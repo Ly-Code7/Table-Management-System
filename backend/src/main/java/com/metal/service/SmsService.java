@@ -6,8 +6,10 @@ import com.aliyuncs.DefaultAcsClient;
 import com.aliyuncs.IAcsClient;
 import com.aliyuncs.http.MethodType;
 import com.aliyuncs.profile.DefaultProfile;
+import com.metal.mapper.SysUserMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -16,7 +18,7 @@ import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 阿里云短信服务 — 发送验证码
+ * 阿里云短信服务 — 发送验证码（仅已注册用户）
  */
 @Service
 public class SmsService {
@@ -35,10 +37,22 @@ public class SmsService {
     @Value("${sms.template-code:SMS_510625124}")
     private String templateCode;
 
+    @Autowired
+    private SysUserMapper sysUserMapper;
+
     private final Map<String, CodeEntry> codeCache = new ConcurrentHashMap<>();
     private static final long CODE_TTL_MS = 5 * 60 * 1000;
 
+    /**
+     * 发送验证码 — 仅已注册的手机号才会真正发送
+     * 未注册的手机号静默返回 true，但不发送短信
+     */
     public boolean sendCode(String phoneNumber) {
+        // 只给已注册用户发验证码
+        if (sysUserMapper.findByUsername(phoneNumber) == null) {
+            log.info("手机号未注册，跳过发送: {}", phoneNumber);
+            return true; // 不暴露用户是否存在
+        }
         try {
             String code = String.format("%06d", new Random().nextInt(1000000));
 

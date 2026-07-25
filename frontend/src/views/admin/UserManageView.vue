@@ -39,7 +39,7 @@
 
       <el-table :data="users" border stripe v-loading="loading" style="width: 100%">
         <el-table-column prop="id" label="ID" width="60" />
-        <el-table-column prop="username" label="用户名" width="140" />
+        <el-table-column prop="username" label="手机号" width="140" />
         <el-table-column prop="realName" label="真实姓名" width="120" />
         <el-table-column prop="role" label="角色" width="100">
           <template #default="{ row }">
@@ -59,9 +59,6 @@
             >
               {{ row.role === 'admin' ? '降级为普通用户' : '提升为管理员' }}
             </el-button>
-            <el-button size="small" type="primary" @click="handleResetPassword(row)">
-              重置密码
-            </el-button>
             <el-button
               size="small"
               type="danger"
@@ -75,19 +72,6 @@
       </el-table>
     </div>
 
-    <!-- Reset Password Dialog -->
-    <el-dialog v-model="resetPwdVisible" title="重置密码" width="400px">
-      <el-form :model="resetPwdForm" :rules="resetPwdRules" ref="resetPwdFormRef" label-position="top">
-        <el-form-item label="新密码" prop="password">
-          <el-input v-model="resetPwdForm.password" type="password" show-password placeholder="请输入新密码（至少6位）" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="resetPwdVisible = false">取消</el-button>
-        <el-button type="primary" :loading="resetPwdLoading" @click="confirmResetPassword">确认重置</el-button>
-      </template>
-    </el-dialog>
-
     <!-- Delete Confirm Dialog -->
     <el-dialog v-model="deleteVisible" title="删除用户" width="400px">
       <p>确定要删除用户 <strong>{{ deleteTarget?.username }}</strong>（{{ deleteTarget?.realName }}）吗？此操作不可恢复。</p>
@@ -100,17 +84,11 @@
     <!-- 注册新用户弹窗 -->
     <el-dialog v-model="regVisible" title="注册新用户" width="440px" :close-on-click-modal="false" destroy-on-close>
       <el-form ref="regFormRef" :model="regForm" :rules="regRules" label-position="top" size="large">
-        <el-form-item label="用户名" prop="username">
-          <el-input v-model="regForm.username" placeholder="请输入用户名" :prefix-icon="User" />
+        <el-form-item label="手机号" prop="phoneNumber">
+          <el-input v-model="regForm.phoneNumber" placeholder="请输入手机号" maxlength="11" :prefix-icon="Iphone" />
         </el-form-item>
         <el-form-item label="真实姓名" prop="realName">
           <el-input v-model="regForm.realName" placeholder="请输入真实姓名" :prefix-icon="UserFilled" />
-        </el-form-item>
-        <el-form-item label="密码" prop="password">
-          <el-input v-model="regForm.password" type="password" placeholder="请输入密码（至少6位）" show-password :prefix-icon="Lock" />
-        </el-form-item>
-        <el-form-item label="确认密码" prop="confirmPassword">
-          <el-input v-model="regForm.confirmPassword" type="password" placeholder="请确认密码" show-password :prefix-icon="Lock" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -124,8 +102,8 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, User, UserFilled, Lock, Clock } from '@element-plus/icons-vue'
-import { getUsers, updateUserRole, deleteUser, resetUserPassword } from '../../api/admin'
+import { Plus, Iphone, UserFilled, Clock } from '@element-plus/icons-vue'
+import { getUsers, updateUserRole, deleteUser } from '../../api/admin'
 import { register as registerApi } from '../../api/auth'
 import { getSchedulerCron, updateSchedulerCron } from '../../api/scheduler'
 import { useAuthStore } from '../../stores/auth'
@@ -232,36 +210,21 @@ const regFormRef = ref(null)
 const regForm = reactive({
   username: '',
   realName: '',
-  password: '',
-  confirmPassword: ''
+  phoneNumber: '',
+  realName: ''
 })
 
-const validateConfirm = (rule, value, callback) => {
-  if (value !== regForm.password) {
-    callback(new Error('两次输入的密码不一致'))
-  } else {
-    callback()
-  }
-}
-
 const regRules = {
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  realName: [{ required: true, message: '请输入真实姓名', trigger: 'blur' }],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码至少6位', trigger: 'blur' }
+  phoneNumber: [
+    { required: true, message: '请输入手机号', trigger: 'blur' },
+    { pattern: /^1\d{10}$/, message: '手机号格式不正确', trigger: 'blur' }
   ],
-  confirmPassword: [
-    { required: true, message: '请确认密码', trigger: 'blur' },
-    { validator: validateConfirm, trigger: 'blur' }
-  ]
+  realName: [{ required: true, message: '请输入真实姓名', trigger: 'blur' }]
 }
 
 function openRegister() {
-  regForm.username = ''
+  regForm.phoneNumber = ''
   regForm.realName = ''
-  regForm.password = ''
-  regForm.confirmPassword = ''
   regFormRef.value?.resetFields()
   regVisible.value = true
 }
@@ -272,8 +235,7 @@ async function handleRegister() {
   regLoading.value = true
   try {
     await registerApi({
-      username: regForm.username,
-      password: regForm.password,
+      phoneNumber: regForm.phoneNumber,
       realName: regForm.realName
     })
     ElMessage.success('用户注册成功')

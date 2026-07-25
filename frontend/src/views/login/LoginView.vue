@@ -21,11 +21,11 @@
       <div class="login-right">
         <div class="login-area">
           <h1 class="system-title">驻场维保数据采集平台</h1>
-          <p class="system-subtitle">On-Site Maintenance Data Analysis Platform</p>
+          <p class="system-subtitle">On-Site Maintenance Data Collection Platform</p>
 
           <div class="login-card">
             <div class="card-header">
-              <h2>欢迎回来</h2>
+              <h2>登录</h2>
               <p>请输入手机号获取验证码</p>
             </div>
 
