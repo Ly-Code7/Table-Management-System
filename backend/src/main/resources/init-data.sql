@@ -1,5 +1,6 @@
 -- ============================================
 -- 金属厂数据管理系统 - 初始化脚本
+-- 一键部署: mysql -u root -p < init-data.sql
 -- ============================================
 
 CREATE DATABASE IF NOT EXISTS metal_system
@@ -19,12 +20,12 @@ CREATE TABLE IF NOT EXISTS `company` (
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 用户表
+-- 用户表（username = 手机号，password 废弃不用，手机验证码登录）
 CREATE TABLE IF NOT EXISTS `sys_user` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
-    `username` VARCHAR(50) NOT NULL UNIQUE,
-    `password` VARCHAR(255) NOT NULL,
-    `real_name` VARCHAR(100),
+    `username` VARCHAR(50) NOT NULL UNIQUE COMMENT '手机号',
+    `password` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '已废弃，改用验证码登录',
+    `real_name` VARCHAR(100) COMMENT '真实姓名',
     `role` VARCHAR(20) NOT NULL DEFAULT 'user' COMMENT '角色: admin / user',
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -37,6 +38,15 @@ CREATE TABLE IF NOT EXISTS `sys_config` (
     `config_value` VARCHAR(500) NOT NULL,
     `description` VARCHAR(200),
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 用户在线状态表
+CREATE TABLE IF NOT EXISTS `user_online` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` BIGINT NOT NULL,
+    `username` VARCHAR(100) NOT NULL,
+    `last_active_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 操作日志
@@ -52,15 +62,6 @@ CREATE TABLE IF NOT EXISTS `operation_log` (
     `company_id` BIGINT COMMENT '公司ID',
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     INDEX `idx_ol_created` (`created_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- 用户在线状态表
-CREATE TABLE IF NOT EXISTS `user_online` (
-    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
-    `user_id` BIGINT NOT NULL,
-    `username` VARCHAR(100) NOT NULL,
-    `last_active_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- OCR 调用日志表
@@ -136,7 +137,7 @@ CREATE TABLE IF NOT EXISTS `material` (
     INDEX `idx_m_mcode` (`material_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 维修记录（原金属厂原始记录）
+-- 维修记录（原始记录）
 CREATE TABLE IF NOT EXISTS `original_record` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
     `company_id` BIGINT DEFAULT '1',
@@ -178,7 +179,7 @@ CREATE TABLE IF NOT EXISTS `original_record` (
     INDEX `idx_or_off` (`machine_off_material`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 上机物料
+-- 上机物料（仅管理员可见）
 CREATE TABLE IF NOT EXISTS `machine_material` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
     `company_id` BIGINT DEFAULT '1',
@@ -307,5 +308,13 @@ CREATE TABLE IF NOT EXISTS `machine_count` (
 -- 初始数据
 -- ============================================
 
+-- 默认配置
 INSERT IGNORE INTO `sys_config` (`config_key`, `config_value`, `description`) VALUES
     ('scheduler.cron', '0 0 3 * * *', '超比统计定时任务cron表达式');
+
+-- 默认公司
+INSERT IGNORE INTO `company` (`id`, `name`) VALUES
+    (1, '默认公司');
+
+-- 管理员（手机验证码登录，请联系管理员获取手机号注册）
+-- 管理员通过 /api/auth/register 接口注册新用户（手机号+姓名即可）
