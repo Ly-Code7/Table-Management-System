@@ -35,4 +35,4 @@ pagehelper:
 app:
   jwt:
     secret: 你的JWT密钥(任意长字符串)
-    expiration-ms: 86400000  # 24 hours
+    expiration-ms: 31536000000  # 365 days
