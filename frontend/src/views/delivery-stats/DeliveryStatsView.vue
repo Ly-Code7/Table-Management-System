@@ -49,10 +49,11 @@
       border
       stripe
       @selection-change="handleSelectionChange"
+      @sort-change="handleSortChange"
       style="width: 100%"
     >
       <el-table-column type="selection" width="44" fixed="left" />
-      <el-table-column prop="id" label="ID" width="64" />
+      <el-table-column prop="id" label="ID" width="64" sortable="custom" />
       <el-table-column prop="category" label="类别" width="100" />
       <el-table-column prop="materialCode" label="料号" width="130" show-overflow-tooltip />
       <el-table-column prop="systemName" label="系统名称" width="120" show-overflow-tooltip />
@@ -230,7 +231,7 @@ import { useCompanyStore } from '../../stores/company'
 import { usePagination } from '../../composables/usePagination'
 import { useTableSelection } from '../../composables/useTableSelection'
 import { useCrud } from '../../composables/useCrud'
-import { getDaysInMonth, getYearMonth, downloadBlob } from '../../utils'
+import { getDaysInMonth, getYearMonth, downloadBlob, toSnakeCase } from '../../utils'
 import PageHeader from '../../components/PageHeader.vue'
 import SearchForm from '../../components/SearchForm.vue'
 import ToolBar from '../../components/ToolBar.vue'
@@ -252,6 +253,8 @@ const isEdit = ref(false)
 const isCopy = ref(false)
 const submitLoading = ref(false)
 const formRef = ref(null)
+const sortField = ref('id')
+const sortOrder = ref('asc')
 
 const defaultForm = {
   id: null,
@@ -336,7 +339,9 @@ function doFetch() {
     keyword: searchForm.keyword,
     category: searchForm.category,
     yearMonth: searchForm.yearMonth,
-    companyId: companyStore.currentCompanyId
+    companyId: companyStore.currentCompanyId,
+    sortField: sortField.value,
+    sortOrder: sortOrder.value
   })
 }
 
@@ -355,6 +360,18 @@ function handleReset() {
   searchForm.keyword = ''
   searchForm.category = ''
   searchForm.yearMonth = ''
+  queryParams.page = 1
+  doFetch()
+}
+
+function handleSortChange({ prop, order }) {
+  if (order) {
+    sortField.value = toSnakeCase(prop)
+    sortOrder.value = order === 'ascending' ? 'asc' : 'desc'
+  } else {
+    sortField.value = 'id'
+    sortOrder.value = 'asc'
+  }
   queryParams.page = 1
   doFetch()
 }

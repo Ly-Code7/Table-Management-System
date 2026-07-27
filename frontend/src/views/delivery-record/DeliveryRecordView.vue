@@ -482,14 +482,30 @@ async function searchMaterials(query, cb) {
   } catch { cb([]) }
 }
 
-function handleMaterialSelect(item) {
+async function handleMaterialSelect(item) {
   form.materialCode = item.value
+  // 先从物料表填充基础字段
   const matched = materialSearchCache.value.find(m => m.materialCode === item.value)
   if (matched) {
-    form.category = matched.category || ''
-    form.materialName = matched.materialName || ''
-    form.specModel = matched.specModel || ''
+    form.category = matched.category || form.category
+    form.materialName = matched.materialName || form.materialName
+    form.specModel = matched.specModel || form.specModel
   }
+  // 再从最近的送货记录中回填更多字段（品牌、单位、厂房等）
+  try {
+    const res = await deliveryApi.lookupByCode(item.value)
+    const dr = res.data
+    if (dr) {
+      if (!form.category && dr.category) form.category = dr.category
+      if (!form.materialName && dr.materialName) form.materialName = dr.materialName
+      if (!form.specModel && dr.specModel) form.specModel = dr.specModel
+      if (!form.brand && dr.brand) form.brand = dr.brand
+      if (!form.unit && dr.unit) form.unit = dr.unit
+      if (!form.factory && dr.factory) form.factory = dr.factory
+      if (!form.productAttr && dr.productAttr) form.productAttr = dr.productAttr
+      if (!form.materialSerial && dr.materialSerial) form.materialSerial = dr.materialSerial
+    }
+  } catch { /* 查不到就不填充 */ }
 }
 
 onMounted(() => {

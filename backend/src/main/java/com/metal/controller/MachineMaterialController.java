@@ -49,6 +49,12 @@ public class MachineMaterialController {
         return Result.ok(service.lookupWarranty(machineOffMaterial));
     }
 
+    /** 根据上机物料号查询送货记录，回填料号和送货记录引用 */
+    @GetMapping("/lookup-delivery")
+    public Result<java.util.Map<String, Object>> lookupDelivery(@RequestParam String machineOnMaterial) {
+        return Result.ok(service.lookupDeliveryByMaterial(machineOnMaterial));
+    }
+
     @PutMapping("/{id}")
     public Result<MachineMaterial> update(@PathVariable Long id, @RequestBody MachineMaterial record) {
         record.setId(id);

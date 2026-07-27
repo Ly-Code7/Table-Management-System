@@ -70,6 +70,12 @@ public class DeliveryRecordController {
         return Result.ok(service.copy(id));
     }
 
+    /** 根据物料编码查询最近的送货记录，用于新增时自动回填 */
+    @GetMapping("/lookup-by-code")
+    public Result<DeliveryRecord> lookupByCode(@RequestParam String materialCode) {
+        return Result.ok(service.getLatestByMaterialCode(materialCode));
+    }
+
     @PostMapping("/import")
     public Result<ImportResultDTO> importExcel(@RequestParam("file") MultipartFile file,
                                                @RequestParam(required = false) Long companyId) {

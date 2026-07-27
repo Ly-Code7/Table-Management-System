@@ -57,6 +57,7 @@
         <template #default="{ row }">{{ formatTime(row.endTime) }}</template>
       </el-table-column>
       <el-table-column prop="lastMachineOnTime" label="上次上机时间" width="110" />
+      <el-table-column prop="deliveryRecordRef" label="送货记录引用" width="140" show-overflow-tooltip />
       <el-table-column prop="isOutOfWarranty" label="是否过保" width="90">
         <template #default="{ row }">
           <el-tag :type="warrantyTagType(row.isOutOfWarranty)" size="small">{{ row.isOutOfWarranty }}</el-tag>
@@ -198,7 +199,7 @@
         <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item label="送货记录引用" prop="deliveryRecordRef">
-              <el-input v-model="form.deliveryRecordRef" />
+              <el-input v-model="form.deliveryRecordRef" disabled />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -375,6 +376,25 @@ watch(() => form.machineOffMaterial, (newVal) => {
       warrantyInfo.isOutOfWarranty = ''
     }
   }, 500)
+})
+
+// 上机物料查询送货记录回填料号和送货记录引用
+let deliveryLookupTimer = null
+watch(() => form.machineOnMaterial, (newVal) => {
+  if (deliveryLookupTimer) clearTimeout(deliveryLookupTimer)
+  if (!newVal || newVal.trim() === '') return
+  deliveryLookupTimer = setTimeout(async () => {
+    try {
+      const res = await api.lookupDelivery(newVal)
+      const data = res.data
+      if (data.materialCode) {
+        form.materialCode = data.materialCode
+      }
+      if (data.deliveryRecordRef) {
+        form.deliveryRecordRef = data.deliveryRecordRef
+      }
+    } catch { /* 查不到就不回填 */ }
+  }, 400)
 })
 
 function warrantyTagType(val) {

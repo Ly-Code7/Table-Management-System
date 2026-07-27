@@ -92,4 +92,12 @@ public interface DeliveryRecordMapper {
 
     @Select("SELECT COUNT(*) FROM delivery_record WHERE material_serial = #{serial} AND DATE_FORMAT(record_date, '%Y-%m') = #{month}")
     int countByMaterialSerialAndMonth(@Param("serial") String serial, @Param("month") String month);
+
+    /** 根据物料序列号查找送货记录，用于维修记录回填料号 */
+    @Select("SELECT * FROM delivery_record WHERE material_serial = #{materialSerial} ORDER BY id DESC LIMIT 1")
+    DeliveryRecord findByMaterialSerial(@Param("materialSerial") String materialSerial);
+
+    /** 根据物料编码查找最近的送货记录，用于自动回填 */
+    @Select("SELECT * FROM delivery_record WHERE material_code = #{materialCode} ORDER BY id DESC LIMIT 1")
+    DeliveryRecord findLatestByMaterialCode(@Param("materialCode") String materialCode);
 }

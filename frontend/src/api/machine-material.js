@@ -42,6 +42,10 @@ export function lookupWarranty(machineOffMaterial) {
   return request.get('/machine-material/lookup-warranty', { params: { machineOffMaterial } })
 }
 
+export function lookupDelivery(machineOnMaterial) {
+  return request.get('/machine-material/lookup-delivery', { params: { machineOnMaterial } })
+}
+
 export function downloadTemplate() {
   return request.get('/machine-material/template', {
     responseType: 'blob'

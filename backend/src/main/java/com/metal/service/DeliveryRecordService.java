@@ -114,6 +114,12 @@ public class DeliveryRecordService {
         return getById(id);
     }
 
+    /** 根据物料编码查询最近一条送货记录，用于新增时自动回填 */
+    public DeliveryRecord getLatestByMaterialCode(String materialCode) {
+        if (materialCode == null || materialCode.isBlank()) return null;
+        return mapper.findLatestByMaterialCode(materialCode);
+    }
+
     // =============== Excel 导入 ===============
     private static final int IMPORT_BATCH_SIZE = 500; // 每批 500 条，平衡内存与数据库往返
 

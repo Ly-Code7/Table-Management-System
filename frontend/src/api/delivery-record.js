@@ -51,3 +51,7 @@ export function downloadTemplate() {
 export function getMaterials(params) {
   return request.get('/material/search', { params })
 }
+
+export function lookupByCode(materialCode) {
+  return request.get('/delivery-record/lookup-by-code', { params: { materialCode } })
+}

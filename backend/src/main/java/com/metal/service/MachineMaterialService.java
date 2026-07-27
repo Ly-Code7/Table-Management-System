@@ -37,6 +37,9 @@ public class MachineMaterialService {
     @Autowired
     private MachineMaterialMapper mapper;
 
+    @Autowired
+    private com.metal.mapper.DeliveryRecordMapper deliveryRecordMapper;
+
     private static final DateTimeFormatter YM_FMT = DateTimeFormatter.ofPattern("'FY'yyMM");
 
     public PageResult<MachineMaterial> query(int page, int pageSize, Long companyId, String keyword,
@@ -237,6 +240,40 @@ public class MachineMaterialService {
         } catch (Exception e) {
             result.put("lastMachineOnTime", null);
             result.put("isOutOfWarranty", "无");
+        }
+        return result;
+    }
+
+    // =============== 上机物料查询送货记录 ===============
+    /**
+     * 根据填写的上机物料号（对应送货记录中的物料序列号），
+     * 查询送货记录表，回填对应的物料编码和送货记录引用
+     */
+    public java.util.Map<String, Object> lookupDeliveryByMaterial(String machineOnMaterial) {
+        java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+        if (machineOnMaterial == null || machineOnMaterial.isBlank()) {
+            result.put("materialCode", null);
+            result.put("deliveryRecordRef", null);
+            return result;
+        }
+        try {
+            com.metal.entity.DeliveryRecord dr = deliveryRecordMapper.findByMaterialSerial(machineOnMaterial);
+            if (dr != null) {
+                result.put("materialCode", dr.getMaterialCode());
+                // 送货记录引用格式: "送货单号(ID=xxx)"
+                StringBuilder ref = new StringBuilder();
+                if (dr.getShipmentNo() != null && !dr.getShipmentNo().isBlank()) {
+                    ref.append(dr.getShipmentNo());
+                }
+                ref.append("(ID=").append(dr.getId()).append(")");
+                result.put("deliveryRecordRef", ref.toString());
+            } else {
+                result.put("materialCode", null);
+                result.put("deliveryRecordRef", null);
+            }
+        } catch (Exception e) {
+            result.put("materialCode", null);
+            result.put("deliveryRecordRef", null);
         }
         return result;
     }
