@@ -40,6 +40,7 @@
       <el-table-column prop="machineModel" label="机型" width="100" />
       <el-table-column prop="faultPhenomenon" label="故障现象" width="120" show-overflow-tooltip />
       <el-table-column prop="materialCode" label="料号" width="110" sortable="custom" />
+      <el-table-column prop="deliveryRecordRef" label="送货记录引用" width="140" show-overflow-tooltip />
       <el-table-column prop="partName" label="配件名称" width="110" />
       <el-table-column prop="quantity" label="数量" width="60" />
       <el-table-column prop="repairHours" label="维修工时" width="90" />
@@ -57,7 +58,6 @@
         <template #default="{ row }">{{ formatTime(row.endTime) }}</template>
       </el-table-column>
       <el-table-column prop="lastMachineOnTime" label="上次上机时间" width="110" />
-      <el-table-column prop="deliveryRecordRef" label="送货记录引用" width="140" show-overflow-tooltip />
       <el-table-column prop="isOutOfWarranty" label="是否过保" width="90">
         <template #default="{ row }">
           <el-tag :type="warrantyTagType(row.isOutOfWarranty)" size="small">{{ row.isOutOfWarranty }}</el-tag>
@@ -385,15 +385,24 @@ watch(() => form.machineOnMaterial, (newVal) => {
   if (!newVal || newVal.trim() === '') return
   deliveryLookupTimer = setTimeout(async () => {
     try {
+      console.log('[上机物料查询] 查询关键字:', newVal)
       const res = await api.lookupDelivery(newVal)
+      console.log('[上机物料查询] 返回结果:', res)
       const data = res.data
       if (data.materialCode) {
         form.materialCode = data.materialCode
+        console.log('[上机物料查询] 料号已回填:', data.materialCode)
       }
       if (data.deliveryRecordRef) {
         form.deliveryRecordRef = data.deliveryRecordRef
+        console.log('[上机物料查询] 送货记录引用已回填:', data.deliveryRecordRef)
       }
-    } catch { /* 查不到就不回填 */ }
+      if (!data.materialCode && !data.deliveryRecordRef) {
+        console.log('[上机物料查询] 未找到匹配的送货记录')
+      }
+    } catch (e) {
+      console.error('[上机物料查询] 请求失败:', e)
+    }
   }, 400)
 })
 
