@@ -118,7 +118,10 @@
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="日期" prop="recordDate">
-              <el-date-picker v-model="form.recordDate" type="date" placeholder="选择日期" value-format="YYYY-MM-DD" style="width: 100%" />
+              <div style="display: flex; gap: 8px; width: 100%">
+                <el-date-picker v-model="form.recordDate" type="date" placeholder="选择日期" value-format="YYYY-MM-DD" style="flex: 1" />
+                <el-button type="primary" @click="materialPickerVisible = true">选择物料</el-button>
+              </div>
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -206,6 +209,9 @@
         <el-button type="primary" :loading="submitLoading" @click="handleSubmit">提交</el-button>
       </template>
     </el-dialog>
+
+    <!-- 物料选择弹窗 -->
+    <MaterialPickerDialog v-model="materialPickerVisible" :company-id="companyStore.currentCompanyId" @select="handleMaterialPicked" />
   </div>
 </template>
 
@@ -223,6 +229,7 @@ import { downloadBlob, toSnakeCase, getYearMonth } from '../../utils'
 import PageHeader from '../../components/PageHeader.vue'
 import SearchForm from '../../components/SearchForm.vue'
 import ToolBar from '../../components/ToolBar.vue'
+import MaterialPickerDialog from '../../components/MaterialPickerDialog.vue'
 
 const companyStore = useCompanyStore()
 const { list, total, loading, queryParams, fetchData, handlePageChange, handleSizeChange } = usePagination(
@@ -245,6 +252,7 @@ const isCopy = ref(false)
 const submitLoading = ref(false)
 const formRef = ref(null)
 const materialSearchCache = ref([])
+const materialPickerVisible = ref(false)
 const form = reactive({
   id: null,
   recordDate: '',
@@ -508,6 +516,15 @@ async function handleMaterialSelect(item) {
       if (!form.materialSerial && dr.materialSerial) form.materialSerial = dr.materialSerial
     }
   } catch { /* 查不到就不填充 */ }
+}
+
+// 从物料选择弹窗回填
+function handleMaterialPicked(material) {
+  form.category = material.category || ''
+  form.materialName = material.materialName || ''
+  form.specModel = material.specModel || ''
+  form.materialCode = material.materialCode || ''
+  ElMessage.success('已回填物料信息')
 }
 
 onMounted(() => {
