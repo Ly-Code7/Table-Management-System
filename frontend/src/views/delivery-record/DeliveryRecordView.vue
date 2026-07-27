@@ -270,7 +270,7 @@ const rules = {
 }
 
 const sortField = ref('id')
-const sortOrder = ref('asc')
+const sortOrder = ref('desc')
 
 function doFetch() {
   return fetchData({

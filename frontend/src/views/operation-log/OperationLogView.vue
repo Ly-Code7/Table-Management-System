@@ -62,7 +62,7 @@ const { list, total, loading, queryParams, fetchData, handlePageChange, handleSi
 const searchForm = reactive({ userId: '', tableName: '', action: '' })
 const dateRange = ref([])
 const sortField = ref('id')
-const sortOrder = ref('asc')
+const sortOrder = ref('desc')
 
 function doFetch() {
   return fetchData({

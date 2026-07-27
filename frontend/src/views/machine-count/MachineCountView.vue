@@ -123,7 +123,7 @@ const isCopy = ref(false)
 const submitLoading = ref(false)
 const formRef = ref(null)
 const sortField = ref('id')
-const sortOrder = ref('asc')
+const sortOrder = ref('desc')
 
 const defaultForm = {
   id: null,
