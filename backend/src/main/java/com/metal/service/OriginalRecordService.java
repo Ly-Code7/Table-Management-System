@@ -273,7 +273,7 @@ public class OriginalRecordService {
     }
 
     // =============== 过保实时查询 ===============
-    public java.util.Map<String, Object> lookupWarranty(String machineOffMaterial) {
+    public java.util.Map<String, Object> lookupWarranty(String machineOffMaterial, String recordDate) {
         java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
         try {
             if (machineOffMaterial == null || machineOffMaterial.isBlank()) {
@@ -281,10 +281,12 @@ public class OriginalRecordService {
                 result.put("isOutOfWarranty", "无");
                 return result;
             }
+            java.time.LocalDate baseDate = recordDate != null && !recordDate.isBlank()
+                    ? java.time.LocalDate.parse(recordDate) : java.time.LocalDate.now();
             java.time.LocalDate lastTime = mapper.findLastMachineOnTime(machineOffMaterial);
             result.put("lastMachineOnTime", lastTime != null ? lastTime.toString() : null);
             if (lastTime != null) {
-                long months = java.time.temporal.ChronoUnit.MONTHS.between(lastTime, java.time.LocalDate.now());
+                long months = java.time.temporal.ChronoUnit.MONTHS.between(lastTime, baseDate);
                 result.put("isOutOfWarranty", months >= 6 ? "已过保" : "未过保");
             } else {
                 result.put("isOutOfWarranty", "无");
@@ -344,9 +346,9 @@ public class OriginalRecordService {
         if (record.getMachineOffMaterial() != null && !record.getMachineOffMaterial().isBlank()) {
             LocalDate lastTime = mapper.findLastMachineOnTime(record.getMachineOffMaterial());
             record.setLastMachineOnTime(lastTime);
-            // 是否过保
-            if (lastTime != null) {
-                long months = java.time.temporal.ChronoUnit.MONTHS.between(lastTime, LocalDate.now());
+            // 是否过保：以维修记录的日期为准，距上次上机是否 >= 6 个月
+            if (lastTime != null && record.getRecordDate() != null) {
+                long months = java.time.temporal.ChronoUnit.MONTHS.between(lastTime, record.getRecordDate());
                 record.setIsOutOfWarranty(months >= 6 ? "已过保" : "未过保");
             } else {
                 record.setIsOutOfWarranty("无");

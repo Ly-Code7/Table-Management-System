@@ -245,7 +245,7 @@ public class DeliveryStatsService {
                             String category, String yearMonth) {
         try {
             PageHelper.startPage(1, 0); // 0 disables paging
-            List<DeliveryStats> list = mapper.search(companyId, keyword, category, yearMonth, "id", "desc");
+            List<DeliveryStats> list = mapper.search(companyId, keyword, category, yearMonth, "id", "asc");
 
             // 批量查询每日明细并填充到实体 transient 字段
             for (DeliveryStats s : list) {

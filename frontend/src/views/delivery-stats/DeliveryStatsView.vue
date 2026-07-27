@@ -28,6 +28,9 @@
     <div style="margin-bottom:12px;display:flex;align-items:center;gap:12px">
       <el-date-picker v-model="refreshMonth" type="month" placeholder="选择要更新的月份" value-format="YYYY-MM" style="width:180px" />
       <el-button type="warning" @click="handleBatchRefresh">更新当月数据</el-button>
+      <span style="margin-left:24px;color:#909399;">|</span>
+      <el-date-picker v-model="exportMonth" type="month" placeholder="选择要导出的月份" value-format="YYYY-MM" style="width:180px" />
+      <el-button type="success" @click="handleExport">导出当前月份</el-button>
     </div>
 
     <!-- 全表合计 -->
@@ -400,10 +403,11 @@ async function handleExport() {
     const response = await api.exportExcel({
       keyword: searchForm.keyword,
       category: searchForm.category,
-      yearMonth: searchForm.yearMonth,
+      yearMonth: exportMonth.value || searchForm.yearMonth,
       companyId: companyStore.currentCompanyId
     })
-    downloadBlob(response.data, '超比统计.xlsx')
+    const filename = exportMonth.value ? `超比统计_${exportMonth.value}.xlsx` : '超比统计.xlsx'
+    downloadBlob(response.data, filename)
     ElMessage.success('导出成功')
   } catch { /* error handled */ }
 }
@@ -574,6 +578,7 @@ async function handleSubmit() {
 }
 
 const refreshMonth = ref('')
+const exportMonth = ref('')
 
 async function handleBatchRefresh() {
   if (!refreshMonth.value) { ElMessage.warning('请先选择要更新的月份'); return }

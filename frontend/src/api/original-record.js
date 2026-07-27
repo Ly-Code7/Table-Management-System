@@ -42,8 +42,8 @@ export function exportExcel(params) {
   })
 }
 
-export function lookupWarranty(machineOffMaterial) {
-  return request.get('/original-record/lookup-warranty', { params: { machineOffMaterial } })
+export function lookupWarranty(machineOffMaterial, recordDate) {
+  return request.get('/original-record/lookup-warranty', { params: { machineOffMaterial, recordDate } })
 }
 
 export function lookup156(materialCode) {

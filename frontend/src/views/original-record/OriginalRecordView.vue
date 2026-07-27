@@ -435,7 +435,7 @@ watch(() => form.machineOffMaterial, (newVal) => {
   }
   warrantyTimer = setTimeout(async () => {
     try {
-      const res = await api.lookupWarranty(newVal)
+      const res = await api.lookupWarranty(newVal, form.recordDate || undefined)
       const data = res.data
       warrantyInfo.lastMachineOnTime = data.lastMachineOnTime || ''
       warrantyInfo.isOutOfWarranty = data.isOutOfWarranty || ''
