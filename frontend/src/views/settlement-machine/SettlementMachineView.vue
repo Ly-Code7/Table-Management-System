@@ -22,7 +22,7 @@
         <template #default="{ $index }">{{ sortOrder === 'desc' ? total - (queryParams.page - 1) * queryParams.pageSize - $index : (queryParams.page - 1) * queryParams.pageSize + $index + 1 }}</template>
       </el-table-column>
       <el-table-column prop="materialCode" label="料号" width="130" sortable="custom" />
-      <el-table-column prop="category" label="类别" width="100" />
+      <el-table-column prop="category" label="类别" width="300" />
       <el-table-column prop="partName" label="配件名称" width="120" show-overflow-tooltip />
       <el-table-column prop="unitUsage" label="单台用量" width="100" />
       <el-table-column prop="ratio" label="比例(%)" width="100">
