@@ -26,12 +26,7 @@ const routes = [
         component: () => import('../views/original-record/OriginalRecordView.vue'),
         meta: { title: '维修记录' }
       },
-      {
-        path: 'machine-material',
-        name: 'MachineMaterial',
-        component: () => import('../views/machine-material/MachineMaterialView.vue'),
-        meta: { title: '上机物料', requiresAdmin: true }
-      },
+      
       {
         path: 'delivery-stats',
         name: 'DeliveryStats',

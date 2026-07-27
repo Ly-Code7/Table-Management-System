@@ -61,10 +61,7 @@
             <el-icon><Notebook /></el-icon>
             <template #title>维修记录</template>
           </el-menu-item>
-          <el-menu-item index="/machine-material" v-if="authStore.isAdmin">
-            <el-icon><Setting /></el-icon>
-            <template #title>上机物料</template>
-          </el-menu-item>
+          
           <el-menu-item index="/delivery-stats">
             <el-icon><DataAnalysis /></el-icon>
             <template #title>超比统计</template>

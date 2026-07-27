@@ -5,7 +5,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/metal_system?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&allowMultiQueries=true
     username: root
-    password: haoyu2026
+    password: ly123456
     driver-class-name: com.mysql.cj.jdbc.Driver
   servlet:
     multipart:
@@ -21,15 +21,15 @@ mybatis:
 
 # 短信配置（阿里云短信验证码登录）
 sms:
-  access-key-id: YOUR_ACCESS_KEY_ID
-  access-key-secret: YOUR_ACCESS_KEY_SECRET
-  sign-name: 深圳市昊昱精密机电
-  template-code: SMS_510625124
+  access-key-id: ${SMS_ACCESS_KEY_ID}
+  access-key-secret: ${SMS_ACCESS_KEY_SECRET}
+  sign-name: ${SMS_SIGN_NAME}
+  template-code: ${SMS_TEMPLATE_CODE}
 
 # OCR 配置（通义千问 Qwen3.5-OCR）
 ocr:
   dashscope:
-    api-key: sk-ws-H.EHILRPR.09wY.MEUCIQD2sGZkPAr9nUM1Mz4UAFUfNoXXF12--vepFtDEr9cPQwIgSIcnKvlw7WPLEizRq_UzhVoghF48ykNEGxHOW4OVQa0
+    api-key: ${OCR_DASHSCOPE_API_KEY}
 
 pagehelper:
   helper-dialect: mysql
