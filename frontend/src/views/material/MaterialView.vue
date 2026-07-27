@@ -12,7 +12,9 @@
 
     <el-table :data="list" v-loading="loading" border stripe @selection-change="handleSelectionChange" @sort-change="handleSortChange">
       <el-table-column type="selection" width="44" fixed="left" />
-      <el-table-column prop="id" label="ID" width="60" sortable="custom" />
+      <el-table-column label="序号" width="60">
+        <template #default="{ $index }">{{ total - (queryParams.page - 1) * queryParams.pageSize - $index }}</template>
+      </el-table-column>
       <el-table-column prop="category" label="类别" width="120" />
       <el-table-column prop="materialName" label="物料名称" width="140" show-overflow-tooltip />
       <el-table-column prop="specModel" label="规格型号" width="160" show-overflow-tooltip />

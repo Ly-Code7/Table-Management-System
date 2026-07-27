@@ -26,7 +26,9 @@
       @sort-change="handleSortChange"
     >
       <el-table-column type="selection" width="44" fixed="left" />
-      <el-table-column prop="id" label="ID" width="60" sortable="custom" />
+      <el-table-column label="序号" width="60">
+        <template #default="{ $index }">{{ total - (queryParams.page - 1) * queryParams.pageSize - $index }}</template>
+      </el-table-column>
       <el-table-column prop="category" label="类别" width="100" />
       <el-table-column prop="materialCode" label="料号" width="130" sortable="custom" show-overflow-tooltip />
       <el-table-column prop="systemName" label="系统名称" width="120" show-overflow-tooltip />

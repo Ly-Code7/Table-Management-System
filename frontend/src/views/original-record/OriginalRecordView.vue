@@ -31,7 +31,9 @@
 
     <el-table :data="list" v-loading="loading" border stripe @selection-change="handleSelectionChange" @sort-change="handleSortChange">
       <el-table-column type="selection" width="44" fixed="left" />
-      <el-table-column prop="id" label="ID" width="60" sortable="custom" fixed="left" />
+      <el-table-column label="序号" width="60" fixed="left">
+        <template #default="{ $index }">{{ total - (queryParams.page - 1) * queryParams.pageSize - $index }}</template>
+      </el-table-column>
       <!-- 日期信息 -->
       <el-table-column prop="recordDate" label="日期" width="105" sortable="custom" />
       <el-table-column prop="yearMonth" label="年月" width="85">

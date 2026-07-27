@@ -20,7 +20,9 @@
 
     <el-table :data="list" v-loading="loading" border stripe @selection-change="handleSelectionChange" @sort-change="handleSortChange">
       <el-table-column type="selection" width="44" fixed="left" />
-      <el-table-column prop="id" label="ID" width="60" sortable="custom" />
+      <el-table-column label="序号" width="60">
+        <template #default="{ $index }">{{ total - (queryParams.page - 1) * queryParams.pageSize - $index }}</template>
+      </el-table-column>
       <el-table-column prop="machineModel" label="机型" width="120" />
       <el-table-column prop="count" label="数量" width="80" />
       <el-table-column prop="ratioPct" label="占比(%)" width="100">

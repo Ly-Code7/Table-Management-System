@@ -38,7 +38,7 @@
       </div>
 
       <el-table :data="users" border stripe v-loading="loading" style="width: 100%">
-        <el-table-column prop="id" label="ID" width="60" />
+        <el-table-column type="index" label="序号" width="60" />
         <el-table-column prop="username" label="手机号" width="140" />
         <el-table-column prop="realName" label="真实姓名" width="120" />
         <el-table-column prop="role" label="角色" width="100">
