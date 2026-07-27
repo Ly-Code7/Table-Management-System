@@ -23,7 +23,7 @@
       <el-table-column label="序号" width="80" prop="id" sortable="custom">
         <template #default="{ $index }">{{ sortOrder === 'desc' ? total - (queryParams.page - 1) * queryParams.pageSize - $index : (queryParams.page - 1) * queryParams.pageSize + $index + 1 }}</template>
       </el-table-column>
-      <el-table-column prop="machineModel" label="机型" width="120" />
+      <el-table-column prop="machineModel" label="机型" width="180" />
       <el-table-column prop="count" label="数量" width="80" />
       <el-table-column prop="ratioPct" label="占比(%)" width="100">
         <template #default="{ row }">{{ row.ratioPct != null ? row.ratioPct + '%' : '' }}</template>

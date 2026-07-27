@@ -8,7 +8,7 @@
       <el-table-column label="序号" width="80" prop="id" sortable="custom">
         <template #default="{ $index }">{{ sortOrder === 'desc' ? total - (queryParams.page - 1) * queryParams.pageSize - $index : (queryParams.page - 1) * queryParams.pageSize + $index + 1 }}</template>
       </el-table-column>
-      <el-table-column prop="name" label="公司名称" min-width="200" />
+      <el-table-column prop="name" label="公司名称" width="150" />
       <el-table-column prop="createdAt" label="创建时间" width="180" sortable="custom">
         <template #default="{ row }">
           {{ formatDateTime(row.createdAt) }}
