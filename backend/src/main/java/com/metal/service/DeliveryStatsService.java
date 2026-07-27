@@ -3,7 +3,10 @@ package com.metal.service;
 import com.alibaba.excel.EasyExcel;
 import com.alibaba.excel.context.AnalysisContext;
 import com.alibaba.excel.event.AnalysisEventListener;
+import com.alibaba.excel.write.handler.CellWriteHandler;
+import com.alibaba.excel.write.handler.context.CellWriteHandlerContext;
 import com.alibaba.excel.write.style.column.LongestMatchColumnWidthStyleStrategy;
+import org.apache.poi.ss.usermodel.*;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import com.metal.common.BizException;
@@ -255,6 +258,41 @@ public class DeliveryStatsService {
                 }
             }
 
+            // 计算汇总金额（与前端逻辑一致：Σ(含税单价 × 数量) ÷ 1.13 ÷ 10000，单位为万元）
+            final BigDecimal DIVISOR = new BigDecimal("11300"); // 1.13 * 10000
+            BigDecimal deliveryAmount = BigDecimal.ZERO;
+            BigDecimal machineOnAmount = BigDecimal.ZERO;
+            BigDecimal repairAmount = BigDecimal.ZERO;
+            BigDecimal agreedRatioAmount = BigDecimal.ZERO;
+            BigDecimal excessAmount = BigDecimal.ZERO;
+            BigDecimal excessTaxAmount = BigDecimal.ZERO;
+            for (DeliveryStats s : list) {
+                BigDecimal unitPrice = s.getUnitPriceWithTax() != null ? s.getUnitPriceWithTax() : BigDecimal.ZERO;
+                deliveryAmount = deliveryAmount.add(unitPrice.multiply(
+                        BigDecimal.valueOf(s.getDeliveryQuantity() != null ? s.getDeliveryQuantity() : 0)));
+                machineOnAmount = machineOnAmount.add(unitPrice.multiply(
+                        BigDecimal.valueOf(s.getMachineOnQuantity() != null ? s.getMachineOnQuantity() : 0)));
+                repairAmount = repairAmount.add(unitPrice.multiply(
+                        BigDecimal.valueOf(s.getMonthRepair() != null ? s.getMonthRepair() : 0)));
+                agreedRatioAmount = agreedRatioAmount.add(unitPrice.multiply(
+                        s.getAgreedRatioQuantity() != null ? s.getAgreedRatioQuantity() : BigDecimal.ZERO));
+                excessAmount = excessAmount.add(unitPrice.multiply(
+                        s.getExcessQuantity() != null ? s.getExcessQuantity() : BigDecimal.ZERO));
+                excessTaxAmount = excessTaxAmount.add(
+                        s.getExcessAmountWithTax() != null ? s.getExcessAmountWithTax() : BigDecimal.ZERO);
+            }
+            final BigDecimal[] totals = {
+                    deliveryAmount.divide(DIVISOR, 2, RoundingMode.HALF_UP),
+                    machineOnAmount.divide(DIVISOR, 2, RoundingMode.HALF_UP),
+                    repairAmount.divide(DIVISOR, 2, RoundingMode.HALF_UP),
+                    agreedRatioAmount.divide(DIVISOR, 2, RoundingMode.HALF_UP),
+                    excessAmount.divide(DIVISOR, 2, RoundingMode.HALF_UP),
+                    excessTaxAmount.divide(new BigDecimal("10000"), 2, RoundingMode.HALF_UP)
+            };
+            final String[] labels = {"送货金额合计", "上机金额合计", "返修金额合计", "比例内金额合计", "超比金额合计", "超比含税总额"};
+            final int[] valueCols = {8, 9, 10, 11, 12, 13};
+            final int dataRowCount = list.size();
+
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
             response.setCharacterEncoding("UTF-8");
             String fileName = URLEncoder.encode("送货统计导出.xlsx", StandardCharsets.UTF_8);
@@ -263,6 +301,38 @@ public class DeliveryStatsService {
             OutputStream os = response.getOutputStream();
             EasyExcel.write(os, DeliveryStats.class)
                     .registerWriteHandler(new LongestMatchColumnWidthStyleStrategy())
+                    .registerWriteHandler(new CellWriteHandler() {
+                        @Override
+                        public void afterCellDispose(CellWriteHandlerContext context) {
+                            // 数据行从 row 1 开始（row 0 是表头），在最后一条数据的最后一个单元格写完后追加汇总行
+                            if (dataRowCount > 0 && context.getRowIndex() == dataRowCount && context.getColumnIndex() == 46) {
+                                Sheet sheet = context.getWriteSheetHolder().getSheet();
+                                // 空两行
+                                sheet.createRow(dataRowCount + 1);
+                                sheet.createRow(dataRowCount + 2);
+                                // 加粗样式
+                                CellStyle style = sheet.getWorkbook().createCellStyle();
+                                Font font = sheet.getWorkbook().createFont();
+                                font.setFontHeightInPoints((short) 11);
+                                font.setBold(true);
+                                style.setFont(font);
+                                // 第 1 行：标签
+                                Row labelRow = sheet.createRow(dataRowCount + 3);
+                                for (int i = 0; i < labels.length; i++) {
+                                    Cell cell = labelRow.createCell(valueCols[i]);
+                                    cell.setCellValue(labels[i]);
+                                    cell.setCellStyle(style);
+                                }
+                                // 第 2 行：值
+                                Row valueRow = sheet.createRow(dataRowCount + 4);
+                                for (int i = 0; i < totals.length; i++) {
+                                    Cell cell = valueRow.createCell(valueCols[i]);
+                                    cell.setCellValue(totals[i].doubleValue());
+                                    cell.setCellStyle(style);
+                                }
+                            }
+                        }
+                    })
                     .sheet("送货统计")
                     .doWrite(list);
             os.flush();
