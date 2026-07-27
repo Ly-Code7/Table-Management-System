@@ -55,7 +55,7 @@
       style="width: 100%"
     >
       <el-table-column type="selection" width="44" fixed="left" />
-      <el-table-column label="序号" width="64" fixed="left">
+      <el-table-column label="序号" width="80" fixed="left">
         <template #default="{ $index }">{{ total - (queryParams.page - 1) * queryParams.pageSize - $index }}</template>
       </el-table-column>
       <el-table-column prop="recordDate" label="日期" width="110" sortable="custom" />
