@@ -53,8 +53,8 @@
       style="width: 100%"
     >
       <el-table-column type="selection" width="44" fixed="left" />
-      <el-table-column label="序号" width="80">
-        <template #default="{ $index }">{{ total - (queryParams.page - 1) * queryParams.pageSize - $index }}</template>
+      <el-table-column label="序号" width="80" prop="id" sortable="custom">
+        <template #default="{ $index }">{{ sortOrder === 'desc' ? total - (queryParams.page - 1) * queryParams.pageSize - $index : (queryParams.page - 1) * queryParams.pageSize + $index + 1 }}</template>
       </el-table-column>
       <el-table-column prop="category" label="类别" width="100" />
       <el-table-column prop="materialCode" label="料号" width="130" show-overflow-tooltip />
@@ -372,7 +372,7 @@ function handleSortChange({ prop, order }) {
     sortOrder.value = order === 'ascending' ? 'asc' : 'desc'
   } else {
     sortField.value = 'id'
-    sortOrder.value = 'asc'
+    sortOrder.value = 'desc'
   }
   queryParams.page = 1
   doFetch()

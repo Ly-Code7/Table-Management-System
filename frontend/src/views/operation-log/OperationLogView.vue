@@ -22,8 +22,8 @@
     </SearchForm>
 
     <el-table :data="list" v-loading="loading" border stripe @sort-change="handleSortChange">
-      <el-table-column label="序号" width="80">
-        <template #default="{ $index }">{{ total - (queryParams.page - 1) * queryParams.pageSize - $index }}</template>
+      <el-table-column label="序号" width="80" prop="id" sortable="custom">
+        <template #default="{ $index }">{{ sortOrder === 'desc' ? total - (queryParams.page - 1) * queryParams.pageSize - $index : (queryParams.page - 1) * queryParams.pageSize + $index + 1 }}</template>
       </el-table-column>
       <el-table-column prop="username" label="用户名" width="100" />
       <el-table-column prop="action" label="操作类型" width="100">

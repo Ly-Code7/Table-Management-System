@@ -55,8 +55,8 @@
       style="width: 100%"
     >
       <el-table-column type="selection" width="44" fixed="left" />
-      <el-table-column label="序号" width="80" fixed="left">
-        <template #default="{ $index }">{{ total - (queryParams.page - 1) * queryParams.pageSize - $index }}</template>
+      <el-table-column label="序号" width="80" prop="id" sortable="custom" fixed="left">
+        <template #default="{ $index }">{{ sortOrder === 'desc' ? total - (queryParams.page - 1) * queryParams.pageSize - $index : (queryParams.page - 1) * queryParams.pageSize + $index + 1 }}</template>
       </el-table-column>
       <el-table-column prop="recordDate" label="日期" width="110" sortable="custom" />
       <el-table-column prop="yearMonth" label="年月" width="90">
@@ -309,7 +309,7 @@ function handleSortChange({ prop, order }) {
     sortOrder.value = order === 'ascending' ? 'asc' : 'desc'
   } else {
     sortField.value = 'id'
-    sortOrder.value = 'asc'
+    sortOrder.value = 'desc'
   }
   queryParams.page = 1
   doFetch()
