@@ -55,3 +55,7 @@ export function getMaterials(params) {
 export function lookupByCode(materialCode) {
   return request.get('/delivery-record/lookup-by-code', { params: { materialCode } })
 }
+
+export function lookupBySerial(materialSerial) {
+  return request.get('/delivery-record/lookup-by-serial', { params: { materialSerial } })
+}

@@ -76,6 +76,12 @@ public class DeliveryRecordController {
         return Result.ok(service.getLatestByMaterialCode(materialCode));
     }
 
+    /** 根据物料序列号查询送货记录，用于维修记录回填料号 */
+    @GetMapping("/lookup-by-serial")
+    public Result<DeliveryRecord> lookupBySerial(@RequestParam String materialSerial) {
+        return Result.ok(service.getByMaterialSerial(materialSerial));
+    }
+
     @PostMapping("/import")
     public Result<ImportResultDTO> importExcel(@RequestParam("file") MultipartFile file,
                                                @RequestParam(required = false) Long companyId) {

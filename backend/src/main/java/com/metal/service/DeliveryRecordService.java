@@ -120,6 +120,12 @@ public class DeliveryRecordService {
         return mapper.findLatestByMaterialCode(materialCode);
     }
 
+    /** 根据物料序列号查询送货记录，用于维修记录回填料号 */
+    public DeliveryRecord getByMaterialSerial(String materialSerial) {
+        if (materialSerial == null || materialSerial.isBlank()) return null;
+        return mapper.findByMaterialSerial(materialSerial);
+    }
+
     // =============== Excel 导入 ===============
     private static final int IMPORT_BATCH_SIZE = 500; // 每批 500 条，平衡内存与数据库往返
 

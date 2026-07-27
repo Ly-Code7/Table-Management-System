@@ -84,6 +84,7 @@
           <el-tag :type="warrantyTagType(row.isOutOfWarranty)" size="small">{{ row.isOutOfWarranty || '-' }}</el-tag>
         </template>
       </el-table-column>
+      <el-table-column prop="deliveryRecordRef" label="送货记录引用" width="140" show-overflow-tooltip />
       <el-table-column prop="documentNo" label="单据号" width="110" show-overflow-tooltip />
       <el-table-column prop="createdBy" label="操作人" width="80" />
       <el-table-column label="操作" width="180" fixed="right">
@@ -201,7 +202,7 @@
           </el-col>
           <el-col :span="9">
             <el-form-item label="上机物料号" prop="machineOnMaterial">
-              <el-input v-model="form.machineOnMaterial" />
+              <el-input v-model="form.machineOnMaterial" @blur="handleMachineOnMaterialBlur" />
             </el-form-item>
           </el-col>
           <el-col :span="9">
@@ -283,6 +284,7 @@ import * as api from '../../api/original-record'
 import { parseVoiceText } from '../../api/voice-parse'
 import { recognizeOcr } from '../../api/ocr'
 import { search as search156Api } from '../../api/base-material-156'
+import { lookupBySerial } from '../../api/delivery-record'
 import { useCompanyStore } from '../../stores/company'
 import { usePagination } from '../../composables/usePagination'
 import { useTableSelection } from '../../composables/useTableSelection'
@@ -474,6 +476,23 @@ watch(() => form.recordDate, () => {
     }, 500)
   }
 })
+
+async function handleMachineOnMaterialBlur() {
+  const serial = form.machineOnMaterial
+  if (!serial || serial.trim() === '') return
+  try {
+    const res = await lookupBySerial(serial.trim())
+    const data = res.data
+    if (data && data.materialCode) {
+      form.materialCode = data.materialCode
+      if (data.partName && !form.partName) {
+        form.partName = data.partName
+      }
+    }
+  } catch {
+    // 查询失败不提示，静默处理
+  }
+}
 
 function warrantyTagType(val) {
   if (val === '未过保') return 'success'
