@@ -74,7 +74,7 @@
       <el-table-column prop="brand" label="品牌" width="100" />
       <el-table-column prop="productAttr" label="产品属性" width="90">
         <template #default="{ row }">
-          <el-tag :type="row.productAttr === '新品' ? 'success' : 'warning'" size="small">
+          <el-tag :type="row.productAttr === '新品' ? 'success' : row.productAttr === '免费' ? 'danger' : 'warning'" size="small" :effect="row.productAttr === '免费' ? 'plain' : 'light'">
             {{ row.productAttr }}
           </el-tag>
         </template>
