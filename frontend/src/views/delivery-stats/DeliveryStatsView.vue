@@ -10,8 +10,8 @@
       <el-form-item label="类别">
         <el-input v-model="searchForm.category" placeholder="类别" clearable style="width: 140px" />
       </el-form-item>
-      <el-form-item label="年月">
-        <el-input v-model="searchForm.yearMonth" placeholder="年月" clearable style="width: 140px" />
+      <el-form-item label="统计月份">
+        <el-date-picker v-model="searchForm.yearMonth" type="month" placeholder="选择月份" value-format="YYYY-MM" clearable style="width: 160px" />
       </el-form-item>
     </SearchForm>
 

@@ -418,6 +418,10 @@ public class DeliveryStatsService {
     }
 
     private void applyCalculations(DeliveryStats record) {
+        // 年月根据统计日期自动生成（如 2026-07-28 → 2026-07），覆盖前端传入值，保证一致性
+        if (record.getStatDate() != null) {
+            record.setYearMonth(record.getStatDate().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM")));
+        }
         // 比例从百分比转为小数（如 15 → 0.15），与 Excel 导入逻辑一致
         if (record.getRatio() != null && record.getRatio().compareTo(BigDecimal.ONE) > 0) {
             record.setRatio(record.getRatio().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));

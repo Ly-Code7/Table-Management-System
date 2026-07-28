@@ -33,6 +33,7 @@
       <el-table-column prop="priceType" label="价格类型" width="100" />
       <el-table-column prop="machineModel" label="机型" width="120" />
       <el-table-column prop="settlementMachineCount" label="结算机台数" width="120" />
+      <el-table-column prop="statMonth" label="统计月份" width="100" />
       <el-table-column prop="remark" label="备注" width="150" show-overflow-tooltip />
       <el-table-column prop="createdBy" label="创建人" width="100" />
       <el-table-column label="操作" width="180" fixed="right">

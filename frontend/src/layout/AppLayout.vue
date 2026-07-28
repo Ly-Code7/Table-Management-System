@@ -3,7 +3,7 @@
     <!-- 顶部栏 -->
     <el-header class="layout-header">
       <div class="header-left">
-        <span class="header-logo">数据管理系统</span>
+        <span class="header-logo">数据采集系统</span>
       </div>
       <div class="header-right">
         <el-select
