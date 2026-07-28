@@ -19,6 +19,13 @@ mybatis:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
+# 短信配置（阿里云短信验证码登录）
+sms:
+  access-key-id: 你的阿里云AccessKeyId
+  access-key-secret: 你的阿里云AccessKeySecret
+  sign-name: 你的短信签名
+  template-code: 你的短信模板CODE
+
 # OCR 配置（通义千问 Qwen3.5-OCR）
 ocr:
   dashscope:
