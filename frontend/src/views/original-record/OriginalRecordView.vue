@@ -229,9 +229,6 @@
           <el-col :span="8">
             <el-form-item label="送货记录引用" prop="deliveryRecordRef">
               <el-input v-model="form.deliveryRecordRef" />
-              <span v-if="deliveryRefCount > 0" style="font-size:12px;color:#67C23A">
-                本月匹配 {{ deliveryRefCount }} 条送货记录
-              </span>
             </el-form-item>
           </el-col>
           <el-col :span="8">
@@ -446,49 +443,26 @@ watch(() => form.machineOffMaterial, (newVal) => {
   }, 500)
 })
 
-// 送货记录引用实时查询：根据上机物料号统计本月送货记录数
-const deliveryRefCount = ref(0)
-let deliveryRefTimer = null
-watch(() => form.machineOnMaterial, (newVal) => {
-  if (deliveryRefTimer) clearTimeout(deliveryRefTimer)
-  if (!newVal || newVal.trim() === '') {
-    deliveryRefCount.value = 0
-    return
-  }
-  deliveryRefTimer = setTimeout(async () => {
-    try {
-      const res = await api.lookupDeliveryRef(newVal, form.recordDate)
-      deliveryRefCount.value = res.data.count || 0
-    } catch {
-      deliveryRefCount.value = 0
-    }
-  }, 500)
-})
-watch(() => form.recordDate, () => {
-  // 日期变化时重新查询
-  if (form.machineOnMaterial) {
-    deliveryRefTimer && clearTimeout(deliveryRefTimer)
-    deliveryRefTimer = setTimeout(async () => {
-      try {
-        const res = await api.lookupDeliveryRef(form.machineOnMaterial, form.recordDate)
-        deliveryRefCount.value = res.data.count || 0
-      } catch {
-        deliveryRefCount.value = 0
-      }
-    }, 500)
-  }
-})
-
 async function handleMachineOnMaterialBlur() {
   const serial = form.machineOnMaterial
   if (!serial || serial.trim() === '') return
   try {
+    // 回填料号
     const res = await lookupBySerial(serial.trim())
     const data = res.data
     if (data && data.materialCode) {
       form.materialCode = data.materialCode
       if (data.partName && !form.partName) {
         form.partName = data.partName
+      }
+    }
+    // 回填本月送货记录匹配数到"送货记录引用"
+    if (!form.deliveryRecordRef) {
+      const date = form.recordDate || new Date().toISOString().slice(0, 10)
+      const refRes = await api.lookupDeliveryRef(serial.trim(), date, companyStore.currentCompanyId)
+      const count = refRes.data?.count || 0
+      if (count > 0) {
+        form.deliveryRecordRef = String(count)
       }
     }
   } catch {

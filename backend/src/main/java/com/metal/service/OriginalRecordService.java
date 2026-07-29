@@ -126,7 +126,7 @@ public class OriginalRecordService {
     /**
      * 根据上机物料号 + 日期，查询本月送货记录中序列号匹配的记录数
      */
-    public java.util.Map<String, Object> lookupDeliveryRef(String machineOnMaterial, String recordDate) {
+    public java.util.Map<String, Object> lookupDeliveryRef(String machineOnMaterial, String recordDate, Long companyId) {
         java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
         result.put("count", 0);
         if (machineOnMaterial == null || machineOnMaterial.isBlank() || recordDate == null || recordDate.isBlank()) {
@@ -135,7 +135,7 @@ public class OriginalRecordService {
         try {
             java.time.LocalDate date = java.time.LocalDate.parse(recordDate);
             String month = date.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM"));
-            int count = deliveryRecordMapper.countByMaterialSerialAndMonth(machineOnMaterial, month);
+            int count = deliveryRecordMapper.countByMaterialSerialAndMonth(machineOnMaterial, month, companyId);
             result.put("count", count);
         } catch (Exception ignored) {}
         return result;
@@ -167,6 +167,34 @@ public class OriginalRecordService {
                         data.setEndTime(fixTime(data.getEndTime(), date));
 
                         applyCalculations(data);
+                        // 导入时：如果料号为空但上机物料有值，尝试从送货记录回填料号
+                        if ((data.getMaterialCode() == null || data.getMaterialCode().isBlank())
+                                && data.getMachineOnMaterial() != null && !data.getMachineOnMaterial().isBlank()) {
+                            try {
+                                com.metal.entity.DeliveryRecord delivery = deliveryRecordMapper.findByMaterialSerial(data.getMachineOnMaterial());
+                                if (delivery != null && delivery.getMaterialCode() != null) {
+                                    data.setMaterialCode(delivery.getMaterialCode());
+                                    if ((data.getPartName() == null || data.getPartName().isBlank()) && delivery.getMaterialName() != null) {
+                                        data.setPartName(delivery.getMaterialName());
+                                    }
+                                }
+                            } catch (Exception ignored) {
+                                // 查询失败不阻塞导入
+                            }
+                        }
+                        // 导入时：如果送货记录引用为空但有上机物料，自动计算本月匹配数
+                        if ((data.getDeliveryRecordRef() == null || data.getDeliveryRecordRef().isBlank())
+                                && data.getMachineOnMaterial() != null && !data.getMachineOnMaterial().isBlank()
+                                && data.getRecordDate() != null) {
+                            try {
+                                String month = data.getRecordDate().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM"));
+                                int count = deliveryRecordMapper.countByMaterialSerialAndMonth(data.getMachineOnMaterial(), month, companyId);
+                                if (count > 0) {
+                                    data.setDeliveryRecordRef(String.valueOf(count));
+                                }
+                            } catch (Exception ignored) {
+                            }
+                        }
                         String user = ServiceHelper.getCurrentUserName();
                         data.setCompanyId(companyId != null ? companyId : 1L);
                         data.setCreatedBy(user);

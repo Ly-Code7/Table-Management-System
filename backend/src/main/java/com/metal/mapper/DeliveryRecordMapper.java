@@ -90,8 +90,10 @@ public interface DeliveryRecordMapper {
             @Param("materialCode") String materialCode, @Param("month") String month,
             @Param("companyId") Long companyId);
 
-    @Select("SELECT COUNT(*) FROM delivery_record WHERE material_serial = #{serial} AND DATE_FORMAT(record_date, '%Y-%m') = #{month}")
-    int countByMaterialSerialAndMonth(@Param("serial") String serial, @Param("month") String month);
+    @Select("SELECT COUNT(*) FROM delivery_record WHERE material_serial = #{serial} AND DATE_FORMAT(record_date, '%Y-%m') = #{month} " +
+            "AND (#{companyId} IS NULL OR company_id = #{companyId})")
+    int countByMaterialSerialAndMonth(@Param("serial") String serial, @Param("month") String month,
+                                      @Param("companyId") Long companyId);
 
     /** 根据上机物料号（序列号或物料名称）查找送货记录，用于维修记录回填料号 */
     @Select("SELECT * FROM delivery_record WHERE material_serial = #{keyword} OR material_name = #{keyword} ORDER BY id DESC LIMIT 1")

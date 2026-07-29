@@ -59,8 +59,9 @@ public class OriginalRecordController {
     @GetMapping("/lookup-delivery-ref")
     public Result<java.util.Map<String, Object>> lookupDeliveryRef(
             @RequestParam String machineOnMaterial,
-            @RequestParam(required = false) String recordDate) {
-        return Result.ok(service.lookupDeliveryRef(machineOnMaterial, recordDate));
+            @RequestParam(required = false) String recordDate,
+            @RequestParam(required = false) Long companyId) {
+        return Result.ok(service.lookupDeliveryRef(machineOnMaterial, recordDate, companyId));
     }
 
     @PostMapping
