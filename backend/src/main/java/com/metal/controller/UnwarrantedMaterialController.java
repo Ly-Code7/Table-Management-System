@@ -4,74 +4,50 @@ import com.metal.common.PageResult;
 import com.metal.common.Result;
 import com.metal.dto.BatchDeleteDTO;
 import com.metal.dto.ImportResultDTO;
-import com.metal.entity.OriginalRecord;
-import com.metal.service.OriginalRecordService;
+import com.metal.entity.UnwarrantedMaterial;
+import com.metal.service.UnwarrantedMaterialService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Map;
+
 @RestController
-@RequestMapping("/api/original-record")
-public class OriginalRecordController {
+@RequestMapping("/api/unwarranted-material")
+public class UnwarrantedMaterialController {
 
     @Autowired
-    private OriginalRecordService service;
+    private UnwarrantedMaterialService service;
 
     @GetMapping
-    public Result<PageResult<OriginalRecord>> query(
+    public Result<PageResult<UnwarrantedMaterial>> query(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int pageSize,
             @RequestParam(required = false) Long companyId,
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) String shift,
             @RequestParam(required = false) String factory,
-            @RequestParam(required = false) String isOutOfWarranty,
+            @RequestParam(required = false) String warrantyStatus,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
             @RequestParam(defaultValue = "id") String sortField,
-            @RequestParam(defaultValue = "desc") String sortOrder,
-            @RequestParam(required = false) Boolean excludeLinked) {
-        return Result.ok(service.query(page, pageSize, companyId, keyword, shift, factory,
-                isOutOfWarranty, startDate, endDate, sortField, sortOrder, excludeLinked));
+            @RequestParam(defaultValue = "desc") String sortOrder) {
+        return Result.ok(service.query(page, pageSize, companyId, keyword, factory, warrantyStatus,
+                startDate, endDate, sortField, sortOrder));
     }
 
     @GetMapping("/{id}")
-    public Result<OriginalRecord> getById(@PathVariable Long id) {
+    public Result<UnwarrantedMaterial> getById(@PathVariable Long id) {
         return Result.ok(service.getById(id));
     }
 
-    @GetMapping("/copy/{id}")
-    public Result<OriginalRecord> copy(@PathVariable Long id) {
-        return Result.ok(service.copy(id));
-    }
-
-    @GetMapping("/lookup-warranty")
-    public Result<java.util.Map<String, Object>> lookupWarranty(@RequestParam String machineOffMaterial,
-                                                                 @RequestParam(required = false) String recordDate) {
-        return Result.ok(service.lookupWarranty(machineOffMaterial, recordDate));
-    }
-
-    @GetMapping("/lookup-156")
-    public Result<java.util.Map<String, String>> lookupFrom156(@RequestParam String materialCode) {
-        return Result.ok(service.lookupFrom156(materialCode));
-    }
-
-    @GetMapping("/lookup-delivery-ref")
-    public Result<java.util.Map<String, Object>> lookupDeliveryRef(
-            @RequestParam String machineOnMaterial,
-            @RequestParam(required = false) String recordDate,
-            @RequestParam(required = false) Long companyId) {
-        return Result.ok(service.lookupDeliveryRef(machineOnMaterial, recordDate, companyId));
-    }
-
     @PostMapping
-    public Result<OriginalRecord> create(@RequestBody OriginalRecord record) {
+    public Result<UnwarrantedMaterial> create(@RequestBody UnwarrantedMaterial record) {
         return Result.ok(service.create(record));
     }
 
     @PutMapping("/{id}")
-    public Result<OriginalRecord> update(@PathVariable Long id, @RequestBody OriginalRecord record) {
+    public Result<UnwarrantedMaterial> update(@PathVariable Long id, @RequestBody UnwarrantedMaterial record) {
         record.setId(id);
         return Result.ok(service.update(record));
     }
@@ -98,16 +74,33 @@ public class OriginalRecordController {
     public void exportExcel(HttpServletResponse response,
                             @RequestParam(required = false) Long companyId,
                             @RequestParam(required = false) String keyword,
-                            @RequestParam(required = false) String shift,
                             @RequestParam(required = false) String factory,
-                            @RequestParam(required = false) String isOutOfWarranty,
+                            @RequestParam(required = false) String warrantyStatus,
                             @RequestParam(required = false) String startDate,
                             @RequestParam(required = false) String endDate) {
-        service.exportExcel(response, companyId, keyword, shift, factory, isOutOfWarranty, startDate, endDate);
+        service.exportExcel(response, companyId, keyword, factory, warrantyStatus, startDate, endDate);
     }
 
     @GetMapping("/template")
     public void downloadTemplate(HttpServletResponse response) {
         service.downloadTemplate(response);
+    }
+
+    /** 选择维修记录后回填基础字段 */
+    @GetMapping("/lookup-original")
+    public Result<Map<String, Object>> lookupOriginal(@RequestParam Long id) {
+        return Result.ok(service.lookupOriginal(id));
+    }
+
+    /** 派生字段实时计算预览 */
+    @GetMapping("/compute")
+    public Result<Map<String, Object>> compute(
+            @RequestParam(required = false) String factory,
+            @RequestParam(required = false) String machineNo,
+            @RequestParam(required = false) String materialCode,
+            @RequestParam(required = false) String recordDate,
+            @RequestParam(required = false) Long companyId,
+            @RequestParam(required = false) Long excludeId) {
+        return Result.ok(service.compute(factory, machineNo, materialCode, recordDate, companyId, excludeId));
     }
 }

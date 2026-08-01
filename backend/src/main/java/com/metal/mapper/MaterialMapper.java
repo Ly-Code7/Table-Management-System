@@ -13,13 +13,13 @@ public interface MaterialMapper {
     @Select("SELECT * FROM material WHERE id = #{id}")
     Material findById(Long id);
 
-    @Insert("INSERT INTO material (company_id, category, material_name, spec_model, material_code, created_by, updated_by) " +
-            "VALUES (#{companyId}, #{category}, #{materialName}, #{specModel}, #{materialCode}, #{createdBy}, #{updatedBy})")
+    @Insert("INSERT INTO material (company_id, category, material_name, spec_model, material_code, remark, created_by, updated_by) " +
+            "VALUES (#{companyId}, #{category}, #{materialName}, #{specModel}, #{materialCode}, #{remark}, #{createdBy}, #{updatedBy})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(Material material);
 
     @Update("UPDATE material SET category=#{category}, material_name=#{materialName}, " +
-            "spec_model=#{specModel}, material_code=#{materialCode}, updated_by=#{updatedBy} WHERE id=#{id}")
+            "spec_model=#{specModel}, material_code=#{materialCode}, remark=#{remark}, updated_by=#{updatedBy} WHERE id=#{id}")
     int update(Material material);
 
     @Delete("DELETE FROM material WHERE id = #{id}")
@@ -33,7 +33,8 @@ public interface MaterialMapper {
             "<if test='companyId != null'>AND company_id = #{companyId}</if> " +
             "<if test='keyword != null and keyword != \"\"'>" +
             "AND (material_code LIKE CONCAT('%',#{keyword},'%') OR material_name LIKE CONCAT('%',#{keyword},'%') " +
-            "OR spec_model LIKE CONCAT('%',#{keyword},'%') OR category LIKE CONCAT('%',#{keyword},'%')) " +
+            "OR spec_model LIKE CONCAT('%',#{keyword},'%') OR category LIKE CONCAT('%',#{keyword},'%') " +
+            "OR remark LIKE CONCAT('%',#{keyword},'%')) " +
             "</if>" +
             "ORDER BY ${sortField} ${sortOrder} " +
             "</script>")
@@ -44,11 +45,25 @@ public interface MaterialMapper {
             "OR material_name LIKE CONCAT('%',#{keyword},'%') LIMIT 15")
     List<Material> searchByKeyword(@Param("keyword") String keyword);
 
+    /** 按物料编码精确查询（公司内），用于未过保物料自动回填类别 */
+    @Select("<script>" +
+            "SELECT * FROM material WHERE material_code = #{materialCode} " +
+            "<if test='companyId != null'>AND company_id = #{companyId}</if> LIMIT 1" +
+            "</script>")
+    Material findByCode(@Param("materialCode") String materialCode, @Param("companyId") Long companyId);
+
+    /** 按备注精确查询（公司内），用于新增物料时校验备注唯一 */
+    @Select("<script>" +
+            "SELECT * FROM material WHERE remark = #{remark} " +
+            "<if test='companyId != null'>AND company_id = #{companyId}</if> LIMIT 1" +
+            "</script>")
+    Material findByRemark(@Param("remark") String remark, @Param("companyId") Long companyId);
+
     /** 批量插入 */
     @Insert("<script>" +
-            "INSERT INTO material (company_id, category, material_name, spec_model, material_code, created_by, updated_by) VALUES " +
+            "INSERT INTO material (company_id, category, material_name, spec_model, material_code, remark, created_by, updated_by) VALUES " +
             "<foreach collection='list' item='r' separator=','>" +
-            "(#{r.companyId}, #{r.category}, #{r.materialName}, #{r.specModel}, #{r.materialCode}, #{r.createdBy}, #{r.updatedBy})" +
+            "(#{r.companyId}, #{r.category}, #{r.materialName}, #{r.specModel}, #{r.materialCode}, #{r.remark}, #{r.createdBy}, #{r.updatedBy})" +
             "</foreach>" +
             "</script>")
     int batchInsert(@Param("list") List<Material> records);

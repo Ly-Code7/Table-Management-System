@@ -14,6 +14,8 @@ public class MachineDetail {
     private String factory;
     @ExcelProperty(value = "机台号", index = 1)
     private String machineNo;
+    @ExcelIgnore
+    private String plantMachine;
     @ExcelProperty(value = "机台品牌", index = 2)
     private String machineBrand;
     @ExcelIgnore

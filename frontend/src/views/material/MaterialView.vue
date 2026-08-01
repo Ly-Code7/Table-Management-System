@@ -19,6 +19,7 @@
       <el-table-column prop="materialName" label="物料名称" width="140" show-overflow-tooltip />
       <el-table-column prop="specModel" label="规格型号" width="160" show-overflow-tooltip />
       <el-table-column prop="materialCode" label="物料编码" width="130" sortable="custom" />
+      <el-table-column prop="remark" label="备注" width="150" show-overflow-tooltip />
       <el-table-column prop="createdBy" label="创建人" width="100" />
       <el-table-column label="操作" width="190" fixed="right">
         <template #default="{ row }">
@@ -59,6 +60,9 @@
             </el-form-item>
           </el-col>
         </el-row>
+        <el-form-item label="备注">
+          <el-input v-model="form.remark" type="textarea" :rows="2" placeholder="备注" />
+        </el-form-item>
         <el-form-item label="语音输入">
           <el-input v-model="voiceText" type="textarea" :rows="3" :placeholder="voicePlaceholder" />
           <el-button type="primary" size="small" style="margin-top:8px" @click="handleVoiceParse" :loading="voiceLoading">解析</el-button>
@@ -107,7 +111,8 @@ const defaultForm = {
   category: '',
   materialName: '',
   specModel: '',
-  materialCode: ''
+  materialCode: '',
+  remark: ''
 }
 const form = reactive({ ...defaultForm })
 const rules = {
@@ -216,7 +221,7 @@ async function handleVoiceParse() {
     const fields = res.data.fields || {}
     const fc = res.data.filledCount || 0
     if (!fc) { ElMessage.warning('未识别到有效字段，请检查格式'); return }
-    const fm = { category: 'category', materialName: 'materialName', specModel: 'specModel', materialCode: 'materialCode' }
+    const fm = { category: 'category', materialName: 'materialName', specModel: 'specModel', materialCode: 'materialCode', remark: 'remark' }
     for (const [k, v] of Object.entries(fields)) { if (fm[k] && v) form[fm[k]] = v }
     ElMessage.success(`已填充 ${fc} 个字段，请核对`)
   } catch { ElMessage.error('解析失败') }

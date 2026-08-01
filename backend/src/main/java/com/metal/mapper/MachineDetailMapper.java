@@ -13,11 +13,11 @@ public interface MachineDetailMapper {
     @Select("SELECT * FROM machine_detail ORDER BY id")
     List<MachineDetail> findAll();
 
-    @Insert("INSERT INTO machine_detail (company_id, factory, machine_no, machine_brand, created_by, updated_by) VALUES (#{companyId}, #{factory}, #{machineNo}, #{machineBrand}, #{createdBy}, #{updatedBy})")
+    @Insert("INSERT INTO machine_detail (company_id, factory, machine_no, plant_machine, machine_brand, created_by, updated_by) VALUES (#{companyId}, #{factory}, #{machineNo}, #{plantMachine}, #{machineBrand}, #{createdBy}, #{updatedBy})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(MachineDetail record);
 
-    @Update("UPDATE machine_detail SET factory=#{factory}, machine_no=#{machineNo}, machine_brand=#{machineBrand}, updated_by=#{updatedBy} WHERE id=#{id}")
+    @Update("UPDATE machine_detail SET factory=#{factory}, machine_no=#{machineNo}, plant_machine=#{plantMachine}, machine_brand=#{machineBrand}, updated_by=#{updatedBy} WHERE id=#{id}")
     int update(MachineDetail record);
 
     @Delete("DELETE FROM machine_detail WHERE id = #{id}")
@@ -44,10 +44,16 @@ public interface MachineDetailMapper {
                                @Param("sortOrder") String sortOrder);
 
     @Insert("<script>" +
-            "INSERT INTO machine_detail (company_id, factory, machine_no, machine_brand, created_by, updated_by) VALUES " +
+            "INSERT INTO machine_detail (company_id, factory, machine_no, plant_machine, machine_brand, created_by, updated_by) VALUES " +
             "<foreach collection='list' item='r' separator=','>" +
-            "(#{r.companyId}, #{r.factory}, #{r.machineNo}, #{r.machineBrand}, #{r.createdBy}, #{r.updatedBy})" +
+            "(#{r.companyId}, #{r.factory}, #{r.machineNo}, #{r.plantMachine}, #{r.machineBrand}, #{r.createdBy}, #{r.updatedBy})" +
             "</foreach>" +
             "</script>")
     int batchInsert(@Param("list") List<MachineDetail> records);
+
+    /** 统计指定 厂房+机台 是否已存在（同一公司内唯一） */
+    @Select("<script>SELECT COUNT(*) FROM machine_detail WHERE plant_machine = #{plantMachine} AND company_id = #{companyId}" +
+            "<if test='excludeId != null'>AND id != #{excludeId}</if></script>")
+    int countByPlantMachine(@Param("plantMachine") String plantMachine, @Param("companyId") Long companyId,
+                            @Param("excludeId") Long excludeId);
 }

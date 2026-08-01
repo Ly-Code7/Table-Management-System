@@ -86,6 +86,10 @@ public interface OriginalRecordMapper {
             "<if test='isOutOfWarranty != null and isOutOfWarranty != \"\"'>AND is_out_of_warranty = #{isOutOfWarranty}</if> " +
             "<if test='startDate != null'>AND record_date &gt;= #{startDate}</if> " +
             "<if test='endDate != null'>AND record_date &lt;= #{endDate}</if> " +
+            "<if test='excludeLinked != null and excludeLinked'>" +
+            "AND id NOT IN (SELECT original_record_id FROM unwarranted_material WHERE original_record_id IS NOT NULL " +
+            "<if test='companyId != null'>AND company_id = #{companyId}</if>) " +
+            "</if>" +
             "ORDER BY ${sortField} ${sortOrder} " +
             "</script>")
     List<OriginalRecord> search(@Param("companyId") Long companyId, @Param("keyword") String keyword,
@@ -95,7 +99,8 @@ public interface OriginalRecordMapper {
                                 @Param("startDate") String startDate,
                                 @Param("endDate") String endDate,
                                 @Param("sortField") String sortField,
-                                @Param("sortOrder") String sortOrder);
+                                @Param("sortOrder") String sortOrder,
+                                @Param("excludeLinked") Boolean excludeLinked);
 
     @Select("SELECT COALESCE(SUM(quantity), 0) FROM original_record WHERE material_code = #{materialCode} " +
             "AND DATE_FORMAT(record_date, '%Y-%m') = #{month} AND company_id = #{companyId}")

@@ -47,6 +47,13 @@ public class MaterialService {
 
     @Transactional
     public Material create(Material material) {
+        // 备注唯一校验：同一公司内备注值不允许重复（备注为空时不校验）
+        if (material.getRemark() != null && !material.getRemark().isBlank()) {
+            Material dup = mapper.findByRemark(material.getRemark(), material.getCompanyId());
+            if (dup != null) {
+                throw new BizException("备注【" + material.getRemark() + "】已存在，不允许重复添加");
+            }
+        }
         String user = ServiceHelper.getCurrentUserName();
         material.setCreatedBy(user);
         material.setUpdatedBy(user);

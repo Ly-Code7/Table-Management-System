@@ -38,7 +38,7 @@ logs/
 *.swp
 *~
 .skills/superpower/
-金属厂--2607 .xlsx
+金属厂--2607*.xlsx
 
 # 配置文件 (含敏感信息，使用 application.example.yml 作为模板)
 backend/src/main/resources/application.yml

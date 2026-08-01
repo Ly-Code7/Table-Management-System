@@ -26,7 +26,12 @@ const routes = [
         component: () => import('../views/original-record/OriginalRecordView.vue'),
         meta: { title: '维修记录' }
       },
-      
+      {
+        path: 'unwarranted-material',
+        name: 'UnwarrantedMaterial',
+        component: () => import('../views/unwarranted-material/UnwarrantedMaterialView.vue'),
+        meta: { title: '未过保物料' }
+      },
       {
         path: 'delivery-stats',
         name: 'DeliveryStats',

@@ -18,6 +18,8 @@ public class Material {
     private Long companyId;
     @ExcelProperty(value = "物料编码", index = 3)
     private String materialCode;
+    @ExcelProperty(value = "备注", index = 4)
+    private String remark;
     @ExcelIgnore
     private String createdBy;
     @ExcelIgnore

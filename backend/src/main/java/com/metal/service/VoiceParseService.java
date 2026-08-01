@@ -147,6 +147,7 @@ public class VoiceParseService {
             put("materialName", new String[]{"物料名称", "名称"});
             put("specModel",    new String[]{"规格型号", "规格"});
             put("materialCode", new String[]{"物料编码", "编码"});
+            put("remark",       new String[]{"备注"});
         }}));
     }
 

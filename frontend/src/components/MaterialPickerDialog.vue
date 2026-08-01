@@ -4,6 +4,7 @@
     @update:model-value="$emit('update:modelValue', $event)"
     title="选择物料"
     width="800px"
+    class="material-picker-dialog"
     :close-on-click-modal="false"
     destroy-on-close
   >
@@ -30,12 +31,14 @@
       highlight-current-row
       @row-click="handleRowClick"
       style="width: 100%; margin-top: 12px"
+      max-height="350"
     >
-      <el-table-column prop="category" label="类别" width="120" />
-      <el-table-column prop="materialName" label="物料名称" width="160" show-overflow-tooltip />
-      <el-table-column prop="specModel" label="规格型号" width="180" show-overflow-tooltip />
-      <el-table-column prop="materialCode" label="物料编码" width="140" />
-      <el-table-column prop="createdBy" label="创建人" width="100" />
+      <el-table-column prop="category" label="类别" width="90" />
+      <el-table-column prop="materialName" label="物料名称" width="120" show-overflow-tooltip />
+      <el-table-column prop="specModel" label="规格型号" width="140" show-overflow-tooltip />
+      <el-table-column prop="materialCode" label="物料编码" width="165" />
+      <el-table-column prop="remark" label="备注" width="130" show-overflow-tooltip />
+      <el-table-column prop="createdBy" label="创建人" width="80" />
     </el-table>
 
     <!-- 分页 -->
@@ -144,7 +147,8 @@ function handleRowClick(row) {
     category: row.category,
     materialName: row.materialName,
     specModel: row.specModel,
-    materialCode: row.materialCode
+    materialCode: row.materialCode,
+    remark: row.remark
   })
   emit('update:modelValue', false)
 }
@@ -200,5 +204,24 @@ async function handleSubmit() {
 }
 :deep(.el-table__row) {
   cursor: pointer;
+}
+</style>
+
+<style>
+/* 固定弹窗尺寸：800 x 550，内容在 body 内滚动 */
+.material-picker-dialog {
+  height: 550px;
+  display: flex;
+  flex-direction: column;
+}
+.material-picker-dialog .el-dialog__header {
+  flex-shrink: 0;
+}
+.material-picker-dialog .el-dialog__body {
+  flex: 1;
+  overflow: auto;
+}
+.material-picker-dialog .el-dialog__footer {
+  flex-shrink: 0;
 }
 </style>

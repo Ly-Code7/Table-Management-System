@@ -50,12 +50,13 @@ public class OriginalRecordService {
     public PageResult<OriginalRecord> query(int page, int pageSize, Long companyId, String keyword,
                                              String shift, String factory,
                                              String isOutOfWarranty, String startDate, String endDate,
-                                             String sortField, String sortOrder) {
+                                             String sortField, String sortOrder,
+                                             Boolean excludeLinked) {
         sortField = ServiceHelper.sanitizeSortField(sortField, "id");
         sortOrder = ServiceHelper.sanitizeSortOrder(sortOrder);
         PageHelper.startPage(page, pageSize);
         List<OriginalRecord> list = mapper.search(companyId, keyword, shift, factory, isOutOfWarranty,
-                startDate, endDate, sortField, sortOrder);
+                startDate, endDate, sortField, sortOrder, excludeLinked);
         PageInfo<OriginalRecord> pageInfo = new PageInfo<>(list);
         return new PageResult<>(pageInfo.getTotal(), page, pageSize, list);
     }
@@ -241,7 +242,7 @@ public class OriginalRecordService {
         try {
             PageHelper.startPage(1, 0);
             List<OriginalRecord> list = mapper.search(companyId, keyword, shift, factory, isOutOfWarranty,
-                    startDate, endDate, "id", "desc");
+                    startDate, endDate, "id", "desc", null);
 
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
             response.setCharacterEncoding("UTF-8");

@@ -500,6 +500,7 @@ async function handleMaterialSelect(item) {
     form.category = matched.category || form.category
     form.materialName = matched.materialName || form.materialName
     form.specModel = matched.specModel || form.specModel
+    if (!form.remark && matched.remark) form.remark = matched.remark
   }
   // 再从最近的送货记录中回填更多字段（品牌、单位、厂房等）
   try {
@@ -524,6 +525,7 @@ function handleMaterialPicked(material) {
   form.materialName = material.materialName || ''
   form.specModel = material.specModel || ''
   form.materialCode = material.materialCode || ''
+  if (!form.remark && material.remark) form.remark = material.remark
   ElMessage.success('已回填物料信息')
 }
 

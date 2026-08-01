@@ -54,6 +54,8 @@ public class MachineDetailService {
         String user = ServiceHelper.getCurrentUserName();
         record.setCreatedBy(user);
         record.setUpdatedBy(user);
+        applyPlantMachine(record);
+        checkPlantMachineUnique(record.getPlantMachine(), record.getCompanyId(), null);
         mapper.insert(record);
         return record;
     }
@@ -63,8 +65,32 @@ public class MachineDetailService {
         MachineDetail exist = getById(record.getId());
         ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "编辑");
         record.setUpdatedBy(ServiceHelper.getCurrentUserName());
+        applyPlantMachine(record);
+        // 仅当 厂房+机台 值发生变化时才做唯一性校验（排除自身）
+        if (record.getPlantMachine() != null && !record.getPlantMachine().equals(exist.getPlantMachine())) {
+            checkPlantMachineUnique(record.getPlantMachine(), record.getCompanyId(), record.getId());
+        }
         mapper.update(record);
         return record;
+    }
+
+    /** 自动拼接 厂房+机台：factory-machineNo，任一缺失则置空 */
+    private void applyPlantMachine(MachineDetail record) {
+        if (record.getFactory() != null && record.getMachineNo() != null
+                && !record.getFactory().isBlank() && !record.getMachineNo().isBlank()) {
+            record.setPlantMachine(record.getFactory() + "-" + record.getMachineNo());
+        } else {
+            record.setPlantMachine(null);
+        }
+    }
+
+    /** 厂房+机台 唯一性校验（同一公司内） */
+    private void checkPlantMachineUnique(String plantMachine, Long companyId, Long excludeId) {
+        if (plantMachine == null || plantMachine.isBlank()) return;
+        Long cid = companyId != null ? companyId : 1L;
+        if (mapper.countByPlantMachine(plantMachine, cid, excludeId) > 0) {
+            throw new BizException("该厂房+机台 '" + plantMachine + "' 已存在");
+        }
     }
 
     @Transactional
@@ -105,6 +131,7 @@ public class MachineDetailService {
                         data.setCompanyId(companyId != null ? companyId : 1L);
                         data.setCreatedBy(user);
                         data.setUpdatedBy(user);
+                        applyPlantMachine(data);
                         batch.add(data);
                         if (batch.size() >= IMPORT_BATCH_SIZE) {
                             flushBatch(batch, counts);

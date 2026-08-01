@@ -23,6 +23,9 @@
       </el-table-column>
       <el-table-column prop="factory" label="厂房" width="120" />
       <el-table-column prop="machineNo" label="机台号" width="120" />
+      <el-table-column label="厂房+机台" width="150">
+        <template #default="{ row }">{{ row.plantMachine || (row.factory && row.machineNo ? row.factory + '-' + row.machineNo : '-') }}</template>
+      </el-table-column>
       <el-table-column prop="machineBrand" label="品牌" width="120" />
       <el-table-column prop="createdBy" label="创建人" width="100" />
       <el-table-column label="操作" width="190" fixed="right">
@@ -49,6 +52,11 @@
           <el-col :span="12">
             <el-form-item label="机台号" prop="machineNo">
               <el-input v-model="form.machineNo" placeholder="机台号" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="厂房+机台">
+              <el-input :model-value="form.factory && form.machineNo ? form.factory + '-' + form.machineNo : ''" disabled />
             </el-form-item>
           </el-col>
         </el-row>

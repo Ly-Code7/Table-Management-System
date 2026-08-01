@@ -61,7 +61,10 @@
             <el-icon><Notebook /></el-icon>
             <template #title>维修记录</template>
           </el-menu-item>
-          
+          <el-menu-item index="/unwarranted-material">
+            <el-icon><Aim /></el-icon>
+            <template #title>未过保物料</template>
+          </el-menu-item>
           <el-menu-item index="/delivery-stats">
             <el-icon><DataAnalysis /></el-icon>
             <template #title>超比统计</template>
@@ -118,7 +121,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   UserFilled, ArrowDown, Expand, Fold, Clock,
-  Document, Notebook, Setting, DataAnalysis, Coin,
+  Document, Notebook, Setting, DataAnalysis, Coin, Aim,
   Monitor, TrendCharts, Box, Collection, List, OfficeBuilding, User
 } from '@element-plus/icons-vue'
 import { useAuthStore } from '../stores/auth'
