@@ -2,6 +2,7 @@ package com.metal.mapper;
 
 import com.metal.entity.UnwarrantedMaterial;
 import org.apache.ibatis.annotations.*;
+import java.time.LocalDate;
 import java.util.List;
 
 @Mapper
@@ -63,20 +64,41 @@ public interface UnwarrantedMaterialMapper {
                                      @Param("sortField") String sortField,
                                      @Param("sortOrder") String sortOrder);
 
-    /** 统计同一唯一标识编号已出现的次数（可排除当前记录，用于计算"第几次"） */
+    /** 统计同一唯一标识编号已出现的总次数（含所有日期，可排除当前记录，用于计算"总次数"） */
     @Select("<script>SELECT COUNT(*) FROM unwarranted_material " +
             "WHERE unique_id = #{uniqueId} AND company_id = #{companyId} " +
             "<if test='excludeId != null'>AND id != #{excludeId}</if></script>")
     int countByUniqueId(@Param("uniqueId") String uniqueId, @Param("companyId") Long companyId,
                         @Param("excludeId") Long excludeId);
 
-    /** 查询同一唯一标识编号的上一条记录（按日期倒序取最近一条，可排除当前记录） */
+    /**
+     * 统计同一唯一标识编号截至某日期已出现的次数（用于计算"第几次"）。
+     * selfId 非空（编辑场景）时按"日期更早或同日且 id 更小"统计，同日多条按 id 稳定排序，互不干扰；
+     * selfId 为空（新增/导入场景）时按"日期 &lt;= 当天"统计，同日已有记录视为更早（追加语义）。
+     */
+    @Select("<script>SELECT COUNT(*) FROM unwarranted_material " +
+            "WHERE unique_id = #{uniqueId} AND company_id = #{companyId} " +
+            "<choose>" +
+            "<when test='selfId != null'>AND (record_date &lt; #{date} OR (record_date = #{date} AND id &lt; #{selfId}))</when>" +
+            "<otherwise>AND record_date &lt;= #{date}</otherwise>" +
+            "</choose>" +
+            "</script>")
+    int countByUniqueIdBefore(@Param("uniqueId") String uniqueId, @Param("companyId") Long companyId,
+                              @Param("date") LocalDate date, @Param("selfId") Long selfId);
+
+    /**
+     * 查询同一唯一标识编号截至某日期最近一条记录（按日期倒序），用于"上次日期/上次维修人"。
+     * 排序规则同 countByUniqueIdBefore（编辑场景同日按 id 稳定排序）。
+     */
     @Select("<script>SELECT * FROM unwarranted_material " +
             "WHERE unique_id = #{uniqueId} AND company_id = #{companyId} " +
-            "<if test='excludeId != null'>AND id != #{excludeId}</if> " +
+            "<choose>" +
+            "<when test='selfId != null'>AND (record_date &lt; #{date} OR (record_date = #{date} AND id &lt; #{selfId}))</when>" +
+            "<otherwise>AND record_date &lt;= #{date}</otherwise>" +
+            "</choose> " +
             "ORDER BY record_date DESC, id DESC LIMIT 1</script>")
-    UnwarrantedMaterial findLatestByUniqueId(@Param("uniqueId") String uniqueId, @Param("companyId") Long companyId,
-                                             @Param("excludeId") Long excludeId);
+    UnwarrantedMaterial findLatestByUniqueIdBefore(@Param("uniqueId") String uniqueId, @Param("companyId") Long companyId,
+                                                   @Param("date") LocalDate date, @Param("selfId") Long selfId);
 
     /** 批量插入（每批最多 500 条，提升大数据量导入性能） */
     @Insert("<script>" +

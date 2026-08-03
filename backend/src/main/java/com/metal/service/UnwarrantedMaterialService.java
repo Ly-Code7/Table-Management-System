@@ -33,7 +33,9 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 未过保物料 Service。
@@ -197,12 +199,20 @@ public class UnwarrantedMaterialService {
 
     // =============== Excel 导入 ===============
 
+    /**
+     * 批量导入 Excel 数据。
+     * 两阶段处理：先读取全部行（保留 Excel 行序），再按唯一标识编号分组、组内按（日期, 行序）排序后
+     * 逐条计算派生字段，最后分批插入。
+     * 一次性导入时同组记录互不可见，若逐条查库计算会出现同组同日多条"第几次/总次数"相同的错误；
+     * 原表行序即业务顺序（已全量验证），组内前序条数/上一条记录作为计算上下文，保证导入结果与原表一致。
+     */
     @Transactional
     public ImportResultDTO importExcel(MultipartFile file, Long companyId) {
         List<ImportResultDTO.FailDetail> failDetails = new ArrayList<>();
-        List<UnwarrantedMaterial> batch = new ArrayList<>(IMPORT_BATCH_SIZE);
+        List<UnwarrantedMaterial> all = new ArrayList<>();
         int[] counts = {0, 0, 0}; // total, success, fail
 
+        // 阶段一：读取全部行（行序 = Excel 行序）
         try (InputStream is = file.getInputStream()) {
             EasyExcel.read(is, UnwarrantedMaterial.class, new AnalysisEventListener<UnwarrantedMaterial>() {
                 @Override
@@ -217,27 +227,49 @@ public class UnwarrantedMaterialService {
                         if (data.getWarrantyStatus() == null || data.getWarrantyStatus().isBlank()) {
                             backfillWarrantyStatus(data);
                         }
-                        // 派生字段后端统一重算（覆盖文件里的派生值）
-                        applyCalculations(data);
-                        batch.add(data);
-                        if (batch.size() >= IMPORT_BATCH_SIZE) {
-                            flushBatch(batch, counts);
-                        }
+                        all.add(data);
                     } catch (Exception e) {
                         failDetails.add(new ImportResultDTO.FailDetail(counts[0], e.getMessage()));
                         counts[2]++;
                     }
                 }
-
-                @Override
-                public void doAfterAllAnalysed(AnalysisContext ctx) {
-                    if (!batch.isEmpty()) {
-                        flushBatch(batch, counts);
-                    }
-                }
             }).sheet().doRead();
         } catch (IOException e) {
             throw new BizException("文件读取失败: " + e.getMessage());
+        }
+
+        // 阶段二：同唯一标识编号分组，组内按 Excel 行序（读取顺序）逐条计算派生字段。
+        // 注意：不按日期重排——原表行序即业务顺序（已全量验证，少量组内日期乱序但第几次仍按行序编号），
+        // 组内前序条数/上一条记录作为计算上下文，保证导入结果与原表一致。
+        Map<String, List<UnwarrantedMaterial>> groups = new LinkedHashMap<>();
+        for (UnwarrantedMaterial r : all) {
+            if (hasGroupKey(r)) {
+                groups.computeIfAbsent(groupKey(r), k -> new ArrayList<>()).add(r);
+            } else {
+                // 无有效分组键的行：保持原有单条计算逻辑
+                applyCalculations(r);
+            }
+        }
+        for (List<UnwarrantedMaterial> g : groups.values()) {
+            UnwarrantedMaterial prev = null;
+            int extra = 0; // 组内排在本条之前的条数
+            for (UnwarrantedMaterial r : g) {
+                applyCalculations(r, extra, g.size(), prev);
+                prev = r;
+                extra++;
+            }
+        }
+
+        // 阶段三：分批插入
+        List<UnwarrantedMaterial> batch = new ArrayList<>(IMPORT_BATCH_SIZE);
+        for (UnwarrantedMaterial r : all) {
+            batch.add(r);
+            if (batch.size() >= IMPORT_BATCH_SIZE) {
+                flushBatch(batch, counts);
+            }
+        }
+        if (!batch.isEmpty()) {
+            flushBatch(batch, counts);
         }
 
         ImportResultDTO result = new ImportResultDTO();
@@ -366,10 +398,24 @@ public class UnwarrantedMaterialService {
     }
 
     /**
-     * 派生字段统一计算。覆盖前端传入值，保证一致性（参照 DeliveryStatsService.applyCalculations）。
+     * 派生字段统一计算（单条场景：新增/编辑/预览）。覆盖前端传入值，保证一致性（参照 DeliveryStatsService.applyCalculations）。
      * warrantyStatus 与 repairAmount 属于基础字段，此处不覆盖。
      */
     private void applyCalculations(UnwarrantedMaterial r) {
+        applyCalculations(r, 0, null, null);
+    }
+
+    /**
+     * 派生字段统一计算（批量导入场景带组上下文）。
+     * 一次性导入时同组（同唯一标识编号）记录尚未入库、互不可见，需要以组内前序条数/上一条记录补充顺序信息：
+     * 第几次 = 库中已有（≤ 当天）条数 + 组内前序条数 + 1；总次数 = 库中已有（全部日期）+ 本组条数；
+     * 上次日期/上次维修人优先取组内上一条记录（同日多条也正确）。
+     *
+     * @param groupExtra  组内排在本条之前的记录条数（非导入场景传 0）
+     * @param groupSize   本组记录总条数（非导入场景传 null，此时总次数 = 库中已有 + 1）
+     * @param prevInGroup 组内上一条记录（非导入场景传 null，此时查库取最近一条）
+     */
+    private void applyCalculations(UnwarrantedMaterial r, int groupExtra, Integer groupSize, UnwarrantedMaterial prevInGroup) {
         fillCategory(r);
         LocalDate date = r.getRecordDate();
         if (date != null) {
@@ -380,7 +426,7 @@ public class UnwarrantedMaterialService {
             r.setYearMonth(null);
         }
 
-        boolean hasKey = notBlank(r.getFactory()) && notBlank(r.getMachineNo()) && notBlank(r.getMaterialCode());
+        boolean hasKey = hasGroupKey(r);
         String uniqueId = null;
         if (hasKey) {
             // 唯一标识编号：厂房-机台物料编码（机台号与物料编码之间无分隔符，如 B5-H1115300812-00）
@@ -405,15 +451,17 @@ public class UnwarrantedMaterialService {
         }
 
         Long cid = r.getCompanyId();
-        Long excludeId = r.getId(); // create 时为 null，update 时为当前 id（排除自身）
-        int occurrence = mapper.countByUniqueId(uniqueId, cid, excludeId) + 1;
-        r.setOccurrenceNo(occurrence);
-        r.setTotalCount(occurrence);
+        Long selfId = r.getId(); // create/导入时为 null（同日已有记录视为更早，追加语义）；update 时为当前 id（同日按 id 稳定排序，互不干扰）
+        // 总次数：同一唯一标识编号出现的总次数 + 1（与日期无关）；批量导入时 + 本组全部条数
+        r.setTotalCount(mapper.countByUniqueId(uniqueId, cid, selfId) + (groupSize != null ? groupSize : 1));
+        // 第几次：截至当前日期的出现次数 + 组内前序条数 + 1，不计当前日期之后的记录
+        r.setOccurrenceNo(mapper.countByUniqueIdBefore(uniqueId, cid, date, selfId) + groupExtra + 1);
 
-        UnwarrantedMaterial prev = mapper.findLatestByUniqueId(uniqueId, cid, excludeId);
+        // 上次日期/上次维修人：批量导入时组内上一条记录优先；否则取库中距离当前日期最近一次（<=当前日期）的出现记录
+        UnwarrantedMaterial prev = prevInGroup != null ? prevInGroup : mapper.findLatestByUniqueIdBefore(uniqueId, cid, date, selfId);
         if (prev != null) {
             r.setLastDate(prev.getRecordDate());
-            r.setLastRepairPerson(occurrence > 1 ? prev.getRepairPerson() : null);
+            r.setLastRepairPerson(prev.getRepairPerson());
         } else {
             r.setLastDate(null);
             r.setLastRepairPerson(null);
@@ -430,5 +478,15 @@ public class UnwarrantedMaterialService {
             r.setOverSixMonths(ChronoUnit.MONTHS.between(r.getLastDate(), date) >= 6 ? "Y" : "N");
             r.setUsageMonths(String.valueOf(wholeMonths(r.getLastDate(), date)));
         }
+    }
+
+    /** 是否有有效分组键（厂房/机台号/物料编码齐全）——与唯一标识编号的计算条件一致 */
+    private boolean hasGroupKey(UnwarrantedMaterial r) {
+        return notBlank(r.getFactory()) && notBlank(r.getMachineNo()) && notBlank(r.getMaterialCode());
+    }
+
+    /** 导入分组的组键：公司 + 唯一标识编号（厂房-机台物料编码，与 applyCalculations 生成规则一致） */
+    private String groupKey(UnwarrantedMaterial r) {
+        return (r.getCompanyId() != null ? r.getCompanyId() : 1L) + "|" + r.getFactory() + "-" + r.getMachineNo() + r.getMaterialCode();
     }
 }
