@@ -89,6 +89,10 @@
             <el-icon><Collection /></el-icon>
             <template #title>156项</template>
           </el-menu-item>
+          <el-menu-item index="/board">
+            <el-icon><DataAnalysis /></el-icon>
+            <template #title>数据看板</template>
+          </el-menu-item>
           <el-menu-item index="/operation-log" v-if="authStore.isAdmin">
             <el-icon><List /></el-icon>
             <template #title>操作日志</template>

@@ -69,6 +69,12 @@ const routes = [
         meta: { title: '156项' }
       },
       {
+        path: 'board',
+        name: 'Board',
+        component: () => import('../views/board/BoardView.vue'),
+        meta: { title: '数据看板' }
+      },
+      {
         path: 'operation-log',
         name: 'OperationLog',
         component: () => import('../views/operation-log/OperationLogView.vue'),

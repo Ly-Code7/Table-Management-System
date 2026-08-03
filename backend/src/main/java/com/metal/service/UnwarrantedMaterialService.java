@@ -233,6 +233,11 @@ public class UnwarrantedMaterialService {
                         counts[2]++;
                     }
                 }
+
+                @Override
+                public void doAfterAllAnalysed(AnalysisContext ctx) {
+                    // 两阶段导入：解析阶段不写库，全部行读完后统一分组计算+分批插入
+                }
             }).sheet().doRead();
         } catch (IOException e) {
             throw new BizException("文件读取失败: " + e.getMessage());
