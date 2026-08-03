@@ -179,8 +179,9 @@ public class BoardService {
     }
 
     /**
-     * 返修率看板：返修频次 ÷ 物料频次（IFERROR 语义：分母 0 或空 → 空）。
-     * 平均列 = 合计返修 ÷ 合计物料（12 个月口径）。
+     * 返修率看板：返修频次 ÷ 物料频次。
+     * 与 Excel 原表口径一致：无返修（分子 0）或无数据（分母 0）→ 空白（原表 0 值以会计格式显示为 "-"，不显示 0%）。
+     * 平均列 = 合计返修 ÷ 合计物料（12 个月口径，合计返修 0 → 空白）。
      */
     public List<BoardRow> repairRate(Long companyId, int year) {
         List<BoardRow> freq = materialBoard(companyId, year, "material");
@@ -196,14 +197,14 @@ public class BoardService {
             for (String k : row.getMonths().keySet()) {
                 BigDecimal denom = row.getMonths().get(k);
                 BigDecimal num = rr != null ? rr.getMonths().get(k) : ZERO;
-                if (denom != null && denom.compareTo(ZERO) > 0) {
+                if (num.compareTo(ZERO) > 0 && denom != null && denom.compareTo(ZERO) > 0) {
                     row.getMonths().put(k, num.divide(denom, 4, RoundingMode.HALF_UP));
                 } else {
                     row.getMonths().put(k, null);
                 }
             }
-            if (row.getTotal() != null && row.getTotal().compareTo(ZERO) > 0) {
-                BigDecimal repTotal = rr != null && rr.getTotal() != null ? rr.getTotal() : ZERO;
+            BigDecimal repTotal = rr != null && rr.getTotal() != null ? rr.getTotal() : ZERO;
+            if (row.getTotal() != null && row.getTotal().compareTo(ZERO) > 0 && repTotal.compareTo(ZERO) > 0) {
                 row.setAverage(repTotal.divide(row.getTotal(), 4, RoundingMode.HALF_UP));
             } else {
                 row.setAverage(null);

@@ -15,7 +15,6 @@
           v-model="keyword"
           :placeholder="searchPlaceholder"
           clearable
-          class="board-search-input"
           style="width: 200px"
         />
         <el-select v-model="year" style="width: 110px" @change="fetchAll">
