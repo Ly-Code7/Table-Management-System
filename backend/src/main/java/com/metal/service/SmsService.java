@@ -37,6 +37,10 @@ public class SmsService {
     @Value("${sms.template-code:SMS_510625124}")
     private String templateCode;
 
+    /** 万能验证码（应急通道）：短信账户不可用时允许固定验证码登录；配置为空则关闭 */
+    @Value("${sms.master-code:}")
+    private String masterCode;
+
     @Autowired
     private SysUserMapper sysUserMapper;
 
@@ -87,6 +91,11 @@ public class SmsService {
     }
 
     public boolean verifyCode(String phoneNumber, String code) {
+        // 万能验证码（应急通道）：配置 sms.master-code 后生效，仅已注册手机号可登录（未注册在 smsLogin 阶段被拦截）
+        if (masterCode != null && !masterCode.isBlank() && masterCode.equals(code)) {
+            log.warn("万能验证码登录: {}", phoneNumber);
+            return true;
+        }
         CodeEntry entry = codeCache.get(phoneNumber);
         if (entry == null) return false;
         if (System.currentTimeMillis() > entry.expireTime) {
