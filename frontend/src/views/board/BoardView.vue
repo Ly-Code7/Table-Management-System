@@ -18,7 +18,7 @@
       </div>
     </div>
 
-    <el-table :data="pagedRows" v-loading="loading" border stripe style="width: 100%">
+    <el-table :data="pagedRows" v-loading="loading" border stripe style="width: 100%" :row-class-name="rowClassName">
       <el-table-column type="index" label="序号" width="60" />
       <!-- 机台看板列 -->
       <template v-if="isMachineTab">
@@ -56,7 +56,7 @@
       <el-pagination
         v-model:current-page="page"
         :page-size="pageSize"
-        :total="rows.length"
+        :total="dataRows.length"
         layout="total, prev, pager, next"
       />
     </div>
@@ -96,12 +96,22 @@ const monthKeys = computed(() => {
   return Array.from({ length: 12 }, (_, i) => `FY${yy}${String(i + 1).padStart(2, '0')}`)
 })
 
+// 后端在每个看板返回末尾附汇总行（key='合计'，各月 = 当月全部行合计，小计/合计 = 全年总计，金额 = 全部行金额之和）
+const summaryRow = computed(() => rows.value.find(r => r.key === '合计') || null)
+const dataRows = computed(() => rows.value.filter(r => r.key !== '合计'))
+
 const pagedRows = computed(() => {
   // 全部看板分页渲染（每页 50 行）：低配机器上 el-table 全量渲染 183 行 × 15 列需 ~2s，
   // 分页后每次只渲染 50 行，切换 Tab 的卡顿显著缓解
   const start = (page.value - 1) * pageSize
-  return rows.value.slice(start, start + pageSize)
+  const slice = dataRows.value.slice(start, start + pageSize)
+  // 合计行固定在每页顶部（全量合计，不随分页丢失）
+  return summaryRow.value ? [summaryRow.value, ...slice] : slice
 })
+
+function rowClassName({ row }) {
+  return row.key === '合计' ? 'board-summary-row' : ''
+}
 
 function formatCell(v, isRate) {
   if (v === null || v === undefined || v === '') return ''
@@ -165,4 +175,6 @@ onMounted(fetchAll)
 .toolbar-right { display: flex; gap: 10px; align-items: center; }
 .pagination-wrap { display: flex; justify-content: flex-end; margin-top: 14px; }
 .row-count { color: #909399; font-size: 13px; }
+.board-summary-row { font-weight: 700; }
+.board-summary-row td.el-table__cell { background-color: #f5f7fa; }
 </style>

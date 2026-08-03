@@ -1,11 +1,17 @@
 package com.metal.service;
 
 import com.alibaba.excel.EasyExcel;
+import com.alibaba.excel.write.handler.RowWriteHandler;
+import com.alibaba.excel.write.metadata.holder.WriteSheetHolder;
+import com.alibaba.excel.write.metadata.holder.WriteTableHolder;
 import com.alibaba.excel.write.style.column.LongestMatchColumnWidthStyleStrategy;
 import com.metal.common.BizException;
 import com.metal.entity.BoardRow;
 import com.metal.mapper.BoardMapper;
 import jakarta.servlet.http.HttpServletResponse;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.util.CellRangeAddress;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -39,6 +45,9 @@ public class BoardService {
 
     private static final BigDecimal ZERO = BigDecimal.ZERO;
 
+    /** 汇总行行键（各月 = 当月全部行合计，与 Excel 原表表头上方 SUMIF 行对齐） */
+    private static final String SUMMARY_KEY = "合计";
+
     /** 年度前缀：2026 -> FY26 */
     private String ymPrefix(int year) {
         return "FY" + String.format("%02d", year % 100);
@@ -59,6 +68,40 @@ public class BoardService {
         if (v instanceof BigDecimal bd) return bd;
         if (v instanceof Number n) return new BigDecimal(n.toString());
         return new BigDecimal(String.valueOf(v));
+    }
+
+    /**
+     * 汇总行：各月列 = 全部行当月合计（= 该列总和），小计/合计列 = 各月合计之和；
+     * 金额列（料号类看板 withAmount=true）= 全部行金额（单价×合计）之和。
+     * 对应 Excel 原表表头上方第 1 行的 SUMIF 汇总。
+     */
+    private BoardRow buildSummary(List<BoardRow> rows, List<String> keys, boolean withAmount) {
+        BoardRow summary = new BoardRow();
+        summary.setKey(SUMMARY_KEY);
+        BigDecimal sumTotal = ZERO;
+        for (String k : keys) {
+            BigDecimal v = ZERO;
+            for (BoardRow r : rows) {
+                BigDecimal cell = r.getMonths().get(k);
+                if (cell != null) v = v.add(cell);
+            }
+            summary.getMonths().put(k, v);
+            sumTotal = sumTotal.add(v);
+        }
+        summary.setTotal(sumTotal);
+        if (withAmount) {
+            BigDecimal sumAmount = ZERO;
+            for (BoardRow r : rows) {
+                if (r.getAmount() != null) sumAmount = sumAmount.add(r.getAmount());
+            }
+            summary.setAmount(sumAmount);
+        }
+        return summary;
+    }
+
+    /** BigDecimal 转导出文本（null -> 空串） */
+    private String fmt(BigDecimal v) {
+        return v == null ? "" : v.toPlainString();
     }
 
     /**
@@ -92,6 +135,7 @@ public class BoardService {
             row.setTotal(total);
             out.add(row);
         }
+        out.add(buildSummary(out, keys, false));
         return out;
     }
 
@@ -130,6 +174,7 @@ public class BoardService {
             row.setAmount(row.getPrice() != null ? row.getPrice().multiply(total) : null);
             out.add(row);
         }
+        out.add(buildSummary(out, keys, true));
         return out;
     }
 
@@ -142,8 +187,10 @@ public class BoardService {
         List<BoardRow> repair = materialBoard(companyId, year, "repair");
         Map<String, BoardRow> repairByKey = new HashMap<>();
         for (BoardRow r : repair) {
+            if (SUMMARY_KEY.equals(r.getKey())) continue; // 汇总行不参与返修率计算
             repairByKey.put(r.getKey(), r);
         }
+        freq.removeIf(r -> SUMMARY_KEY.equals(r.getKey())); // 返修率看板不展示合计行（Excel 原表无）
         for (BoardRow row : freq) {
             BoardRow rr = repairByKey.get(row.getKey());
             for (String k : row.getMonths().keySet()) {
@@ -172,31 +219,48 @@ public class BoardService {
         boolean isMachine = "repair-amount".equals(board) || "fault-frequency".equals(board);
         boolean isRate = "repair-rate".equals(board);
         List<BoardRow> rows;
-        List<String> extraHead;
         switch (board) {
-            case "repair-amount" -> { rows = machineBoard(companyId, year, "amount"); extraHead = List.of("小计"); }
-            case "fault-frequency" -> { rows = machineBoard(companyId, year, "count"); extraHead = List.of("小计"); }
-            case "material-frequency" -> { rows = materialBoard(companyId, year, "material"); extraHead = List.of("合计", "金额"); }
-            case "repair-frequency" -> { rows = materialBoard(companyId, year, "repair"); extraHead = List.of("合计", "金额"); }
-            case "repair-rate" -> { rows = repairRate(companyId, year); extraHead = List.of("平均"); }
+            case "repair-amount" -> rows = machineBoard(companyId, year, "amount");
+            case "fault-frequency" -> rows = machineBoard(companyId, year, "count");
+            case "material-frequency" -> rows = materialBoard(companyId, year, "material");
+            case "repair-frequency" -> rows = materialBoard(companyId, year, "repair");
+            case "repair-rate" -> rows = repairRate(companyId, year);
             default -> throw new BizException("未知看板: " + board);
         }
         List<String> keys = monthKeys(year);
-        List<List<String>> head = new ArrayList<>();
-        if (isMachine) {
-            head.add(List.of("厂房+机台号"));
-            head.add(List.of("厂房"));
-        } else {
-            head.add(List.of("类别"));
-            head.add(List.of("料号"));
-            head.add(List.of("配件名称"));
-            head.add(List.of("合约单价"));
+        // 汇总行与数据行分离：汇总行写表头上方第 1 行（复刻 Excel 原表 SUMIF 行），不进入数据区
+        BoardRow summary = null;
+        List<BoardRow> dataRows = new ArrayList<>(rows.size());
+        for (BoardRow r : rows) {
+            if (SUMMARY_KEY.equals(r.getKey())) summary = r;
+            else dataRows.add(r);
         }
-        for (String k : keys) head.add(List.of(k));
-        for (String h : extraHead) head.add(List.of(h));
+        // 表头：每列一个 List（EasyExcel 约定）。有汇总行时每列两层：第 1 层 = 该列全部行的合计（表头上方），第 2 层 = 正式表头
+        List<List<String>> head = new ArrayList<>();
+        boolean twoLevel = summary != null;
+        if (isMachine) {
+            head.add(twoLevel ? List.of("合计", "厂房+机台号") : List.of("厂房+机台号"));
+            head.add(twoLevel ? List.of("金额", "厂房") : List.of("厂房"));
+        } else {
+            head.add(twoLevel ? List.of("合计", "类别") : List.of("类别"));
+            head.add(twoLevel ? List.of("", "料号") : List.of("料号"));
+            head.add(twoLevel ? List.of("", "配件名称") : List.of("配件名称"));
+            head.add(twoLevel ? List.of("", "合约单价") : List.of("合约单价"));
+        }
+        for (String k : keys) {
+            head.add(twoLevel ? List.of(fmt(summary.getMonths().get(k)), k) : List.of(k));
+        }
+        if (isRate) {
+            head.add(twoLevel ? List.of(fmt(summary.getAverage()), "平均") : List.of("平均"));
+        } else {
+            head.add(twoLevel ? List.of(fmt(summary.getTotal()), isMachine ? "小计" : "合计") : List.of(isMachine ? "小计" : "合计"));
+            if (!isMachine) {
+                head.add(twoLevel ? List.of(fmt(summary.getAmount()), "金额") : List.of("金额"));
+            }
+        }
 
         List<List<Object>> data = new ArrayList<>();
-        for (BoardRow r : rows) {
+        for (BoardRow r : dataRows) {
             List<Object> line = new ArrayList<>();
             if (isMachine) {
                 line.add(r.getKey());
@@ -224,6 +288,7 @@ public class BoardService {
             OutputStream os = response.getOutputStream();
             EasyExcel.write(os).head(head)
                     .registerWriteHandler(new LongestMatchColumnWidthStyleStrategy())
+                    .registerWriteHandler(new UnmergeFirstHeadRowHandler())
                     .sheet("看板")
                     .doWrite(data);
             os.flush();
@@ -235,5 +300,33 @@ public class BoardService {
     /** 默认年份：当年 */
     public int defaultYear() {
         return LocalDate.now().getYear();
+    }
+
+    /**
+     * 取消表头第 1 行（汇总行）的横向自动合并：EasyExcel 会把相邻相同的表头值（如多个月份汇总同为 0）
+     * 合并成一个单元格，导致"某些表头上面没有数据"的观感。此处取消合并并把值回填到每个单元格。
+     */
+    private static class UnmergeFirstHeadRowHandler implements com.alibaba.excel.write.handler.RowWriteHandler {
+        @Override
+        public void afterRowDispose(WriteSheetHolder writeSheetHolder, WriteTableHolder writeTableHolder,
+                                    Row row, Integer relativeRowIndex, Boolean isHead) {
+            if (!Boolean.TRUE.equals(isHead) || row.getRowNum() != 0) return;
+            org.apache.poi.ss.usermodel.Sheet sheet = row.getSheet();
+            int n = sheet.getNumMergedRegions();
+            for (int i = n - 1; i >= 0; i--) {
+                CellRangeAddress range = sheet.getMergedRegion(i);
+                if (range.getFirstRow() == 0 && range.getLastRow() == 0 && range.getLastColumn() > range.getFirstColumn()) {
+                    Row r0 = sheet.getRow(0);
+                    Cell src = r0.getCell(range.getFirstColumn());
+                    String v = src != null ? src.getStringCellValue() : "";
+                    sheet.removeMergedRegion(i);
+                    for (int c = range.getFirstColumn() + 1; c <= range.getLastColumn(); c++) {
+                        Cell cell = r0.getCell(c);
+                        if (cell == null) cell = r0.createCell(c);
+                        cell.setCellValue(v);
+                    }
+                }
+            }
+        }
     }
 }
