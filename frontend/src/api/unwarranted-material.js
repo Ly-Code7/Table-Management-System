@@ -38,8 +38,8 @@ export function exportExcel(params) {
   })
 }
 
-export function lookupOriginal(id) {
-  return request.get('/unwarranted-material/lookup-original', { params: { id } })
+export function lookupOriginal(id, companyId) {
+  return request.get('/unwarranted-material/lookup-original', { params: { id, companyId } })
 }
 
 export function compute(params) {

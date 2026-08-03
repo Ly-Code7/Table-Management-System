@@ -95,11 +95,13 @@ public interface DeliveryRecordMapper {
     int countByMaterialSerialAndMonth(@Param("serial") String serial, @Param("month") String month,
                                       @Param("companyId") Long companyId);
 
-    /** 根据上机物料号（序列号或物料名称）查找送货记录，用于维修记录回填料号 */
-    @Select("SELECT * FROM delivery_record WHERE material_serial = #{keyword} OR material_name = #{keyword} ORDER BY id DESC LIMIT 1")
-    DeliveryRecord findByMaterialSerial(@Param("keyword") String keyword);
+    /** 根据上机物料号（序列号或物料名称）查找送货记录，用于维修记录回填料号（公司内） */
+    @Select("<script>SELECT * FROM delivery_record WHERE (material_serial = #{keyword} OR material_name = #{keyword}) " +
+            "AND (#{companyId} IS NULL OR company_id = #{companyId}) ORDER BY id DESC LIMIT 1</script>")
+    DeliveryRecord findByMaterialSerial(@Param("keyword") String keyword, @Param("companyId") Long companyId);
 
-    /** 根据物料编码查找最近的送货记录，用于自动回填 */
-    @Select("SELECT * FROM delivery_record WHERE material_code = #{materialCode} ORDER BY id DESC LIMIT 1")
-    DeliveryRecord findLatestByMaterialCode(@Param("materialCode") String materialCode);
+    /** 根据物料编码查找最近的送货记录，用于自动回填（公司内） */
+    @Select("<script>SELECT * FROM delivery_record WHERE material_code = #{materialCode} " +
+            "AND (#{companyId} IS NULL OR company_id = #{companyId}) ORDER BY id DESC LIMIT 1</script>")
+    DeliveryRecord findLatestByMaterialCode(@Param("materialCode") String materialCode, @Param("companyId") Long companyId);
 }

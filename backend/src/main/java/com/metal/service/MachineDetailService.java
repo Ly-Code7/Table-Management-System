@@ -76,12 +76,7 @@ public class MachineDetailService {
 
     /** 自动拼接 厂房+机台：factory-machineNo，任一缺失则置空 */
     private void applyPlantMachine(MachineDetail record) {
-        if (record.getFactory() != null && record.getMachineNo() != null
-                && !record.getFactory().isBlank() && !record.getMachineNo().isBlank()) {
-            record.setPlantMachine(record.getFactory() + "-" + record.getMachineNo());
-        } else {
-            record.setPlantMachine(null);
-        }
+        record.setPlantMachine(ServiceHelper.combineFactoryMachine(record.getFactory(), record.getMachineNo()));
     }
 
     /** 厂房+机台 唯一性校验（同一公司内） */

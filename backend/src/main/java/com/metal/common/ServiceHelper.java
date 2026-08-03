@@ -61,6 +61,17 @@ public final class ServiceHelper {
     }
 
     /**
+     * 拼接 厂房+机台号（如 "B5-H1"），任一字段为空时返回 null。
+     * 供机台详情、未过保物料等多处共用，保证拼接规则一致。
+     */
+    public static String combineFactoryMachine(String factory, String machineNo) {
+        if (factory == null || machineNo == null || factory.isBlank() || machineNo.isBlank()) {
+            return null;
+        }
+        return factory + "-" + machineNo;
+    }
+
+    /**
      * 判断当前用户是否为管理员
      *
      * @return true 如果是 admin

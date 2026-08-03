@@ -448,7 +448,7 @@ async function handleMachineOnMaterialBlur() {
   if (!serial || serial.trim() === '') return
   try {
     // 回填料号
-    const res = await lookupBySerial(serial.trim())
+    const res = await lookupBySerial(serial.trim(), companyStore.currentCompanyId)
     const data = res.data
     if (data && data.materialCode) {
       form.materialCode = data.materialCode

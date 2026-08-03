@@ -70,16 +70,18 @@ public class DeliveryRecordController {
         return Result.ok(service.copy(id));
     }
 
-    /** 根据物料编码查询最近的送货记录，用于新增时自动回填 */
+    /** 根据物料编码查询最近的送货记录，用于新增时自动回填（公司内） */
     @GetMapping("/lookup-by-code")
-    public Result<DeliveryRecord> lookupByCode(@RequestParam String materialCode) {
-        return Result.ok(service.getLatestByMaterialCode(materialCode));
+    public Result<DeliveryRecord> lookupByCode(@RequestParam String materialCode,
+                                               @RequestParam(required = false) Long companyId) {
+        return Result.ok(service.getLatestByMaterialCode(materialCode, companyId));
     }
 
-    /** 根据物料序列号查询送货记录，用于维修记录回填料号 */
+    /** 根据物料序列号查询送货记录，用于维修记录回填料号（公司内） */
     @GetMapping("/lookup-by-serial")
-    public Result<DeliveryRecord> lookupBySerial(@RequestParam String materialSerial) {
-        return Result.ok(service.getByMaterialSerial(materialSerial));
+    public Result<DeliveryRecord> lookupBySerial(@RequestParam String materialSerial,
+                                                 @RequestParam(required = false) Long companyId) {
+        return Result.ok(service.getByMaterialSerial(materialSerial, companyId));
     }
 
     @PostMapping("/import")

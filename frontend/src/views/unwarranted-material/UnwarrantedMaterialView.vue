@@ -367,7 +367,7 @@ async function handleCopy(row) {
 // 选择维修记录 → 回填基础字段 → 重算派生字段
 async function handleOriginalPicked(record) {
   try {
-    const res = await api.lookupOriginal(record.id)
+    const res = await api.lookupOriginal(record.id, companyStore.currentCompanyId)
     Object.assign(form, res.data)
     pickedDesc.value = `${form.recordDate || ''} ${form.factory || ''} ${form.machineNo || ''}`
     await refreshCompute()

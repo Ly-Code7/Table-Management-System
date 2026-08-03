@@ -10,6 +10,8 @@ import com.metal.common.BizException;
 import com.metal.common.PageResult;
 import com.metal.common.ServiceHelper;
 import com.metal.dto.ImportResultDTO;
+import com.metal.dto.UnwarrantedMaterialComputeDTO;
+import com.metal.dto.UnwarrantedMaterialLookupDTO;
 import com.metal.entity.Material;
 import com.metal.entity.OriginalRecord;
 import com.metal.entity.UnwarrantedMaterial;
@@ -31,9 +33,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 未过保物料 Service。
@@ -101,10 +101,10 @@ public class UnwarrantedMaterialService {
         return record;
     }
 
-    /** 校验：一个维修记录只允许被一个未过保物料记录关联 */
+    /** 校验：一个维修记录只允许被一个未过保物料记录关联（同一公司内） */
     private void checkOriginalRecordUniqueness(UnwarrantedMaterial record) {
-        if (record.getOriginalRecordId() != null
-                && mapper.countByOriginalRecordId(record.getOriginalRecordId(), record.getId()) > 0) {
+        if (record.getOriginalRecordId() != null && record.getCompanyId() != null
+                && mapper.countByOriginalRecordId(record.getOriginalRecordId(), record.getCompanyId(), record.getId()) > 0) {
             throw new BizException("该维修记录已被其他未过保物料记录关联");
         }
     }
@@ -131,38 +131,40 @@ public class UnwarrantedMaterialService {
     // =============== 关联维修记录回填 ===============
 
     /**
-     * 根据维修记录 id 返回可回填的基础字段。
+     * 根据维修记录 id 返回可回填的基础字段（仅限当前公司内的维修记录）。
+     * 记录不存在或跨公司时返回 null，前端保持表单原值。
      */
-    public Map<String, Object> lookupOriginal(Long originalId) {
-        Map<String, Object> result = new LinkedHashMap<>();
-        if (originalId == null) return result;
-        OriginalRecord o = originalRecordMapper.findById(originalId);
-        if (o == null) return result;
-        result.put("originalRecordId", originalId);
-        result.put("recordDate", o.getRecordDate() != null ? o.getRecordDate().toString() : null);
-        result.put("factory", o.getFactory());
-        result.put("machineNo", o.getMachineNo());
-        result.put("equipRepairDebugging", o.getFaultDescription());
-        result.put("repairMaterialOn", o.getMachineOnMaterial());
-        result.put("repairPerson", o.getRepairPerson());
+    public UnwarrantedMaterialLookupDTO lookupOriginal(Long originalId, Long companyId) {
+        if (originalId == null) return null;
+        Long cid = companyId != null ? companyId : 1L;
+        OriginalRecord o = originalRecordMapper.findByIdAndCompany(originalId, cid);
+        if (o == null) return null;
+        UnwarrantedMaterialLookupDTO dto = new UnwarrantedMaterialLookupDTO();
+        dto.setOriginalRecordId(originalId);
+        dto.setRecordDate(o.getRecordDate() != null ? o.getRecordDate().toString() : null);
+        dto.setFactory(o.getFactory());
+        dto.setMachineNo(o.getMachineNo());
+        dto.setEquipRepairDebugging(o.getFaultDescription());
+        dto.setRepairMaterialOn(o.getMachineOnMaterial());
+        dto.setRepairPerson(o.getRepairPerson());
         // 是否过保为"无"时不留存，其余回填原值
         String w = o.getIsOutOfWarranty();
-        result.put("warrantyStatus", "无".equals(w) ? "" : w);
-        result.put("partName", o.getPartName());
-        result.put("quantity", o.getQuantity());
-        result.put("materialCode", o.getMaterialCode());
+        dto.setWarrantyStatus("无".equals(w) ? "" : w);
+        dto.setPartName(o.getPartName());
+        dto.setQuantity(o.getQuantity());
+        dto.setMaterialCode(o.getMaterialCode());
         if (o.getRecordDate() != null) {
-            result.put("yearMonth", o.getRecordDate().format(YM_FMT));
+            dto.setYearMonth(o.getRecordDate().format(YM_FMT));
         }
-        return result;
+        return dto;
     }
 
     /**
      * 派生字段预览（纯读，不写库）。返回所有由前端展示的派生字段。
      */
-    public Map<String, Object> compute(String factory, String machineNo, String materialCode,
-                                       String recordDate, Long companyId, Long excludeId) {
-        Map<String, Object> result = new LinkedHashMap<>();
+    public UnwarrantedMaterialComputeDTO compute(String factory, String machineNo, String materialCode,
+                                                 String recordDate, Long companyId, Long excludeId) {
+        UnwarrantedMaterialComputeDTO dto = new UnwarrantedMaterialComputeDTO();
         try {
             UnwarrantedMaterial tmp = new UnwarrantedMaterial();
             tmp.setFactory(factory);
@@ -174,23 +176,23 @@ public class UnwarrantedMaterialService {
                 tmp.setRecordDate(LocalDate.parse(recordDate));
             }
             applyCalculations(tmp);
-            result.put("category", tmp.getCategory());
-            result.put("uniqueId", tmp.getUniqueId());
-            result.put("plantMachine", tmp.getPlantMachine());
-            result.put("yearMonth", tmp.getYearMonth());
-            result.put("currentDate", tmp.getCurrentDate() != null ? tmp.getCurrentDate().toString() : null);
-            result.put("occurrenceNo", tmp.getOccurrenceNo());
-            result.put("totalCount", tmp.getTotalCount());
-            result.put("lastDate", tmp.getLastDate() != null ? tmp.getLastDate().toString() : null);
-            result.put("lastDateNo", tmp.getLastDateNo());
-            result.put("currentDateNo", tmp.getCurrentDateNo());
-            result.put("overSixMonths", tmp.getOverSixMonths());
-            result.put("usageMonths", tmp.getUsageMonths());
-            result.put("lastRepairPerson", tmp.getLastRepairPerson());
+            dto.setCategory(tmp.getCategory());
+            dto.setUniqueId(tmp.getUniqueId());
+            dto.setPlantMachine(tmp.getPlantMachine());
+            dto.setYearMonth(tmp.getYearMonth());
+            dto.setCurrentDate(tmp.getCurrentDate() != null ? tmp.getCurrentDate().toString() : null);
+            dto.setOccurrenceNo(tmp.getOccurrenceNo());
+            dto.setTotalCount(tmp.getTotalCount());
+            dto.setLastDate(tmp.getLastDate() != null ? tmp.getLastDate().toString() : null);
+            dto.setLastDateNo(tmp.getLastDateNo());
+            dto.setCurrentDateNo(tmp.getCurrentDateNo());
+            dto.setOverSixMonths(tmp.getOverSixMonths());
+            dto.setUsageMonths(tmp.getUsageMonths());
+            dto.setLastRepairPerson(tmp.getLastRepairPerson());
         } catch (Exception ignored) {
             // 参数不合法时不返回派生值，前端保持原值
         }
-        return result;
+        return dto;
     }
 
     // =============== Excel 导入 ===============
@@ -384,7 +386,7 @@ public class UnwarrantedMaterialService {
             // 唯一标识编号：厂房-机台物料编码（机台号与物料编码之间无分隔符，如 B5-H1115300812-00）
             uniqueId = r.getFactory() + "-" + r.getMachineNo() + r.getMaterialCode();
             r.setUniqueId(uniqueId);
-            r.setPlantMachine(r.getFactory() + "-" + r.getMachineNo());
+            r.setPlantMachine(ServiceHelper.combineFactoryMachine(r.getFactory(), r.getMachineNo()));
         } else {
             r.setUniqueId(null);
             r.setPlantMachine(null);

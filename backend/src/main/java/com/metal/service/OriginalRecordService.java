@@ -172,7 +172,8 @@ public class OriginalRecordService {
                         if ((data.getMaterialCode() == null || data.getMaterialCode().isBlank())
                                 && data.getMachineOnMaterial() != null && !data.getMachineOnMaterial().isBlank()) {
                             try {
-                                com.metal.entity.DeliveryRecord delivery = deliveryRecordMapper.findByMaterialSerial(data.getMachineOnMaterial());
+                                com.metal.entity.DeliveryRecord delivery = deliveryRecordMapper.findByMaterialSerial(
+                                        data.getMachineOnMaterial(), companyId);
                                 if (delivery != null && delivery.getMaterialCode() != null) {
                                     data.setMaterialCode(delivery.getMaterialCode());
                                     if ((data.getPartName() == null || data.getPartName().isBlank()) && delivery.getMaterialName() != null) {

@@ -90,6 +90,9 @@
             </el-form-item>
           </el-col>
         </el-row>
+        <el-form-item label="备注">
+          <el-input v-model="form.remark" type="textarea" :rows="2" placeholder="备注（可为空）" />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="addDialogVisible = false">取消</el-button>
@@ -157,7 +160,7 @@ function handleRowClick(row) {
 const addDialogVisible = ref(false)
 const submitLoading = ref(false)
 const formRef = ref(null)
-const defaultForm = { id: null, category: '', materialName: '', specModel: '', materialCode: '' }
+const defaultForm = { id: null, category: '', materialName: '', specModel: '', materialCode: '', remark: '' }
 const form = reactive({ ...defaultForm })
 const rules = {
   materialName: [{ required: true, message: '请输入物料名称', trigger: 'blur' }],

@@ -114,16 +114,16 @@ public class DeliveryRecordService {
         return getById(id);
     }
 
-    /** 根据物料编码查询最近一条送货记录，用于新增时自动回填 */
-    public DeliveryRecord getLatestByMaterialCode(String materialCode) {
+    /** 根据物料编码查询最近一条送货记录，用于新增时自动回填（公司内） */
+    public DeliveryRecord getLatestByMaterialCode(String materialCode, Long companyId) {
         if (materialCode == null || materialCode.isBlank()) return null;
-        return mapper.findLatestByMaterialCode(materialCode);
+        return mapper.findLatestByMaterialCode(materialCode, companyId);
     }
 
-    /** 根据物料序列号查询送货记录，用于维修记录回填料号 */
-    public DeliveryRecord getByMaterialSerial(String materialSerial) {
+    /** 根据物料序列号查询送货记录，用于维修记录回填料号（公司内） */
+    public DeliveryRecord getByMaterialSerial(String materialSerial, Long companyId) {
         if (materialSerial == null || materialSerial.isBlank()) return null;
-        return mapper.findByMaterialSerial(materialSerial);
+        return mapper.findByMaterialSerial(materialSerial, companyId);
     }
 
     // =============== Excel 导入 ===============

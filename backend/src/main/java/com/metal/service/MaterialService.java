@@ -47,6 +47,8 @@ public class MaterialService {
 
     @Transactional
     public Material create(Material material) {
+        // 公司默认值：先确定 companyId，保证备注唯一校验在公司内生效，而不是全局唯一
+        if (material.getCompanyId() == null) material.setCompanyId(1L);
         // 备注唯一校验：同一公司内备注值不允许重复（备注为空时不校验）
         if (material.getRemark() != null && !material.getRemark().isBlank()) {
             Material dup = mapper.findByRemark(material.getRemark(), material.getCompanyId());

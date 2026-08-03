@@ -95,9 +95,11 @@ public interface UnwarrantedMaterialMapper {
             "</script>")
     int batchInsert(@Param("list") List<UnwarrantedMaterial> records);
 
-    /** 统计同一维修记录已被关联的次数（可排除当前记录，用于校验一个维修记录只允许关联一条未过保物料） */
+    /** 统计同一维修记录已被关联的次数（公司内，可排除当前记录，用于校验一个维修记录只允许关联一条未过保物料） */
     @Select("<script>SELECT COUNT(*) FROM unwarranted_material WHERE original_record_id = #{originalRecordId} " +
+            "AND company_id = #{companyId} " +
             "<if test='excludeId != null'>AND id != #{excludeId}</if></script>")
     int countByOriginalRecordId(@Param("originalRecordId") Long originalRecordId,
+                                @Param("companyId") Long companyId,
                                 @Param("excludeId") Long excludeId);
 }

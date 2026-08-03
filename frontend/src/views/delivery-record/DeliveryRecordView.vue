@@ -504,7 +504,7 @@ async function handleMaterialSelect(item) {
   }
   // 再从最近的送货记录中回填更多字段（品牌、单位、厂房等）
   try {
-    const res = await deliveryApi.lookupByCode(item.value)
+    const res = await deliveryApi.lookupByCode(item.value, companyStore.currentCompanyId)
     const dr = res.data
     if (dr) {
       if (!form.category && dr.category) form.category = dr.category

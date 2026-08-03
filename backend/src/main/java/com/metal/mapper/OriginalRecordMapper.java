@@ -11,6 +11,10 @@ public interface OriginalRecordMapper {
     @Select("SELECT * FROM original_record WHERE id = #{id}")
     OriginalRecord findById(Long id);
 
+    /** 公司内按 id 查询，用于跨表回填时防止读取其他公司的维修记录 */
+    @Select("SELECT * FROM original_record WHERE id = #{id} AND company_id = #{companyId}")
+    OriginalRecord findByIdAndCompany(@Param("id") Long id, @Param("companyId") Long companyId);
+
     @Insert("INSERT INTO original_record (company_id, `year_month`, record_date, shift, factory, serial_number, machine_no, " +
             "diagnostician, repair_person, repair_request_time, start_time, end_time, repair_hours, downtime_hours, " +
             "machine_model, fault_phenomenon, fault_description, material_code, part_name, quantity, " +

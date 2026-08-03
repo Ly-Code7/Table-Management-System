@@ -4,14 +4,14 @@ import com.metal.common.PageResult;
 import com.metal.common.Result;
 import com.metal.dto.BatchDeleteDTO;
 import com.metal.dto.ImportResultDTO;
+import com.metal.dto.UnwarrantedMaterialComputeDTO;
+import com.metal.dto.UnwarrantedMaterialLookupDTO;
 import com.metal.entity.UnwarrantedMaterial;
 import com.metal.service.UnwarrantedMaterialService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/unwarranted-material")
@@ -86,15 +86,16 @@ public class UnwarrantedMaterialController {
         service.downloadTemplate(response);
     }
 
-    /** 选择维修记录后回填基础字段 */
+    /** 选择维修记录后回填基础字段（公司内，防止跨公司读取维修记录） */
     @GetMapping("/lookup-original")
-    public Result<Map<String, Object>> lookupOriginal(@RequestParam Long id) {
-        return Result.ok(service.lookupOriginal(id));
+    public Result<UnwarrantedMaterialLookupDTO> lookupOriginal(@RequestParam Long id,
+                                                               @RequestParam(required = false) Long companyId) {
+        return Result.ok(service.lookupOriginal(id, companyId));
     }
 
     /** 派生字段实时计算预览 */
     @GetMapping("/compute")
-    public Result<Map<String, Object>> compute(
+    public Result<UnwarrantedMaterialComputeDTO> compute(
             @RequestParam(required = false) String factory,
             @RequestParam(required = false) String machineNo,
             @RequestParam(required = false) String materialCode,
