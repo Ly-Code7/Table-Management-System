@@ -11,6 +11,13 @@
         <el-radio-button label="repair-rate">物料返修率</el-radio-button>
       </el-radio-group>
       <div class="toolbar-right">
+        <el-input
+          v-model="keyword"
+          :placeholder="searchPlaceholder"
+          clearable
+          class="board-search-input"
+          style="width: 200px"
+        />
         <el-select v-model="year" style="width: 110px" @change="fetchAll">
           <el-option v-for="y in yearOptions" :key="y" :label="`${y}年`" :value="y" />
         </el-select>
@@ -56,7 +63,7 @@
       <el-pagination
         v-model:current-page="page"
         :page-size="pageSize"
-        :total="dataRows.length"
+        :total="filteredRows.length"
         layout="total, prev, pager, next"
       />
     </div>
@@ -91,6 +98,12 @@ const yearOptions = computed(() => {
 
 const isMachineTab = computed(() => ['repair-amount', 'fault-frequency'].includes(activeTab.value))
 
+// 搜索框：按当前看板维度适配（机台类搜机台号/厂房，料号类搜料号/配件名称/类别）
+const keyword = ref('')
+const searchPlaceholder = computed(() =>
+  isMachineTab.value ? '搜索机台号/厂房' : '搜索料号/配件名称/类别'
+)
+
 const monthKeys = computed(() => {
   const yy = String(year.value % 100).padStart(2, '0')
   return Array.from({ length: 12 }, (_, i) => `FY${yy}${String(i + 1).padStart(2, '0')}`)
@@ -100,11 +113,28 @@ const monthKeys = computed(() => {
 const summaryRow = computed(() => rows.value.find(r => r.key === '合计') || null)
 const dataRows = computed(() => rows.value.filter(r => r.key !== '合计'))
 
+// 按关键词过滤数据行（合计行不受搜索影响，始终为全量合计）
+const filteredRows = computed(() => {
+  const kw = keyword.value.trim().toLowerCase()
+  if (!kw) return dataRows.value
+  if (isMachineTab.value) {
+    return dataRows.value.filter(r =>
+      (r.key || '').toLowerCase().includes(kw) ||
+      (r.factory || '').toLowerCase().includes(kw)
+    )
+  }
+  return dataRows.value.filter(r =>
+    (r.key || '').toLowerCase().includes(kw) ||
+    (r.partName || '').toLowerCase().includes(kw) ||
+    (r.category || '').toLowerCase().includes(kw)
+  )
+})
+
 const pagedRows = computed(() => {
   // 全部看板分页渲染（每页 50 行）：低配机器上 el-table 全量渲染 183 行 × 15 列需 ~2s，
   // 分页后每次只渲染 50 行，切换 Tab 的卡顿显著缓解
   const start = (page.value - 1) * pageSize
-  const slice = dataRows.value.slice(start, start + pageSize)
+  const slice = filteredRows.value.slice(start, start + pageSize)
   // 合计行固定在每页顶部（全量合计，不随分页丢失）
   return summaryRow.value ? [summaryRow.value, ...slice] : slice
 })
@@ -125,6 +155,7 @@ function formatPercent(v) {
 }
 
 async function fetchAll() {
+  keyword.value = '' // 切换看板/年份/公司时重置搜索
   const cid = companyStore.currentCompanyId
   const key = `${activeTab.value}|${cid}|${year.value}`
   const hit = cache.get(key)
@@ -167,6 +198,8 @@ async function handleExport() {
 }
 
 watch(() => companyStore.currentCompanyId, () => fetchAll())
+// 搜索词变化时回到第一页
+watch(keyword, () => { page.value = 1 })
 onMounted(fetchAll)
 </script>
 
