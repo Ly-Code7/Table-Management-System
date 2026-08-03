@@ -346,6 +346,14 @@ public class OriginalRecordService {
         if (record.getRecordDate() != null) {
             record.setYearMonth(record.getRecordDate().format(YM_FMT));
         }
+        // 厂房+机台号（规则：厂房-机台号，两端去空格；任一为空则置空）
+        if (record.getFactory() != null && record.getMachineNo() != null) {
+            String f = record.getFactory().trim();
+            String m = record.getMachineNo().trim();
+            record.setPlantMachine(!f.isEmpty() && !m.isEmpty() ? f + "-" + m : null);
+        } else {
+            record.setPlantMachine(null);
+        }
         // 跨天修正 + 工时计算（单位：分钟）
         LocalDateTime start = record.getStartTime();
         LocalDateTime end = record.getEndTime();

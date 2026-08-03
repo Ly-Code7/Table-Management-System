@@ -116,6 +116,7 @@ CREATE TABLE `original_record` (
   `factory` varchar(100) DEFAULT NULL COMMENT '厂房',
   `serial_number` varchar(100) DEFAULT NULL COMMENT '序号',
   `machine_no` varchar(100) DEFAULT NULL COMMENT '机台号',
+  `plant_machine` varchar(100) DEFAULT NULL COMMENT '厂房+机台号（自动计算：厂房-机台号）',
   `diagnostician` varchar(50) DEFAULT NULL COMMENT '诊断人',
   `repair_person` varchar(50) DEFAULT NULL COMMENT '维修人',
   `repair_request_time` datetime DEFAULT NULL COMMENT '报修时间',

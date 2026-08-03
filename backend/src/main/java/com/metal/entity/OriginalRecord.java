@@ -28,6 +28,9 @@ public class OriginalRecord {
     private String serialNumber;
     @ExcelProperty(value = "机台号", index = 5)
     private String machineNo;
+    /** 厂房+机台号（自动计算：厂房-机台号，添加/编辑/导入时由后端计算，不参与导入导出） */
+    @ExcelIgnore
+    private String plantMachine;
     @ExcelProperty(value = "诊断人", index = 6)
     private String diagnostician;
     @ExcelProperty(value = "维修人", index = 7)

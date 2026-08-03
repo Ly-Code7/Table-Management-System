@@ -15,12 +15,12 @@ public interface OriginalRecordMapper {
     @Select("SELECT * FROM original_record WHERE id = #{id} AND company_id = #{companyId}")
     OriginalRecord findByIdAndCompany(@Param("id") Long id, @Param("companyId") Long companyId);
 
-    @Insert("INSERT INTO original_record (company_id, `year_month`, record_date, shift, factory, serial_number, machine_no, " +
+    @Insert("INSERT INTO original_record (company_id, `year_month`, record_date, shift, factory, serial_number, machine_no, plant_machine, " +
             "diagnostician, repair_person, repair_request_time, start_time, end_time, repair_hours, downtime_hours, " +
             "machine_model, fault_phenomenon, fault_description, material_code, part_name, quantity, " +
             "machine_on_material, machine_off_material, remark, confirmer, delivery_record_ref, document_no, " +
             "last_machine_on_time, is_out_of_warranty, created_by, updated_by) " +
-            "VALUES (#{companyId}, #{yearMonth}, #{recordDate}, #{shift}, #{factory}, #{serialNumber}, #{machineNo}, " +
+            "VALUES (#{companyId}, #{yearMonth}, #{recordDate}, #{shift}, #{factory}, #{serialNumber}, #{machineNo}, #{plantMachine}, " +
             "#{diagnostician}, #{repairPerson}, #{repairRequestTime}, #{startTime}, #{endTime}, " +
             "#{repairHours}, #{downtimeHours}, #{machineModel}, #{faultPhenomenon}, #{faultDescription}, " +
             "#{materialCode}, #{partName}, #{quantity}, #{machineOnMaterial}, #{machineOffMaterial}, " +
@@ -30,7 +30,7 @@ public interface OriginalRecordMapper {
     int insert(OriginalRecord record);
 
     @Update("UPDATE original_record SET `year_month`=#{yearMonth}, record_date=#{recordDate}, shift=#{shift}, " +
-            "factory=#{factory}, serial_number=#{serialNumber}, machine_no=#{machineNo}, " +
+            "factory=#{factory}, serial_number=#{serialNumber}, machine_no=#{machineNo}, plant_machine=#{plantMachine}, " +
             "diagnostician=#{diagnostician}, repair_person=#{repairPerson}, repair_request_time=#{repairRequestTime}, " +
             "start_time=#{startTime}, end_time=#{endTime}, repair_hours=#{repairHours}, downtime_hours=#{downtimeHours}, " +
             "machine_model=#{machineModel}, fault_phenomenon=#{faultPhenomenon}, fault_description=#{faultDescription}, " +
@@ -49,13 +49,13 @@ public interface OriginalRecordMapper {
 
     /** 批量插入（每批最多 500 条，提升大数据量导入性能） */
     @Insert("<script>" +
-            "INSERT INTO original_record (company_id, `year_month`, record_date, shift, factory, serial_number, machine_no, " +
+            "INSERT INTO original_record (company_id, `year_month`, record_date, shift, factory, serial_number, machine_no, plant_machine, " +
             "diagnostician, repair_person, repair_request_time, start_time, end_time, repair_hours, downtime_hours, " +
             "machine_model, fault_phenomenon, fault_description, material_code, part_name, quantity, " +
             "machine_on_material, machine_off_material, remark, confirmer, delivery_record_ref, document_no, " +
             "last_machine_on_time, is_out_of_warranty, created_by, updated_by) VALUES " +
             "<foreach collection='list' item='r' separator=','>" +
-            "(#{r.companyId}, #{r.yearMonth}, #{r.recordDate}, #{r.shift}, #{r.factory}, #{r.serialNumber}, #{r.machineNo}, " +
+            "(#{r.companyId}, #{r.yearMonth}, #{r.recordDate}, #{r.shift}, #{r.factory}, #{r.serialNumber}, #{r.machineNo}, #{r.plantMachine}, " +
             "#{r.diagnostician}, #{r.repairPerson}, #{r.repairRequestTime}, #{r.startTime}, #{r.endTime}, " +
             "#{r.repairHours}, #{r.downtimeHours}, #{r.machineModel}, #{r.faultPhenomenon}, #{r.faultDescription}, " +
             "#{r.materialCode}, #{r.partName}, #{r.quantity}, #{r.machineOnMaterial}, #{r.machineOffMaterial}, " +
