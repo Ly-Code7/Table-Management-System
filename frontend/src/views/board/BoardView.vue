@@ -54,13 +54,11 @@
 
     <div class="pagination-wrap">
       <el-pagination
-        v-if="isMachineTab"
         v-model:current-page="page"
         :page-size="pageSize"
         :total="rows.length"
         layout="total, prev, pager, next"
       />
-      <span v-else class="row-count">共 {{ rows.length }} 行</span>
     </div>
   </div>
 </template>
@@ -82,6 +80,10 @@ const exportLoading = ref(false)
 const page = ref(1)
 const pageSize = 50
 
+// 结果缓存：key = `${tab}|${companyId}|${year}`，切 Tab/年份/公司往返秒开，不重复请求
+const cache = new Map()
+const CACHE_MAX = 30
+
 const yearOptions = computed(() => {
   const y = new Date().getFullYear()
   return [y - 1, y, y + 1]
@@ -95,7 +97,8 @@ const monthKeys = computed(() => {
 })
 
 const pagedRows = computed(() => {
-  if (!isMachineTab.value) return rows.value
+  // 全部看板分页渲染（每页 50 行）：低配机器上 el-table 全量渲染 183 行 × 15 列需 ~2s，
+  // 分页后每次只渲染 50 行，切换 Tab 的卡顿显著缓解
   const start = (page.value - 1) * pageSize
   return rows.value.slice(start, start + pageSize)
 })
@@ -112,11 +115,23 @@ function formatPercent(v) {
 }
 
 async function fetchAll() {
+  const cid = companyStore.currentCompanyId
+  const key = `${activeTab.value}|${cid}|${year.value}`
+  const hit = cache.get(key)
+  if (hit) {
+    rows.value = hit
+    page.value = 1
+    return
+  }
   loading.value = true
   try {
-    const cid = companyStore.currentCompanyId
     const res = await api[tabApiMap[activeTab.value]](cid, year.value)
     rows.value = res.data || []
+    cache.set(key, rows.value)
+    if (cache.size > CACHE_MAX) {
+      // 淘汰最早插入的键，防止长时间使用内存膨胀
+      cache.delete(cache.keys().next().value)
+    }
     page.value = 1
   } catch { /* 拦截器已提示 */ }
   finally { loading.value = false }
