@@ -36,9 +36,12 @@
         <template #default="{ $index }">{{ sortOrder === 'desc' ? total - (queryParams.page - 1) * queryParams.pageSize - $index : (queryParams.page - 1) * queryParams.pageSize + $index + 1 }}</template>
       </el-table-column>
       <el-table-column prop="recordDate" label="日期" width="105" sortable="custom" />
+      <el-table-column prop="yearMonth" label="年+月" width="80" />
       <el-table-column prop="factory" label="厂房" width="80" />
       <el-table-column prop="machineNo" label="机台号" width="90" />
+      <el-table-column prop="repairPerson" label="维修人" width="90" />
       <el-table-column prop="plantMachine" label="厂房+机台号" width="120" show-overflow-tooltip />
+      <el-table-column prop="uniqueId" label="唯一标识编号" width="150" show-overflow-tooltip />
       <el-table-column prop="materialCode" label="物料编码" width="130" show-overflow-tooltip />
       <el-table-column prop="category" label="类别" width="110" show-overflow-tooltip />
       <el-table-column prop="partName" label="配件名称" width="120" show-overflow-tooltip />
@@ -48,14 +51,24 @@
           <el-tag :type="warrantyTagType(row.warrantyStatus)" size="small">{{ row.warrantyStatus || '-' }}</el-tag>
         </template>
       </el-table-column>
+      <el-table-column prop="originalRecordId" label="关联维修记录" width="110">
+        <template #default="{ row }">
+          <el-tag v-if="row.originalRecordId" size="small">{{ row.originalRecordId }}</el-tag>
+          <span v-else>-</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="occurrenceNo" label="第几次" width="70" />
       <el-table-column prop="totalCount" label="总次数" width="70" />
       <el-table-column prop="lastDate" label="上次日期" width="105" />
+      <el-table-column prop="lastDateNo" label="上次日期+编号" width="200" show-overflow-tooltip />
       <el-table-column prop="currentDate" label="本次日期" width="105" />
+      <el-table-column prop="currentDateNo" label="本次日期+编号" width="200" show-overflow-tooltip />
       <el-table-column prop="overSixMonths" label="超六个月" width="90" />
       <el-table-column prop="usageMonths" label="使用时长/月" width="100" />
       <el-table-column prop="lastRepairPerson" label="上次维修人" width="100" />
       <el-table-column prop="repairAmount" label="维修金额" width="100" />
+      <el-table-column prop="repairMaterialOn" label="维修物料装上" width="130" show-overflow-tooltip />
+      <el-table-column prop="equipRepairDebugging" label="设备维修调试" width="140" show-overflow-tooltip />
       <el-table-column prop="createdBy" label="创建人" width="90" />
       <el-table-column label="操作" width="180" fixed="right">
         <template #default="{ row }">
@@ -144,8 +157,8 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="维修金额（合约）">
-              <el-input-number v-model="form.repairAmount" :precision="2" :min="0" style="width: 100%" />
+            <el-form-item label="维修金额（合约）" label-width="130px">
+              <el-input-number v-model="form.repairAmount" :precision="3" :min="0" style="width: 100%" />
             </el-form-item>
           </el-col>
         </el-row>
