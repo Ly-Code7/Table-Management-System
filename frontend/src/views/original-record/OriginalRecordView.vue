@@ -31,7 +31,7 @@
 
     <el-table :data="list" v-loading="loading" border stripe @selection-change="handleSelectionChange" @sort-change="handleSortChange">
       <el-table-column type="selection" width="44" fixed="left" />
-      <el-table-column label="序号" width="80" prop="id" sortable="custom" fixed="left">
+      <el-table-column label="id" width="80" prop="id" sortable="custom" fixed="left">
         <template #default="{ row }">{{ row.id }}</template>
       </el-table-column>
       <!-- 日期信息 -->

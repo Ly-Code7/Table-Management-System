@@ -32,7 +32,7 @@
     <ToolBar :show-add="false" :show-batch-delete="false" :show-import="false" :show-template="false" @export="handleExport" />
 
     <el-table :data="list" v-loading="loading" border stripe @sort-change="handleSortChange">
-      <el-table-column label="序号" width="70" prop="id" sortable="custom">
+      <el-table-column label="id" width="70" prop="id" sortable="custom">
         <template #default="{ row }">{{ row.id }}</template>
       </el-table-column>
       <el-table-column prop="recordDate" label="日期" width="105" sortable="custom" />
