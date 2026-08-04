@@ -4,6 +4,7 @@ import com.metal.entity.DeliveryStats;
 import com.metal.entity.DeliveryStatsDaily;
 import com.metal.entity.SysConfig;
 import com.metal.mapper.*;
+import com.metal.service.DeliveryStatsService;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
@@ -11,7 +12,6 @@ import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
@@ -35,7 +35,10 @@ public class DeliveryStatsScheduler {
     @Autowired
     private SysConfigMapper sysConfigMapper;
 
-    private static final DateTimeFormatter YM_FMT = DateTimeFormatter.ofPattern("'FY'yyMM");
+    /** 计算口径统一复用 Service（含约定比例数量/超比数量/超比含税金额公式），避免副本漂移 */
+    @Autowired
+    private DeliveryStatsService deliveryStatsService;
+
     private static final String DEFAULT_CRON = "0 0 3 * * *";
     private static final String CONFIG_KEY = "scheduler.cron";
 
@@ -98,7 +101,9 @@ public class DeliveryStatsScheduler {
     public void refreshCurrentMonthStats() {
         LocalDate now = LocalDate.now();
         String currentMonth = now.format(DateTimeFormatter.ofPattern("yyyy-MM"));
-        String yearMonth = now.format(YM_FMT);
+        // 注意：delivery_stats.year_month 存的是 yyyy-MM 格式（FY 格式是 unwarranted_material 表的约定）。
+        // 曾用 FY 格式查询导致永远查不到记录、定时刷新空转。
+        String yearMonth = currentMonth;
 
         List<DeliveryStats> statsList = deliveryStatsMapper.findByYearMonth(yearMonth, null);
 
@@ -115,7 +120,7 @@ public class DeliveryStatsScheduler {
             stats.setMachineOnQuantity(machineOnQty);
             stats.setMonthRepair(repairQty);
 
-            applyCalculations(stats);
+            deliveryStatsService.applyCalculations(stats);
             deliveryStatsMapper.update(stats);
 
             dailyMapper.deleteByStatId(stats.getId());
@@ -137,25 +142,6 @@ public class DeliveryStatsScheduler {
                 dailies.add(daily);
             }
             if (!dailies.isEmpty()) dailyMapper.batchInsert(dailies);
-        }
-    }
-
-    private void applyCalculations(DeliveryStats record) {
-        if (record.getMachineCount() != null && record.getUnitUsage() != null && record.getRatio() != null) {
-            record.setAgreedRatioQuantity(
-                    record.getUnitUsage()
-                            .multiply(record.getRatio())
-                            .multiply(BigDecimal.valueOf(record.getMachineCount()))
-                            .setScale(4, RoundingMode.HALF_UP));
-        }
-        int delivery = record.getDeliveryQuantity() != null ? record.getDeliveryQuantity() : 0;
-        int repair = record.getMonthRepair() != null ? record.getMonthRepair() : 0;
-        record.setExcessQuantity(BigDecimal.valueOf(delivery - repair));
-        if (record.getExcessQuantity() != null && record.getUnitPriceWithTax() != null) {
-            record.setExcessAmountWithTax(
-                    record.getUnitPriceWithTax()
-                            .multiply(record.getExcessQuantity())
-                            .divide(BigDecimal.valueOf(1.13), 4, RoundingMode.HALF_UP));
         }
     }
 }

@@ -167,6 +167,9 @@ public class DeliveryStatsService {
                                 data.setRatio(r.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
                             }
                         }
+                        // 派生字段统一重算（年月/约定比例数量/超比数量/超比含税金额），
+                        // 与新增/编辑/批量刷新口径一致，防止 Excel 原值或空值入库
+                        applyCalculations(data);
                         // 提取每日明细
                         java.util.Map<Integer, BigDecimal> dailies = getDayValues(data);
                         batch.add(data);
@@ -417,7 +420,12 @@ public class DeliveryStatsService {
         }
     }
 
-    private void applyCalculations(DeliveryStats record) {
+    /**
+     * 派生字段统一计算：年月（由统计日期生成）、比例（百分数转小数）、约定比例数量、超比数量、超比含税金额。
+     * 供新增/编辑/批量刷新/Excel 导入使用；DeliveryStatsScheduler 定时刷新也复用本方法，
+     * 保证所有入口计算口径一致（历史教训：Scheduler 曾自带一份漏减约定比例的副本导致口径漂移）。
+     */
+    public void applyCalculations(DeliveryStats record) {
         // 年月根据统计日期自动生成（如 2026-07-28 → 2026-07），覆盖前端传入值，保证一致性
         if (record.getStatDate() != null) {
             record.setYearMonth(record.getStatDate().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM")));
