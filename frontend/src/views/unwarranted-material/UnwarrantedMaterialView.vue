@@ -399,6 +399,7 @@ async function refreshCompute() {
       recordDate: form.recordDate,
       quantity: form.quantity,
       companyId: companyStore.currentCompanyId,
+      originalRecordId: form.originalRecordId || undefined,
       excludeId: form.id || undefined
     })
     Object.assign(form, res.data)
