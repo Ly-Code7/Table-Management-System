@@ -28,6 +28,10 @@ export function linkedCount(id) {
   return request.get(`/original-record/${id}/linked-count`)
 }
 
+export function linkedCounts(ids) {
+  return request.post('/original-record/linked-counts', { ids })
+}
+
 export function batchDelete(ids) {
   return request.post('/original-record/batch-delete', { ids })
 }

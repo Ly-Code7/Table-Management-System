@@ -28,11 +28,10 @@
       </el-form-item>
     </SearchForm>
 
-    <!-- 新增按钮隐藏：未过保物料数据由维修记录自动下推/同步维护 -->
-    <ToolBar :selected-count="selectedRows.length" :show-add="false" @batch-delete="batchDelete" @import="handleImport" @export="handleExport" @template="handleTemplateDownload" />
+    <!-- 彻底只读：数据由维修记录自动下推/同步维护，仅保留查看与导出 -->
+    <ToolBar :show-add="false" :show-batch-delete="false" :show-import="false" :show-template="false" @export="handleExport" />
 
-    <el-table :data="list" v-loading="loading" border stripe @selection-change="handleSelectionChange" @sort-change="handleSortChange">
-      <el-table-column type="selection" width="44" fixed="left" />
+    <el-table :data="list" v-loading="loading" border stripe @sort-change="handleSortChange">
       <el-table-column label="序号" width="70" prop="id" sortable="custom">
         <template #default="{ row }">{{ row.id }}</template>
       </el-table-column>
@@ -71,13 +70,6 @@
       <el-table-column prop="repairMaterialOn" label="上机物料" width="130" show-overflow-tooltip />
       <el-table-column prop="equipRepairDebugging" label="处理方式" width="140" show-overflow-tooltip />
       <el-table-column prop="createdBy" label="创建人" width="90" />
-      <el-table-column label="操作" width="180" fixed="right">
-        <template #default="{ row }">
-          <el-button link type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
-          <el-button link type="primary" size="small" @click="handleCopy(row)">复制</el-button>
-          <el-button link type="danger" size="small" @click="handleDelete(row.id)">删除</el-button>
-        </template>
-      </el-table-column>
     </el-table>
 
     <div class="pagination-wrap">
@@ -262,8 +254,6 @@ import { ElMessage } from 'element-plus'
 import * as api from '../../api/unwarranted-material'
 import { useCompanyStore } from '../../stores/company'
 import { usePagination } from '../../composables/usePagination'
-import { useTableSelection } from '../../composables/useTableSelection'
-import { useCrud } from '../../composables/useCrud'
 import { toSnakeCase, downloadBlob } from '../../utils'
 import PageHeader from '../../components/PageHeader.vue'
 import SearchForm from '../../components/SearchForm.vue'
@@ -274,8 +264,6 @@ const companyStore = useCompanyStore()
 const { list, total, loading, queryParams, fetchData, handlePageChange, handleSizeChange } = usePagination(
   (params) => api.getList({ ...params, companyId: companyStore.currentCompanyId })
 )
-const { selectedRows, handleSelectionChange } = useTableSelection()
-const { handleDelete, handleBatchDelete } = useCrud(api, doFetch)
 
 const searchForm = reactive({ keyword: '', factory: '', warrantyStatus: '', dateRange: [] })
 const dialogVisible = ref(false)
@@ -431,27 +419,6 @@ async function handleSubmit() {
   } finally { submitLoading.value = false }
 }
 
-function batchDelete() {
-  handleBatchDelete(selectedRows.value.map(r => r.id))
-}
-
-function handleImport() {
-  const input = document.createElement('input')
-  input.type = 'file'
-  input.accept = '.xlsx,.xls'
-  input.onchange = async (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    try {
-      const res = await api.importExcel(file, companyStore.currentCompanyId)
-      const d = res.data
-      ElMessage.success(`导入完成：成功 ${d.success} 条，失败 ${d.fail} 条`)
-      doFetch()
-    } catch { /* error handled in interceptor */ }
-  }
-  input.click()
-}
-
 async function handleExport() {
   try {
     const response = await api.exportExcel({
@@ -462,14 +429,6 @@ async function handleExport() {
     })
     downloadBlob(response.data, '未过保物料.xlsx')
     ElMessage.success('导出成功')
-  } catch { /* error handled */ }
-}
-
-async function handleTemplateDownload() {
-  try {
-    const response = await api.downloadTemplate()
-    downloadBlob(response.data, '未过保物料模板.xlsx')
-    ElMessage.success('模板下载成功')
   } catch { /* error handled */ }
 }
 

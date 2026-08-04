@@ -287,7 +287,6 @@ import { lookupBySerial } from '../../api/delivery-record'
 import { useCompanyStore } from '../../stores/company'
 import { usePagination } from '../../composables/usePagination'
 import { useTableSelection } from '../../composables/useTableSelection'
-import { useCrud } from '../../composables/useCrud'
 import { toSnakeCase, getYearMonth, downloadBlob } from '../../utils'
 import PageHeader from '../../components/PageHeader.vue'
 import SearchForm from '../../components/SearchForm.vue'
@@ -298,7 +297,6 @@ const { list, total, loading, queryParams, fetchData, handlePageChange, handleSi
   (params) => api.getList({ ...params, companyId: companyStore.currentCompanyId })
 )
 const { selectedRows, handleSelectionChange } = useTableSelection()
-const { handleBatchDelete } = useCrud(api, doFetch)
 
 // 自定义删除：预检该维修记录在未过保物料表中的关联数量，有关联时提示将一并删除
 async function handleDelete(id) {
@@ -320,6 +318,37 @@ async function handleDelete(id) {
     })
     await api.remove(id)
     ElMessage.success('删除成功')
+    doFetch()
+  } catch {
+    // 取消删除
+  }
+}
+
+// 批量删除：预检选中记录的关联总数，有关联时提示将一并删除
+async function batchDelete() {
+  const ids = selectedRows.value.map(r => r.id)
+  if (ids.length === 0) {
+    ElMessage.warning('请选择要删除的记录')
+    return
+  }
+  try {
+    let message = `确定要删除选中的 ${ids.length} 条记录吗？`
+    try {
+      const res = await api.linkedCounts(ids)
+      const count = res?.data?.count ?? 0
+      if (count > 0) {
+        message = `选中的 ${ids.length} 条维修记录在未过保物料表中共有 ${count} 条关联记录，删除将一并删除，确定删除吗？`
+      }
+    } catch {
+      // 预检失败按普通删除处理
+    }
+    await ElMessageBox.confirm(message, '批量删除确认', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await api.batchDelete(ids)
+    ElMessage.success('批量删除成功')
     doFetch()
   } catch {
     // 取消删除
@@ -500,10 +529,6 @@ function warrantyTagType(val) {
   if (val === '未过保') return 'success'
   if (val === '已过保') return 'danger'
   return 'info'
-}
-
-function batchDelete() {
-  handleBatchDelete(selectedRows.value.map(r => r.id))
 }
 
 function handleImport() {

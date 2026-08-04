@@ -4,20 +4,20 @@
       <el-icon><Plus /></el-icon>
       <span>新增</span>
     </el-button>
-    <el-button type="danger" plain @click="$emit('batch-delete')" :disabled="selectedCount === 0">
+    <el-button v-if="showBatchDelete" type="danger" plain @click="$emit('batch-delete')" :disabled="selectedCount === 0">
       <el-icon><Delete /></el-icon>
       <span>批量删除</span>
       <span v-if="selectedCount > 0">({{ selectedCount }})</span>
     </el-button>
-    <el-button plain @click="$emit('import')">
+    <el-button v-if="showImport" plain @click="$emit('import')">
       <el-icon><Upload /></el-icon>
       <span>导入</span>
     </el-button>
-    <el-button plain @click="$emit('export')">
+    <el-button v-if="showExport" plain @click="$emit('export')">
       <el-icon><Download /></el-icon>
       <span>导出</span>
     </el-button>
-    <el-button plain @click="$emit('template')">
+    <el-button v-if="showTemplate" plain @click="$emit('template')">
       <el-icon><Document /></el-icon>
       <span>模板下载</span>
     </el-button>
@@ -32,6 +32,22 @@ defineProps({
     default: 0
   },
   showAdd: {
+    type: Boolean,
+    default: true
+  },
+  showBatchDelete: {
+    type: Boolean,
+    default: true
+  },
+  showImport: {
+    type: Boolean,
+    default: true
+  },
+  showExport: {
+    type: Boolean,
+    default: true
+  },
+  showTemplate: {
     type: Boolean,
     default: true
   }
