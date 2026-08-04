@@ -91,6 +91,8 @@ public class OriginalRecordService {
         applyCalculations(record);
         record.setUpdatedBy(ServiceHelper.getCurrentUserName());
         mapper.update(record);
+        // 同步已下推的未过保物料：已有关联则回填+重算；无关联且数量>=1 则下推
+        unwarrantedMaterialService.pushFromOriginalRecord(record);
         return record;
     }
 
@@ -98,6 +100,8 @@ public class OriginalRecordService {
     public void delete(Long id) {
         OriginalRecord exist = getById(id);
         ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "删除");
+        // 级联删除关联的未过保物料（前端已提示"有关联记录，删除将一并删除"）
+        unwarrantedMaterialService.deleteByOriginalRecordId(id, exist.getCompanyId());
         mapper.deleteById(id);
     }
 
@@ -110,7 +114,18 @@ public class OriginalRecordService {
                 ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "删除");
             }
         }
+        // 级联删除关联的未过保物料（前端已提示）
+        for (Long id : ids) {
+            OriginalRecord exist = getById(id);
+            unwarrantedMaterialService.deleteByOriginalRecordId(id, exist.getCompanyId());
+        }
         mapper.batchDelete(ids);
+    }
+
+    /** 某维修记录已关联的未过保物料条数（前端删除提示用） */
+    public int linkedCount(Long id) {
+        OriginalRecord exist = getById(id);
+        return unwarrantedMaterialService.countByOriginalRecordId(id, exist.getCompanyId());
     }
 
     public OriginalRecord copy(Long id) {
@@ -239,6 +254,12 @@ public class OriginalRecordService {
 
     private void flushBatch(List<OriginalRecord> batch, int[] counts) {
         mapper.batchInsert(batch);
+        // Excel 导入的维修记录同样触发下推：数量 >= 1 时自动下推未过保物料（同事务）
+        for (OriginalRecord r : batch) {
+            if (r.getQuantity() != null && r.getQuantity() >= 1) {
+                unwarrantedMaterialService.createFromOriginalRecord(r);
+            }
+        }
         counts[1] += batch.size();
         batch.clear();
     }

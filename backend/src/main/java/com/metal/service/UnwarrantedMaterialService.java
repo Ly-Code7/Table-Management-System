@@ -223,8 +223,73 @@ public class UnwarrantedMaterialService {
     public UnwarrantedMaterial createFromOriginalRecord(OriginalRecord o) {
         UnwarrantedMaterial uw = new UnwarrantedMaterial();
         uw.setCompanyId(o.getCompanyId() != null ? o.getCompanyId() : 1L);
+        fillFromOriginal(uw, o);
+        // 派生字段统一计算
+        applyCalculations(uw);
+        String user = ServiceHelper.getCurrentUserName();
+        uw.setCreatedBy(user);
+        uw.setUpdatedBy(user);
+        mapper.insert(uw);
+        return uw;
+    }
+
+    /**
+     * 编辑维修记录后同步已下推的未过保物料（OriginalRecordService.update 调用，同事务）。
+     * 该维修记录关联的全部未过保物料：基础字段重新回填 + 派生字段重新计算 + 更新。
+     * 未关联任何未过保物料时无操作（下推由 {@link #pushFromOriginalRecord} 按数量条件处理）。
+     */
+    @Transactional
+    public void syncFromOriginalRecord(OriginalRecord o) {
+        Long cid = o.getCompanyId() != null ? o.getCompanyId() : 1L;
+        List<UnwarrantedMaterial> linked = mapper.findByOriginalRecordId(o.getId(), cid);
+        String user = ServiceHelper.getCurrentUserName();
+        for (UnwarrantedMaterial uw : linked) {
+            fillFromOriginal(uw, o);
+            applyCalculations(uw);
+            uw.setUpdatedBy(user);
+            mapper.update(uw);
+        }
+    }
+
+    /**
+     * 维修记录保存（新增/编辑）后的统一入口：已有关联记录则同步更新；
+     * 无关联且数量 &gt;= 1 则下推新增（覆盖"编辑前数量&lt;1 未下推、编辑后数量&gt;=1"的场景）。
+     */
+    @Transactional
+    public void pushFromOriginalRecord(OriginalRecord o) {
+        Long cid = o.getCompanyId() != null ? o.getCompanyId() : 1L;
+        List<UnwarrantedMaterial> linked = mapper.findByOriginalRecordId(o.getId(), cid);
+        if (!linked.isEmpty()) {
+            String user = ServiceHelper.getCurrentUserName();
+            for (UnwarrantedMaterial uw : linked) {
+                fillFromOriginal(uw, o);
+                applyCalculations(uw);
+                uw.setUpdatedBy(user);
+                mapper.update(uw);
+            }
+        } else if (o.getQuantity() != null && o.getQuantity() >= 1) {
+            createFromOriginalRecord(o);
+        }
+    }
+
+    /** 删除维修记录时级联删除其关联的未过保物料（同事务） */
+    @Transactional
+    public void deleteByOriginalRecordId(Long originalRecordId, Long companyId) {
+        if (originalRecordId == null) return;
+        Long cid = companyId != null ? companyId : 1L;
+        mapper.deleteByOriginalRecordId(originalRecordId, cid);
+    }
+
+    /** 某维修记录在当前公司内已关联的未过保物料条数（前端删除提示用） */
+    public int countByOriginalRecordId(Long originalRecordId, Long companyId) {
+        if (originalRecordId == null) return 0;
+        Long cid = companyId != null ? companyId : 1L;
+        return mapper.countByOriginalRecordId(originalRecordId, cid, null);
+    }
+
+    /** 基础字段回填（映射规则与 lookupOriginal 一致） */
+    private void fillFromOriginal(UnwarrantedMaterial uw, OriginalRecord o) {
         uw.setOriginalRecordId(o.getId());
-        // 基础字段回填（映射规则与 lookupOriginal 一致）
         uw.setRecordDate(o.getRecordDate());
         uw.setFactory(o.getFactory());
         uw.setMachineNo(o.getMachineNo());
@@ -236,13 +301,6 @@ public class UnwarrantedMaterialService {
         uw.setPartName(o.getPartName());
         uw.setQuantity(o.getQuantity());
         uw.setMaterialCode(o.getMaterialCode());
-        // 派生字段统一计算
-        applyCalculations(uw);
-        String user = ServiceHelper.getCurrentUserName();
-        uw.setCreatedBy(user);
-        uw.setUpdatedBy(user);
-        mapper.insert(uw);
-        return uw;
     }
 
     // =============== Excel 导入 ===============

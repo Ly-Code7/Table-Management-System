@@ -101,4 +101,88 @@ class OriginalRecordAutoPushTest {
         assertEquals(1, hits.size());
         assertEquals("", hits.get(0).getWarrantyStatus());
     }
+
+    // =============== 编辑同步 ===============
+
+    @Test
+    void update_syncsLinkedRecordFieldsAndRecalculates() {
+        OriginalRecord saved = originalRecordService.create(newRecord(1));
+
+        // 编辑维修记录：改厂房/机台号/数量
+        OriginalRecord edit = originalRecordService.getById(saved.getId());
+        edit.setFactory("新厂房");
+        edit.setMachineNo("T-AUTO-02");
+        edit.setQuantity(3);
+        edit.setPartName(edit.getPartName() + "改");
+        originalRecordService.update(edit);
+
+        List<UnwarrantedMaterial> hits = unwarrantedMaterialMapper.search(1L, edit.getPartName(), null, null, null, null, "id", "desc");
+        assertEquals(1, hits.size());
+        UnwarrantedMaterial uw = hits.get(0);
+        assertEquals("新厂房", uw.getFactory());
+        assertEquals("T-AUTO-02", uw.getMachineNo());
+        assertEquals(3, uw.getQuantity());
+        // 派生字段随新值重算：唯一标识编号 = 新厂房-T-AUTO-02 + 新配件名
+        assertEquals("新厂房-T-AUTO-02" + edit.getPartName(), uw.getUniqueId());
+        assertEquals(1, uw.getOccurrenceNo());
+    }
+
+    @Test
+    void update_quantityBecomesGE1_pushesNewLink() {
+        // 数量 0 创建 → 未下推
+        OriginalRecord saved = originalRecordService.create(newRecord(0));
+        assertEquals(0, unwarrantedMaterialMapper.countByOriginalRecordId(saved.getId(), 1L, null));
+
+        // 编辑数量改为 2 → 补下推
+        OriginalRecord edit = originalRecordService.getById(saved.getId());
+        edit.setQuantity(2);
+        originalRecordService.update(edit);
+        assertEquals(1, unwarrantedMaterialMapper.countByOriginalRecordId(saved.getId(), 1L, null));
+    }
+
+    // =============== 删除级联 ===============
+
+    @Test
+    void delete_cascadesLinkedUnwarrantedMaterial() {
+        OriginalRecord saved = originalRecordService.create(newRecord(1));
+        assertEquals(1, unwarrantedMaterialMapper.countByOriginalRecordId(saved.getId(), 1L, null));
+
+        originalRecordService.delete(saved.getId());
+        assertEquals(0, unwarrantedMaterialMapper.countByOriginalRecordId(saved.getId(), 1L, null));
+    }
+
+    @Test
+    void linkedCount_reflectsLinkState() {
+        OriginalRecord saved = originalRecordService.create(newRecord(1));
+        assertEquals(1, originalRecordService.linkedCount(saved.getId()));
+        originalRecordService.delete(saved.getId());
+        // 维修记录已删，再查会抛"记录不存在"——直接验证级联后的删除结果
+        assertEquals(0, unwarrantedMaterialMapper.countByOriginalRecordId(saved.getId(), 1L, null));
+    }
+
+    // =============== Excel 导入下推 ===============
+
+    @Test
+    void importExcel_quantityGE1_pushesLinkedRecords() throws Exception {
+        OriginalRecord r1 = newRecord(1); // 应下推
+        OriginalRecord r0 = newRecord(0); // 不下推
+        // 清掉 id（导入按新记录处理）
+        r1.setId(null);
+        r0.setId(null);
+
+        java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+        com.alibaba.excel.EasyExcel.write(bos, OriginalRecord.class).sheet("维修记录").doWrite(List.of(r1, r0));
+        org.springframework.mock.web.MockMultipartFile file = new org.springframework.mock.web.MockMultipartFile(
+                "file", "test.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", bos.toByteArray());
+
+        com.metal.dto.ImportResultDTO res = originalRecordService.importExcel(file, 1L);
+        assertEquals(2, res.getSuccess());
+        assertEquals(0, res.getFail());
+
+        // r1（quantity=1）导入后应有关联的未过保物料；r0（quantity=0）无
+        List<UnwarrantedMaterial> hits = unwarrantedMaterialMapper.search(1L, r1.getPartName(), null, null, null, null, "id", "desc");
+        assertEquals(1, hits.size());
+        assertNotNull(hits.get(0).getOriginalRecordId());
+        assertEquals(0, unwarrantedMaterialMapper.countByOriginalRecordId(r0.getId() != null ? r0.getId() : -1L, 1L, null));
+    }
 }

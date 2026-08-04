@@ -28,12 +28,13 @@
       </el-form-item>
     </SearchForm>
 
-    <ToolBar :selected-count="selectedRows.length" @add="handleAdd" @batch-delete="batchDelete" @import="handleImport" @export="handleExport" @template="handleTemplateDownload" />
+    <!-- 新增按钮隐藏：未过保物料数据由维修记录自动下推/同步维护 -->
+    <ToolBar :selected-count="selectedRows.length" :show-add="false" @batch-delete="batchDelete" @import="handleImport" @export="handleExport" @template="handleTemplateDownload" />
 
     <el-table :data="list" v-loading="loading" border stripe @selection-change="handleSelectionChange" @sort-change="handleSortChange">
       <el-table-column type="selection" width="44" fixed="left" />
       <el-table-column label="序号" width="70" prop="id" sortable="custom">
-        <template #default="{ $index }">{{ sortOrder === 'desc' ? total - (queryParams.page - 1) * queryParams.pageSize - $index : (queryParams.page - 1) * queryParams.pageSize + $index + 1 }}</template>
+        <template #default="{ row }">{{ row.id }}</template>
       </el-table-column>
       <el-table-column prop="recordDate" label="日期" width="105" sortable="custom" />
       <el-table-column prop="yearMonth" label="年+月" width="80" />

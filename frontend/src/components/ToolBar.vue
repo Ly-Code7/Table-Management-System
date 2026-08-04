@@ -1,6 +1,6 @@
 <template>
   <div class="toolbar">
-    <el-button type="primary" @click="$emit('add')">
+    <el-button v-if="showAdd" type="primary" @click="$emit('add')">
       <el-icon><Plus /></el-icon>
       <span>新增</span>
     </el-button>
@@ -30,6 +30,10 @@ defineProps({
   selectedCount: {
     type: Number,
     default: 0
+  },
+  showAdd: {
+    type: Boolean,
+    default: true
   }
 })
 

@@ -63,6 +63,7 @@ public interface OriginalRecordMapper {
             "#{r.createdBy}, #{r.updatedBy})" +
             "</foreach>" +
             "</script>")
+    @Options(useGeneratedKeys = true, keyProperty = "id")
     int batchInsert(@Param("list") List<OriginalRecord> records);
 
     /**

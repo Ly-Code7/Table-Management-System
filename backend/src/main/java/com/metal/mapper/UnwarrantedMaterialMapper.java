@@ -124,4 +124,14 @@ public interface UnwarrantedMaterialMapper {
     int countByOriginalRecordId(@Param("originalRecordId") Long originalRecordId,
                                 @Param("companyId") Long companyId,
                                 @Param("excludeId") Long excludeId);
+
+    /** 查询某维修记录关联的全部未过保物料（编辑维修记录时同步更新用） */
+    @Select("SELECT * FROM unwarranted_material WHERE original_record_id = #{originalRecordId} AND company_id = #{companyId} ORDER BY id")
+    List<UnwarrantedMaterial> findByOriginalRecordId(@Param("originalRecordId") Long originalRecordId,
+                                                     @Param("companyId") Long companyId);
+
+    /** 删除某维修记录关联的全部未过保物料（删除维修记录时级联删除用） */
+    @Delete("DELETE FROM unwarranted_material WHERE original_record_id = #{originalRecordId} AND company_id = #{companyId}")
+    int deleteByOriginalRecordId(@Param("originalRecordId") Long originalRecordId,
+                                 @Param("companyId") Long companyId);
 }

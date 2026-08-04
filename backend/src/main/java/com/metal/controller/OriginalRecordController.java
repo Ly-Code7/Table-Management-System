@@ -41,6 +41,12 @@ public class OriginalRecordController {
         return Result.ok(service.getById(id));
     }
 
+    /** 某维修记录已关联的未过保物料条数（前端删除提示用） */
+    @GetMapping("/{id}/linked-count")
+    public Result<java.util.Map<String, Object>> linkedCount(@PathVariable Long id) {
+        return Result.ok(java.util.Map.of("count", service.linkedCount(id)));
+    }
+
     @GetMapping("/copy/{id}")
     public Result<OriginalRecord> copy(@PathVariable Long id) {
         return Result.ok(service.copy(id));

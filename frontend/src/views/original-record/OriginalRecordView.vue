@@ -32,7 +32,7 @@
     <el-table :data="list" v-loading="loading" border stripe @selection-change="handleSelectionChange" @sort-change="handleSortChange">
       <el-table-column type="selection" width="44" fixed="left" />
       <el-table-column label="序号" width="80" prop="id" sortable="custom" fixed="left">
-        <template #default="{ $index }">{{ sortOrder === 'desc' ? total - (queryParams.page - 1) * queryParams.pageSize - $index : (queryParams.page - 1) * queryParams.pageSize + $index + 1 }}</template>
+        <template #default="{ row }">{{ row.id }}</template>
       </el-table-column>
       <!-- 日期信息 -->
       <el-table-column prop="recordDate" label="日期" width="105" sortable="custom" />
@@ -278,7 +278,7 @@
 
 <script setup>
 import { ref, reactive, watch, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import * as api from '../../api/original-record'
 import { parseVoiceText } from '../../api/voice-parse'
 import { recognizeOcr } from '../../api/ocr'
@@ -298,7 +298,33 @@ const { list, total, loading, queryParams, fetchData, handlePageChange, handleSi
   (params) => api.getList({ ...params, companyId: companyStore.currentCompanyId })
 )
 const { selectedRows, handleSelectionChange } = useTableSelection()
-const { handleDelete, handleBatchDelete } = useCrud(api, doFetch)
+const { handleBatchDelete } = useCrud(api, doFetch)
+
+// 自定义删除：预检该维修记录在未过保物料表中的关联数量，有关联时提示将一并删除
+async function handleDelete(id) {
+  try {
+    let message = '确定要删除该条记录吗？'
+    try {
+      const res = await api.linkedCount(id)
+      const count = res?.data?.count ?? 0
+      if (count > 0) {
+        message = `该维修记录在未过保物料表中有 ${count} 条关联记录，删除将一并删除，确定删除吗？`
+      }
+    } catch {
+      // 预检失败按普通删除处理
+    }
+    await ElMessageBox.confirm(message, '删除确认', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await api.remove(id)
+    ElMessage.success('删除成功')
+    doFetch()
+  } catch {
+    // 取消删除
+  }
+}
 
 const searchForm = reactive({ keyword: '', shift: '', factory: '', isOutOfWarranty: '' })
 const dateRange = ref([])

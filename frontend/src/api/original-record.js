@@ -24,6 +24,10 @@ export function remove(id) {
   return request.delete(`/original-record/${id}`)
 }
 
+export function linkedCount(id) {
+  return request.get(`/original-record/${id}/linked-count`)
+}
+
 export function batchDelete(ids) {
   return request.post('/original-record/batch-delete', { ids })
 }
