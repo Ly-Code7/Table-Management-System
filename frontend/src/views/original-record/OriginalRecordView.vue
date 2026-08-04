@@ -375,7 +375,10 @@ const defaultForm = {
 const form = reactive({ ...defaultForm })
 const rules = {
   recordDate: [{ required: true, message: '请选择日期', trigger: 'change' }],
-  factory: [{ required: true, message: '请输入厂房', trigger: 'blur' }]
+  factory: [{ required: true, message: '请输入厂房', trigger: 'blur' }],
+  shift: [{ required: true, message: '请选择班次', trigger: 'change' }],
+  machineNo: [{ required: true, message: '请输入机台号', trigger: 'blur' }],
+  repairPerson: [{ required: true, message: '请输入维修人', trigger: 'blur' }]
 }
 
 function doFetch() {
