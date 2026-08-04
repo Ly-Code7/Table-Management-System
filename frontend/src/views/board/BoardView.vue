@@ -25,7 +25,9 @@
     </div>
 
     <el-table :data="pagedRows" v-loading="loading" border stripe style="width: 100%" :row-class-name="rowClassName">
-      <el-table-column type="index" label="序号" width="60" />
+      <el-table-column label="序号" width="60">
+        <template #default="{ row, $index }">{{ row.key === '合计' ? 0 : $index }}</template>
+      </el-table-column>
       <!-- 机台看板列 -->
       <template v-if="isMachineTab">
         <el-table-column prop="key" label="厂房+机台号" width="130" fixed="left" show-overflow-tooltip />
