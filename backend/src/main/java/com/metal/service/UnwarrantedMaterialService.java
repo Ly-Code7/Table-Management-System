@@ -464,11 +464,22 @@ public class UnwarrantedMaterialService {
             r.setRepairAmount(null);
         }
 
-        boolean hasKey = hasGroupKey(r);
+        // 唯一标识编号的配件名称：优先取关联维修记录（original_record）的配件名称（用户口径）；
+        // 无关联时（手动新增/导入）用本条记录自身配件名称（料号回填或手工填写）
+        String uniquePartName = r.getPartName();
+        if (r.getOriginalRecordId() != null && r.getCompanyId() != null) {
+            try {
+                OriginalRecord or = originalRecordMapper.findByIdAndCompany(r.getOriginalRecordId(), r.getCompanyId());
+                if (or != null && notBlank(or.getPartName())) uniquePartName = or.getPartName();
+            } catch (Exception ignored) {
+                // 维修记录查询失败不阻塞
+            }
+        }
+        boolean hasKey = notBlank(r.getFactory()) && notBlank(r.getMachineNo()) && notBlank(uniquePartName);
         String uniqueId = null;
         if (hasKey) {
             // 唯一标识编号：厂房-机台号配件名称（机台号与配件名称之间无分隔符，如 F6-A15主轴）
-            uniqueId = r.getFactory() + "-" + r.getMachineNo() + r.getPartName();
+            uniqueId = r.getFactory() + "-" + r.getMachineNo() + uniquePartName;
             r.setUniqueId(uniqueId);
             r.setPlantMachine(ServiceHelper.combineFactoryMachine(r.getFactory(), r.getMachineNo()));
         } else {
