@@ -31,7 +31,7 @@ public interface MachineDetailMapper {
             "<if test='companyId != null'>AND company_id = #{companyId}</if> " +
             "<if test='keyword != null and keyword != \"\"'>" +
             "AND (factory LIKE CONCAT('%',#{keyword},'%') OR machine_no LIKE CONCAT('%',#{keyword},'%') " +
-            "OR machine_brand LIKE CONCAT('%',#{keyword},'%')) " +
+            "OR machine_brand LIKE CONCAT('%',#{keyword},'%') OR id LIKE CONCAT('%',#{keyword},'%')) " +
             "</if>" +
             "<if test='factory != null and factory != \"\"'>AND factory = #{factory}</if> " +
             "<if test='brand != null and brand != \"\"'>AND machine_brand = #{brand}</if> " +

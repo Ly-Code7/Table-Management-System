@@ -47,7 +47,7 @@ public interface BaseMaterial156Mapper {
             "<if test='companyId != null'>AND company_id = #{companyId}</if> " +
             "<if test='keyword != null and keyword != \"\"'>" +
             "AND (material_code LIKE CONCAT('%',#{keyword},'%') OR system_name LIKE CONCAT('%',#{keyword},'%') " +
-            "OR part_name LIKE CONCAT('%',#{keyword},'%') OR category LIKE CONCAT('%',#{keyword},'%')) " +
+            "OR part_name LIKE CONCAT('%',#{keyword},'%') OR category LIKE CONCAT('%',#{keyword},'%') OR id LIKE CONCAT('%',#{keyword},'%')) " +
             "</if>" +
             "ORDER BY ${sortField} ${sortOrder} " +
             "</script>")

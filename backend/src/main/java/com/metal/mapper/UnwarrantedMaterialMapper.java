@@ -48,7 +48,7 @@ public interface UnwarrantedMaterialMapper {
             "OR part_name LIKE CONCAT('%',#{keyword},'%') OR material_code LIKE CONCAT('%',#{keyword},'%') " +
             "OR repair_person LIKE CONCAT('%',#{keyword},'%') OR unique_id LIKE CONCAT('%',#{keyword},'%') " +
             "OR plant_machine LIKE CONCAT('%',#{keyword},'%') OR equip_repair_debugging LIKE CONCAT('%',#{keyword},'%') " +
-            "OR repair_material_on LIKE CONCAT('%',#{keyword},'%')) " +
+            "OR repair_material_on LIKE CONCAT('%',#{keyword},'%') OR id LIKE CONCAT('%',#{keyword},'%')) " +
             "</if>" +
             "<if test='factory != null and factory != \"\"'>AND factory = #{factory}</if> " +
             "<if test='warrantyStatus != null and warrantyStatus != \"\"'>AND warranty_status = #{warrantyStatus}</if> " +

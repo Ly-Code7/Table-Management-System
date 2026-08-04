@@ -45,7 +45,7 @@ public interface SettlementMachineMapper {
             "<if test='companyId != null'>AND company_id = #{companyId}</if> " +
             "<if test='keyword != null and keyword != \"\"'>" +
             "AND (material_code LIKE CONCAT('%',#{keyword},'%') OR part_name LIKE CONCAT('%',#{keyword},'%') " +
-            "OR category LIKE CONCAT('%',#{keyword},'%') OR machine_model LIKE CONCAT('%',#{keyword},'%')) " +
+            "OR category LIKE CONCAT('%',#{keyword},'%') OR machine_model LIKE CONCAT('%',#{keyword},'%') OR id LIKE CONCAT('%',#{keyword},'%')) " +
             "</if>" +
             "<if test='machineModel != null and machineModel != \"\"'>AND machine_model = #{machineModel}</if> " +
             "<if test='statMonth != null and statMonth != \"\"'>AND stat_month = #{statMonth}</if> " +

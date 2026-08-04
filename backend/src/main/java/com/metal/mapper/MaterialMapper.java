@@ -34,7 +34,7 @@ public interface MaterialMapper {
             "<if test='keyword != null and keyword != \"\"'>" +
             "AND (material_code LIKE CONCAT('%',#{keyword},'%') OR material_name LIKE CONCAT('%',#{keyword},'%') " +
             "OR spec_model LIKE CONCAT('%',#{keyword},'%') OR category LIKE CONCAT('%',#{keyword},'%') " +
-            "OR remark LIKE CONCAT('%',#{keyword},'%')) " +
+            "OR remark LIKE CONCAT('%',#{keyword},'%') OR id LIKE CONCAT('%',#{keyword},'%')) " +
             "</if>" +
             "ORDER BY ${sortField} ${sortOrder} " +
             "</script>")

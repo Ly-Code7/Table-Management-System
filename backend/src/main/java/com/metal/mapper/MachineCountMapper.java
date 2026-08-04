@@ -40,7 +40,7 @@ public interface MachineCountMapper {
             "SELECT * FROM machine_count WHERE 1=1 " +
             "<if test='companyId != null'>AND company_id = #{companyId}</if> " +
             "<if test='keyword != null and keyword != \"\"'>" +
-            "AND machine_model LIKE CONCAT('%',#{keyword},'%') " +
+            "AND (machine_model LIKE CONCAT('%',#{keyword},'%') OR id LIKE CONCAT('%',#{keyword},'%')) " +
             "</if>" +
             "<if test='statMonth != null and statMonth != \"\"'>AND stat_month = #{statMonth}</if> " +
             "ORDER BY ${sortField} ${sortOrder} " +

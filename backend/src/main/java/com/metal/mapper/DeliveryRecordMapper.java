@@ -43,7 +43,7 @@ public interface DeliveryRecordMapper {
             "OR material_serial LIKE CONCAT('%',#{keyword},'%') OR brand LIKE CONCAT('%',#{keyword},'%') " +
             "OR factory LIKE CONCAT('%',#{keyword},'%') OR shipment_no LIKE CONCAT('%',#{keyword},'%') " +
             "OR unit LIKE CONCAT('%',#{keyword},'%') OR product_attr LIKE CONCAT('%',#{keyword},'%') " +
-            "OR remark LIKE CONCAT('%',#{keyword},'%')) " +
+            "OR remark LIKE CONCAT('%',#{keyword},'%') OR id LIKE CONCAT('%',#{keyword},'%')) " +
             "</if>" +
             "<if test='category != null and category != \"\"'>AND category = #{category}</if> " +
             "<if test='productAttr != null and productAttr != \"\"'>AND product_attr = #{productAttr}</if> " +
