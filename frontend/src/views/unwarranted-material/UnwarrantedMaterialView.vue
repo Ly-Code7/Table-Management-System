@@ -397,6 +397,7 @@ async function refreshCompute() {
       machineNo: form.machineNo,
       materialCode: form.materialCode,
       recordDate: form.recordDate,
+      quantity: form.quantity,
       companyId: companyStore.currentCompanyId,
       excludeId: form.id || undefined
     })

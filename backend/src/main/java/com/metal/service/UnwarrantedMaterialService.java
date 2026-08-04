@@ -173,13 +173,14 @@ public class UnwarrantedMaterialService {
      * 派生字段预览（纯读，不写库）。返回所有由前端展示的派生字段。
      */
     public UnwarrantedMaterialComputeDTO compute(String factory, String machineNo, String materialCode,
-                                                 String recordDate, Long companyId, Long excludeId) {
+                                                 String recordDate, Integer quantity, Long companyId, Long excludeId) {
         UnwarrantedMaterialComputeDTO dto = new UnwarrantedMaterialComputeDTO();
         try {
             UnwarrantedMaterial tmp = new UnwarrantedMaterial();
             tmp.setFactory(factory);
             tmp.setMachineNo(machineNo);
             tmp.setMaterialCode(materialCode);
+            tmp.setQuantity(quantity);
             tmp.setCompanyId(companyId != null ? companyId : 1L);
             tmp.setId(excludeId);
             if (recordDate != null && !recordDate.isBlank()) {
@@ -199,6 +200,7 @@ public class UnwarrantedMaterialService {
             dto.setOverSixMonths(tmp.getOverSixMonths());
             dto.setUsageMonths(tmp.getUsageMonths());
             dto.setLastRepairPerson(tmp.getLastRepairPerson());
+            dto.setRepairAmount(tmp.getRepairAmount());
         } catch (Exception ignored) {
             // 参数不合法时不返回派生值，前端保持原值
         }

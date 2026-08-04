@@ -21,4 +21,6 @@ public class UnwarrantedMaterialComputeDTO {
     private String overSixMonths;
     private String usageMonths;
     private String lastRepairPerson;
+    /** 维修金额（合约）：超比统计表含税单价 × 数量 */
+    private java.math.BigDecimal repairAmount;
 }

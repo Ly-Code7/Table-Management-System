@@ -12,11 +12,13 @@ public interface DeliveryStatsMapper {
     DeliveryStats findById(Long id);
 
     /**
-     * 按（年+月, 料号, 公司）查含税单价，用于未过保物料"维修金额（合约）"自动计算。
+     * 按（料号, 公司）查含税单价，用于未过保物料"维修金额（合约）"自动计算。
+     * 月份匹配：优先取当前月份单价；当前月无数据时回退到 ≤ 当前月份 的最近一条（超比表按月导入，新月份未导入前沿用最近月份单价）。
      * 同 (年+月, 料号) 可能存在多行（每机台一行），含税单价一致，取任一行即可。
      */
     @Select("SELECT unit_price_with_tax FROM delivery_stats WHERE company_id = #{companyId} " +
-            "AND `year_month` = #{yearMonth} AND material_code = #{materialCode} LIMIT 1")
+            "AND material_code = #{materialCode} AND `year_month` <= #{yearMonth} " +
+            "ORDER BY `year_month` DESC LIMIT 1")
     BigDecimal findUnitPriceByMonthAndMaterial(@Param("companyId") Long companyId,
                                                @Param("yearMonth") String yearMonth,
                                                @Param("materialCode") String materialCode);

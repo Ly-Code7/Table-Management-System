@@ -100,8 +100,9 @@ public class UnwarrantedMaterialController {
             @RequestParam(required = false) String machineNo,
             @RequestParam(required = false) String materialCode,
             @RequestParam(required = false) String recordDate,
+            @RequestParam(required = false) Integer quantity,
             @RequestParam(required = false) Long companyId,
             @RequestParam(required = false) Long excludeId) {
-        return Result.ok(service.compute(factory, machineNo, materialCode, recordDate, companyId, excludeId));
+        return Result.ok(service.compute(factory, machineNo, materialCode, recordDate, quantity, companyId, excludeId));
     }
 }
