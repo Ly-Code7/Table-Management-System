@@ -434,8 +434,8 @@ public class UnwarrantedMaterialService {
         boolean hasKey = hasGroupKey(r);
         String uniqueId = null;
         if (hasKey) {
-            // 唯一标识编号：厂房-机台物料编码（机台号与物料编码之间无分隔符，如 B5-H1115300812-00）
-            uniqueId = r.getFactory() + "-" + r.getMachineNo() + r.getMaterialCode();
+            // 唯一标识编号：厂房-机台号配件名称（机台号与配件名称之间无分隔符，如 F6-A15主轴）
+            uniqueId = r.getFactory() + "-" + r.getMachineNo() + r.getPartName();
             r.setUniqueId(uniqueId);
             r.setPlantMachine(ServiceHelper.combineFactoryMachine(r.getFactory(), r.getMachineNo()));
         } else {
@@ -485,13 +485,13 @@ public class UnwarrantedMaterialService {
         }
     }
 
-    /** 是否有有效分组键（厂房/机台号/物料编码齐全）——与唯一标识编号的计算条件一致 */
+    /** 是否有有效分组键（厂房/机台号/配件名称齐全）——与唯一标识编号的计算条件一致 */
     private boolean hasGroupKey(UnwarrantedMaterial r) {
-        return notBlank(r.getFactory()) && notBlank(r.getMachineNo()) && notBlank(r.getMaterialCode());
+        return notBlank(r.getFactory()) && notBlank(r.getMachineNo()) && notBlank(r.getPartName());
     }
 
-    /** 导入分组的组键：公司 + 唯一标识编号（厂房-机台物料编码，与 applyCalculations 生成规则一致） */
+    /** 导入分组的组键：公司 + 唯一标识编号（厂房-机台号配件名称，与 applyCalculations 生成规则一致） */
     private String groupKey(UnwarrantedMaterial r) {
-        return (r.getCompanyId() != null ? r.getCompanyId() : 1L) + "|" + r.getFactory() + "-" + r.getMachineNo() + r.getMaterialCode();
+        return (r.getCompanyId() != null ? r.getCompanyId() : 1L) + "|" + r.getFactory() + "-" + r.getMachineNo() + r.getPartName();
     }
 }
