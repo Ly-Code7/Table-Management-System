@@ -252,13 +252,21 @@ public class UnwarrantedMaterialService {
     }
 
     /**
-     * 维修记录保存（新增/编辑）后的统一入口：已有关联记录则同步更新；
-     * 无关联且数量 &gt;= 1 则下推新增（覆盖"编辑前数量&lt;1 未下推、编辑后数量&gt;=1"的场景）。
+     * 维修记录保存（新增/编辑）后的统一入口：
+     * 数量 &gt;= 1 时——已有关联记录则同步更新，无关联则下推新增；
+     * 数量 &lt; 1（0/空）时——删除已关联的未过保物料记录（下推条件不满足，历史遗留关联一并清理）。
      */
     @Transactional
     public void pushFromOriginalRecord(OriginalRecord o) {
         Long cid = o.getCompanyId() != null ? o.getCompanyId() : 1L;
         List<UnwarrantedMaterial> linked = mapper.findByOriginalRecordId(o.getId(), cid);
+        if (o.getQuantity() == null || o.getQuantity() < 1) {
+            // 数量不满足下推条件：删除已关联的记录
+            if (!linked.isEmpty()) {
+                mapper.deleteByOriginalRecordId(o.getId(), cid);
+            }
+            return;
+        }
         if (!linked.isEmpty()) {
             String user = ServiceHelper.getCurrentUserName();
             for (UnwarrantedMaterial uw : linked) {
@@ -267,7 +275,7 @@ public class UnwarrantedMaterialService {
                 uw.setUpdatedBy(user);
                 mapper.update(uw);
             }
-        } else if (o.getQuantity() != null && o.getQuantity() >= 1) {
+        } else {
             createFromOriginalRecord(o);
         }
     }
@@ -285,6 +293,12 @@ public class UnwarrantedMaterialService {
         if (originalRecordId == null) return 0;
         Long cid = companyId != null ? companyId : 1L;
         return mapper.countByOriginalRecordId(originalRecordId, cid, null);
+    }
+
+    /** 多条维修记录的关联未过保物料总数（前端批量删除提示用） */
+    public int countByOriginalRecordIds(List<Long> ids, Long companyId) {
+        if (ids == null || ids.isEmpty()) return 0;
+        return mapper.countByOriginalRecordIds(ids, companyId);
     }
 
     /** 基础字段回填（映射规则与 lookupOriginal 一致） */

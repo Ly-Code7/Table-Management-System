@@ -140,6 +140,30 @@ class OriginalRecordAutoPushTest {
         assertEquals(1, unwarrantedMaterialMapper.countByOriginalRecordId(saved.getId(), 1L, null));
     }
 
+    @Test
+    void update_quantityBecomesZero_deletesLinkedRecord() {
+        // 数量 1 创建 → 已下推
+        OriginalRecord saved = originalRecordService.create(newRecord(1));
+        assertEquals(1, unwarrantedMaterialMapper.countByOriginalRecordId(saved.getId(), 1L, null));
+
+        // 编辑数量改为 0 → 删除关联的未过保物料记录
+        OriginalRecord edit = originalRecordService.getById(saved.getId());
+        edit.setQuantity(0);
+        originalRecordService.update(edit);
+        assertEquals(0, unwarrantedMaterialMapper.countByOriginalRecordId(saved.getId(), 1L, null));
+    }
+
+    @Test
+    void linkedCounts_batchSumsAllLinked() {
+        OriginalRecord a = originalRecordService.create(newRecord(1));
+        OriginalRecord b = originalRecordService.create(newRecord(2));
+        // 未下推的记录不计入
+        OriginalRecord c = originalRecordService.create(newRecord(0));
+        assertEquals(2, originalRecordService.linkedCounts(java.util.List.of(a.getId(), b.getId())));
+        assertEquals(2, originalRecordService.linkedCounts(java.util.List.of(a.getId(), b.getId(), c.getId())));
+        assertEquals(0, originalRecordService.linkedCounts(java.util.List.of(c.getId())));
+    }
+
     // =============== 删除级联 ===============
 
     @Test

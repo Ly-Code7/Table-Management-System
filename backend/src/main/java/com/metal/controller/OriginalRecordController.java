@@ -47,6 +47,12 @@ public class OriginalRecordController {
         return Result.ok(java.util.Map.of("count", service.linkedCount(id)));
     }
 
+    /** 多条维修记录的关联未过保物料总数（前端批量删除提示用） */
+    @PostMapping("/linked-counts")
+    public Result<java.util.Map<String, Object>> linkedCounts(@RequestBody BatchDeleteDTO dto) {
+        return Result.ok(java.util.Map.of("count", service.linkedCounts(dto.getIds())));
+    }
+
     @GetMapping("/copy/{id}")
     public Result<OriginalRecord> copy(@PathVariable Long id) {
         return Result.ok(service.copy(id));

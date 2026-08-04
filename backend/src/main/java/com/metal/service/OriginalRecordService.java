@@ -128,6 +128,12 @@ public class OriginalRecordService {
         return unwarrantedMaterialService.countByOriginalRecordId(id, exist.getCompanyId());
     }
 
+    /** 多条维修记录的关联未过保物料总数（前端批量删除提示用） */
+    public int linkedCounts(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) return 0;
+        return unwarrantedMaterialService.countByOriginalRecordIds(ids, null);
+    }
+
     public OriginalRecord copy(Long id) {
         return getById(id);
     }

@@ -134,4 +134,12 @@ public interface UnwarrantedMaterialMapper {
     @Delete("DELETE FROM unwarranted_material WHERE original_record_id = #{originalRecordId} AND company_id = #{companyId}")
     int deleteByOriginalRecordId(@Param("originalRecordId") Long originalRecordId,
                                  @Param("companyId") Long companyId);
+
+    /** 批量统计多条维修记录的关联未过保物料总数（前端批量删除提示用，companyId 可空） */
+    @Select("<script>SELECT COALESCE(SUM(cnt), 0) AS total FROM (" +
+            "SELECT original_record_id, COUNT(*) AS cnt FROM unwarranted_material " +
+            "WHERE original_record_id IN <foreach collection='ids' item='id' open='(' close=')' separator=','>#{id}</foreach> " +
+            "<if test='companyId != null'>AND company_id = #{companyId}</if> " +
+            "GROUP BY original_record_id) t</script>")
+    int countByOriginalRecordIds(@Param("ids") List<Long> ids, @Param("companyId") Long companyId);
 }
