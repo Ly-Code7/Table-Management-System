@@ -73,6 +73,10 @@
             <el-icon><Coin /></el-icon>
             <template #title>结算机台数</template>
           </el-menu-item>
+          <el-menu-item index="/board">
+            <el-icon><DataAnalysis /></el-icon>
+            <template #title>数据看板</template>
+          </el-menu-item>
           <el-menu-item index="/machine-detail">
             <el-icon><Monitor /></el-icon>
             <template #title>机型明细</template>
@@ -88,10 +92,6 @@
           <el-menu-item index="/base-material-156">
             <el-icon><Collection /></el-icon>
             <template #title>156项</template>
-          </el-menu-item>
-          <el-menu-item index="/board">
-            <el-icon><DataAnalysis /></el-icon>
-            <template #title>数据看板</template>
           </el-menu-item>
           <el-menu-item index="/operation-log" v-if="authStore.isAdmin">
             <el-icon><List /></el-icon>
