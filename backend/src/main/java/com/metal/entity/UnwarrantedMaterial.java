@@ -29,9 +29,9 @@ public class UnwarrantedMaterial {
     private String factory;
     @ExcelProperty(value = "机台号", index = 2)
     private String machineNo;
-    @ExcelProperty(value = "设备维修调试", index = 3)
+    @ExcelProperty(value = "处理方式", index = 3)
     private String equipRepairDebugging;
-    @ExcelProperty(value = "维修物料装上", index = 4)
+    @ExcelProperty(value = "上机物料", index = 4)
     private String repairMaterialOn;
     @ExcelProperty(value = "维修人", index = 5)
     private String repairPerson;
@@ -41,7 +41,7 @@ public class UnwarrantedMaterial {
     private String partName;
     @ExcelProperty(value = "数量", index = 8)
     private Integer quantity;
-    @ExcelProperty(value = "物料编码", index = 9)
+    @ExcelProperty(value = "料号", index = 9)
     private String materialCode;
     @ExcelProperty(value = "唯一标识编号", index = 10)
     private String uniqueId;

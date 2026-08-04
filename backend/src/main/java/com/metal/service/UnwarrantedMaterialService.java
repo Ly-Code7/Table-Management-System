@@ -40,7 +40,7 @@ import java.util.Map;
 /**
  * 未过保物料 Service。
  *
- * 基础字段（日期/厂房/机台号/设备维修调试/维修物料装上/维修人/未过保/配件名称/数量/物料编码/维修金额）
+ * 基础字段（日期/厂房/机台号/处理方式/上机物料/维修人/未过保/配件名称/数量/料号/维修金额）
  * 来自"选择维修记录"回填或手动录入；
  * 派生字段（唯一标识编号、第几次、总次数、上次日期、上次/本次日期+编号、超六个月、使用时长、上次维修人）
  * 由 {@link #applyCalculations} 在新增/编辑/导入时统一重算，覆盖前端传入值，保证一致性。
@@ -346,13 +346,13 @@ public class UnwarrantedMaterialService {
             template.setRecordDate(LocalDate.now());
             template.setFactory("示例厂房");
             template.setMachineNo("示例机台号");
-            template.setEquipRepairDebugging("示例设备维修调试");
-            template.setRepairMaterialOn("示例维修物料装上");
+            template.setEquipRepairDebugging("示例处理方式");
+            template.setRepairMaterialOn("示例上机物料");
             template.setRepairPerson("示例维修人");
             template.setWarrantyStatus("未过保");
             template.setPartName("示例配件名称");
             template.setQuantity(1);
-            template.setMaterialCode("示例物料编码");
+            template.setMaterialCode("示例料号");
             template.setCategory("示例类别");
             template.setRepairAmount(java.math.BigDecimal.ZERO);
 

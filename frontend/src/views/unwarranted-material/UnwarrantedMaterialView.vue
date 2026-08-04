@@ -42,7 +42,7 @@
       <el-table-column prop="repairPerson" label="维修人" width="90" />
       <el-table-column prop="plantMachine" label="厂房+机台号" width="120" show-overflow-tooltip />
       <el-table-column prop="uniqueId" label="唯一标识编号" width="150" show-overflow-tooltip />
-      <el-table-column prop="materialCode" label="物料编码" width="130" show-overflow-tooltip />
+      <el-table-column prop="materialCode" label="料号" width="130" show-overflow-tooltip />
       <el-table-column prop="category" label="类别" width="110" show-overflow-tooltip />
       <el-table-column prop="partName" label="配件名称" width="120" show-overflow-tooltip />
       <el-table-column prop="quantity" label="数量" width="60" />
@@ -67,8 +67,8 @@
       <el-table-column prop="usageMonths" label="使用时长/月" width="100" />
       <el-table-column prop="lastRepairPerson" label="上次维修人" width="100" />
       <el-table-column prop="repairAmount" label="维修金额" width="100" />
-      <el-table-column prop="repairMaterialOn" label="维修物料装上" width="130" show-overflow-tooltip />
-      <el-table-column prop="equipRepairDebugging" label="设备维修调试" width="140" show-overflow-tooltip />
+      <el-table-column prop="repairMaterialOn" label="上机物料" width="130" show-overflow-tooltip />
+      <el-table-column prop="equipRepairDebugging" label="处理方式" width="140" show-overflow-tooltip />
       <el-table-column prop="createdBy" label="创建人" width="90" />
       <el-table-column label="操作" width="180" fixed="right">
         <template #default="{ row }">
@@ -120,8 +120,8 @@
         </el-row>
         <el-row :gutter="16">
           <el-col :span="12">
-            <el-form-item label="维修物料装上">
-              <el-input v-model="form.repairMaterialOn" placeholder="维修物料装上" />
+            <el-form-item label="上机物料">
+              <el-input v-model="form.repairMaterialOn" placeholder="上机物料" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -148,12 +148,12 @@
         <el-row :gutter="16">
           <el-col :span="8">
             <el-form-item label="类别">
-              <el-input v-model="form.category" placeholder="按物料编码自动回填" />
+              <el-input v-model="form.category" placeholder="按料号自动回填" />
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="物料编码" prop="materialCode">
-              <el-input v-model="form.materialCode" placeholder="物料编码" />
+            <el-form-item label="料号" prop="materialCode">
+              <el-input v-model="form.materialCode" placeholder="料号" />
             </el-form-item>
           </el-col>
           <el-col :span="8">
@@ -162,8 +162,8 @@
             </el-form-item>
           </el-col>
         </el-row>
-        <el-form-item label="设备维修调试">
-          <el-input v-model="form.equipRepairDebugging" type="textarea" :rows="2" placeholder="设备维修调试" />
+        <el-form-item label="处理方式">
+          <el-input v-model="form.equipRepairDebugging" type="textarea" :rows="2" placeholder="处理方式" />
         </el-form-item>
 
         <!-- 派生字段（只读） -->
@@ -327,7 +327,7 @@ const rules = {
   recordDate: [{ required: true, message: '请选择日期', trigger: 'change' }],
   factory: [{ required: true, message: '请输入厂房', trigger: 'blur' }],
   machineNo: [{ required: true, message: '请输入机台号', trigger: 'blur' }],
-  materialCode: [{ required: true, message: '请输入物料编码', trigger: 'blur' }]
+  materialCode: [{ required: true, message: '请输入料号', trigger: 'blur' }]
 }
 
 function doFetch() {
