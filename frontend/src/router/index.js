@@ -45,6 +45,12 @@ const routes = [
         meta: { title: '结算机台数' }
       },
       {
+        path: 'board',
+        name: 'Board',
+        component: () => import('../views/board/BoardView.vue'),
+        meta: { title: '数据看板' }
+      },
+      {
         path: 'machine-detail',
         name: 'MachineDetail',
         component: () => import('../views/machine-detail/MachineDetailView.vue'),
@@ -67,12 +73,6 @@ const routes = [
         name: 'BaseMaterial156',
         component: () => import('../views/base-material-156/BaseMaterial156View.vue'),
         meta: { title: '156项' }
-      },
-      {
-        path: 'board',
-        name: 'Board',
-        component: () => import('../views/board/BoardView.vue'),
-        meta: { title: '数据看板' }
       },
       {
         path: 'operation-log',
