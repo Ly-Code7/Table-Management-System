@@ -62,6 +62,9 @@ public class UnwarrantedMaterialService {
     @Autowired
     private DeliveryStatsMapper deliveryStatsMapper;
 
+    @Autowired
+    private com.metal.mapper.BaseMaterial156Mapper baseMaterial156Mapper;
+
     private static final DateTimeFormatter YM_FMT = DateTimeFormatter.ofPattern("'FY'yyMM");
     private static final int IMPORT_BATCH_SIZE = 500;
 
@@ -407,6 +410,19 @@ public class UnwarrantedMaterialService {
         }
     }
 
+    /** 按料号从 156 项表回填配件名称（已有值不覆盖；查不到保留原值）——分组键/唯一标识编号依赖配件名称 */
+    private void fillPartName(UnwarrantedMaterial r) {
+        if (!notBlank(r.getMaterialCode()) || notBlank(r.getPartName())) return;
+        try {
+            com.metal.entity.BaseMaterial156 item = baseMaterial156Mapper.findByMaterialCode(r.getMaterialCode());
+            if (item != null && notBlank(item.getPartName())) {
+                r.setPartName(item.getPartName());
+            }
+        } catch (Exception ignored) {
+            // 查询失败不阻塞
+        }
+    }
+
     /**
      * 派生字段统一计算（单条场景：新增/编辑/预览）。覆盖前端传入值，保证一致性（参照 DeliveryStatsService.applyCalculations）。
      * warrantyStatus 属于基础字段，此处不覆盖；repairAmount 按超比统计表含税单价 × 数量自动计算覆盖。
@@ -427,6 +443,7 @@ public class UnwarrantedMaterialService {
      */
     private void applyCalculations(UnwarrantedMaterial r, int groupExtra, Integer groupSize, UnwarrantedMaterial prevInGroup) {
         fillCategory(r);
+        fillPartName(r);
         LocalDate date = r.getRecordDate();
         if (date != null) {
             r.setCurrentDate(date);
