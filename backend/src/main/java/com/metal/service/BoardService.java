@@ -24,8 +24,11 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
 /**
  * 数据看板聚合（实时聚合，不建物化表）。
@@ -36,6 +39,9 @@ import java.util.Map;
  *  - 返修频次初版同物料频次（Excel 辅助列-T0 为物料编码冗余副本，用户确认；对账差异时分析判别条件）
  *  - 返修率 = 返修频次 ÷ 物料频次（IFERROR 语义：分母 0 → 空）
  * 年度滚动：year_month 前缀（FY26）过滤，2027 年录入数据自动生成 FY27xx，无需迁移。
+ *
+ * 性能：聚合查询结果内存缓存 60 秒（看板数据非秒级变化；并发多人打开时避免重复全表聚合，
+ * 缓存键 = 看板类型|公司|年份）。
  */
 @Service
 public class BoardService {
@@ -44,6 +50,13 @@ public class BoardService {
     private BoardMapper mapper;
 
     private static final BigDecimal ZERO = BigDecimal.ZERO;
+
+    /** 看板结果缓存 TTL：60 秒（业务写入后最多延迟 60 秒反映到看板） */
+    private static final long CACHE_TTL_MS = 60_000;
+
+    private final Map<String, CacheEntry> cache = new ConcurrentHashMap<>();
+
+    private record CacheEntry(List<BoardRow> data, long expireAt) {}
 
     /** 汇总行行键（各月 = 当月全部行合计，与 Excel 原表表头上方 SUMIF 行对齐） */
     private static final String SUMMARY_KEY = "合计";
@@ -105,11 +118,52 @@ public class BoardService {
     }
 
     /**
+     * 带 60 秒 TTL 的内存缓存读取：命中返回共享引用（调用方只读）；未命中加载并缓存。
+     * 调用方若需要修改返回的行对象，必须先 {@link #copyRows} 深拷贝。
+     */
+    private List<BoardRow> cached(String key, Supplier<List<BoardRow>> loader) {
+        long now = System.currentTimeMillis();
+        CacheEntry e = cache.get(key);
+        if (e != null && e.expireAt > now) return e.data;
+        synchronized (cache) {
+            e = cache.get(key);
+            if (e != null && e.expireAt > now) return e.data;
+            List<BoardRow> data = loader.get();
+            cache.put(key, new CacheEntry(data, now + CACHE_TTL_MS));
+            return data;
+        }
+    }
+
+    /** 深拷贝行列表（修复方修改行数据前调用，避免污染缓存共享实例） */
+    private List<BoardRow> copyRows(List<BoardRow> rows) {
+        List<BoardRow> out = new ArrayList<>(rows.size());
+        for (BoardRow r : rows) {
+            BoardRow c = new BoardRow();
+            c.setKey(r.getKey());
+            c.setFactory(r.getFactory());
+            c.setCategory(r.getCategory());
+            c.setPartName(r.getPartName());
+            c.setPrice(r.getPrice());
+            c.setTotal(r.getTotal());
+            c.setAmount(r.getAmount());
+            c.setAverage(r.getAverage());
+            c.setMonths(new LinkedHashMap<>(r.getMonths()));
+            out.add(c);
+        }
+        return out;
+    }
+
+    /**
      * 机台看板（维修金额 amount / 故障频次 count）。
      * 行列表 = original_record 机台去重（与 Excel UNIQUE(总维修明细 B 列) 一致）；列 = 12 月 + 小计。
      */
     public List<BoardRow> machineBoard(Long companyId, int year, String kind) {
         Long cid = companyId != null ? companyId : 1L;
+        return cached("machine|" + kind + "|" + cid + "|" + year,
+                () -> machineBoardInner(cid, year, kind));
+    }
+
+    private List<BoardRow> machineBoardInner(Long cid, int year, String kind) {
         String prefix = ymPrefix(year);
         List<String> keys = monthKeys(year);
         List<String> machines = mapper.machineList(cid);
@@ -146,6 +200,11 @@ public class BoardService {
      */
     public List<BoardRow> materialBoard(Long companyId, int year, String kind) {
         Long cid = companyId != null ? companyId : 1L;
+        return cached("material|" + kind + "|" + cid + "|" + year,
+                () -> materialBoardInner(cid, year, kind));
+    }
+
+    private List<BoardRow> materialBoardInner(Long cid, int year, String kind) {
         String prefix = ymPrefix(year);
         List<String> keys = monthKeys(year);
         List<Map<String, Object>> materials = mapper.materialList(cid);
@@ -184,8 +243,15 @@ public class BoardService {
      * 平均列 = 合计返修 ÷ 合计物料（12 个月口径，合计返修 0 → 空白）。
      */
     public List<BoardRow> repairRate(Long companyId, int year) {
-        List<BoardRow> freq = materialBoard(companyId, year, "material");
-        List<BoardRow> repair = materialBoard(companyId, year, "repair");
+        Long cid = companyId != null ? companyId : 1L;
+        return cached("rate|" + cid + "|" + year,
+                () -> repairRateInner(cid, year));
+    }
+
+    private List<BoardRow> repairRateInner(Long cid, int year) {
+        // 深拷贝：本方法会修改行对象（月份值/移除汇总行），不能动缓存的共享实例
+        List<BoardRow> freq = copyRows(materialBoard(cid, year, "material"));
+        List<BoardRow> repair = materialBoard(cid, year, "repair");
         Map<String, BoardRow> repairByKey = new HashMap<>();
         for (BoardRow r : repair) {
             if (SUMMARY_KEY.equals(r.getKey())) continue; // 汇总行不参与返修率计算
