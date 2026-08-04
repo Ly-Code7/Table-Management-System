@@ -45,6 +45,9 @@ public class OriginalRecordService {
     @Autowired
     private com.metal.mapper.DeliveryRecordMapper deliveryRecordMapper;
 
+    @Autowired
+    private UnwarrantedMaterialService unwarrantedMaterialService;
+
     private static final DateTimeFormatter YM_FMT = DateTimeFormatter.ofPattern("'FY'yyMM");
 
     public PageResult<OriginalRecord> query(int page, int pageSize, Long companyId, String keyword,
@@ -74,6 +77,10 @@ public class OriginalRecordService {
         record.setCreatedBy(user);
         record.setUpdatedBy(user);
         mapper.insert(record);
+        // 数量 >= 1 时自动下推一条未过保物料（同事务：下推失败则维修记录一并回滚）
+        if (record.getQuantity() != null && record.getQuantity() >= 1) {
+            unwarrantedMaterialService.createFromOriginalRecord(record);
+        }
         return record;
     }
 

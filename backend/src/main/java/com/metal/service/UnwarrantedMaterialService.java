@@ -209,6 +209,42 @@ public class UnwarrantedMaterialService {
         return dto;
     }
 
+    // =============== 维修记录自动下推 ===============
+
+    /**
+     * 由维修记录自动下推一条未过保物料（新增维修记录且数量 &gt;= 1 时由 OriginalRecordService.create 调用，同事务）。
+     * 基础字段按 {@link #lookupOriginal} 的映射规则回填（处理方式←维修描述、上机物料←上机物料、
+     * 未过保←是否过保（"无"置空）、配件名称←零件名称、料号←物料编码）；
+     * 派生字段（唯一标识编号/第几次/总次数/上次日期/超六个月/使用时长/维修金额/类别等）由
+     * {@link #applyCalculations} 统一计算，查不到/算不出的字段保持为空。
+     * 前置约束：调用方保证该维修记录为新建（original_record_id 尚未被关联，无需重复唯一性校验）。
+     */
+    @Transactional
+    public UnwarrantedMaterial createFromOriginalRecord(OriginalRecord o) {
+        UnwarrantedMaterial uw = new UnwarrantedMaterial();
+        uw.setCompanyId(o.getCompanyId() != null ? o.getCompanyId() : 1L);
+        uw.setOriginalRecordId(o.getId());
+        // 基础字段回填（映射规则与 lookupOriginal 一致）
+        uw.setRecordDate(o.getRecordDate());
+        uw.setFactory(o.getFactory());
+        uw.setMachineNo(o.getMachineNo());
+        uw.setEquipRepairDebugging(o.getFaultDescription());
+        uw.setRepairMaterialOn(o.getMachineOnMaterial());
+        uw.setRepairPerson(o.getRepairPerson());
+        String w = o.getIsOutOfWarranty();
+        uw.setWarrantyStatus("无".equals(w) ? "" : w);
+        uw.setPartName(o.getPartName());
+        uw.setQuantity(o.getQuantity());
+        uw.setMaterialCode(o.getMaterialCode());
+        // 派生字段统一计算
+        applyCalculations(uw);
+        String user = ServiceHelper.getCurrentUserName();
+        uw.setCreatedBy(user);
+        uw.setUpdatedBy(user);
+        mapper.insert(uw);
+        return uw;
+    }
+
     // =============== Excel 导入 ===============
 
     /**
