@@ -15,6 +15,7 @@ import com.metal.dto.UnwarrantedMaterialLookupDTO;
 import com.metal.entity.Material;
 import com.metal.entity.OriginalRecord;
 import com.metal.entity.UnwarrantedMaterial;
+import com.metal.mapper.DeliveryStatsMapper;
 import com.metal.mapper.MaterialMapper;
 import com.metal.mapper.OriginalRecordMapper;
 import com.metal.mapper.UnwarrantedMaterialMapper;
@@ -27,6 +28,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
@@ -56,6 +58,9 @@ public class UnwarrantedMaterialService {
 
     @Autowired
     private MaterialMapper materialMapper;
+
+    @Autowired
+    private DeliveryStatsMapper deliveryStatsMapper;
 
     private static final DateTimeFormatter YM_FMT = DateTimeFormatter.ofPattern("'FY'yyMM");
     private static final int IMPORT_BATCH_SIZE = 500;
@@ -404,7 +409,7 @@ public class UnwarrantedMaterialService {
 
     /**
      * 派生字段统一计算（单条场景：新增/编辑/预览）。覆盖前端传入值，保证一致性（参照 DeliveryStatsService.applyCalculations）。
-     * warrantyStatus 与 repairAmount 属于基础字段，此处不覆盖。
+     * warrantyStatus 属于基础字段，此处不覆盖；repairAmount 按超比统计表含税单价 × 数量自动计算覆盖。
      */
     private void applyCalculations(UnwarrantedMaterial r) {
         applyCalculations(r, 0, null, null);
@@ -429,6 +434,15 @@ public class UnwarrantedMaterialService {
         } else {
             r.setCurrentDate(null);
             r.setYearMonth(null);
+        }
+
+        // 维修金额（合约）= 超比统计表含税单价 × 数量：按当前日期月份（yyyy-MM）+ 料号匹配超比统计表，查不到单价则置空
+        if (date != null && r.getCompanyId() != null && notBlank(r.getMaterialCode()) && r.getQuantity() != null) {
+            String ym = date.format(DateTimeFormatter.ofPattern("yyyy-MM"));
+            BigDecimal price = deliveryStatsMapper.findUnitPriceByMonthAndMaterial(r.getCompanyId(), ym, r.getMaterialCode());
+            r.setRepairAmount(price != null ? price.multiply(BigDecimal.valueOf(r.getQuantity())) : null);
+        } else {
+            r.setRepairAmount(null);
         }
 
         boolean hasKey = hasGroupKey(r);

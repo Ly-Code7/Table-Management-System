@@ -2,6 +2,7 @@ package com.metal.mapper;
 
 import com.metal.entity.DeliveryStats;
 import org.apache.ibatis.annotations.*;
+import java.math.BigDecimal;
 import java.util.List;
 
 @Mapper
@@ -9,6 +10,16 @@ public interface DeliveryStatsMapper {
 
     @Select("SELECT * FROM delivery_stats WHERE id = #{id}")
     DeliveryStats findById(Long id);
+
+    /**
+     * 按（年+月, 料号, 公司）查含税单价，用于未过保物料"维修金额（合约）"自动计算。
+     * 同 (年+月, 料号) 可能存在多行（每机台一行），含税单价一致，取任一行即可。
+     */
+    @Select("SELECT unit_price_with_tax FROM delivery_stats WHERE company_id = #{companyId} " +
+            "AND `year_month` = #{yearMonth} AND material_code = #{materialCode} LIMIT 1")
+    BigDecimal findUnitPriceByMonthAndMaterial(@Param("companyId") Long companyId,
+                                               @Param("yearMonth") String yearMonth,
+                                               @Param("materialCode") String materialCode);
 
     @Insert("INSERT INTO delivery_stats (company_id, category, material_code, system_name, part_name, unit_usage, ratio, " +
             "unit_price_with_tax, machine_count, delivery_quantity, machine_on_quantity, month_repair, " +
