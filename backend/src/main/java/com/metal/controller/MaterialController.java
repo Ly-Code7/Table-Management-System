@@ -35,8 +35,9 @@ public class MaterialController {
     }
 
     @GetMapping("/search")
-    public Result<List<Material>> search(@RequestParam String keyword) {
-        return Result.ok(service.searchByKeyword(keyword));
+    public Result<List<Material>> search(@RequestParam String keyword,
+                                         @RequestParam(required = false) Long companyId) {
+        return Result.ok(service.searchByKeyword(keyword, companyId));
     }
 
     @PostMapping

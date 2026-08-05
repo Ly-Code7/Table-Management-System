@@ -4,8 +4,8 @@ export function getList(params) {
   return request.get('/base-material-156', { params })
 }
 
-export function search(keyword) {
-  return request.get('/base-material-156/search', { params: { keyword } })
+export function search(keyword, companyId) {
+  return request.get('/base-material-156/search', { params: { keyword, companyId } })
 }
 
 export function getDetail(id) {

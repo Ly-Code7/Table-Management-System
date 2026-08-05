@@ -308,7 +308,7 @@ async function handleTemplateDownload() {
 async function searchMaterial156(query, cb) {
   if (!query || query.length < 1) { cb([]); return }
   try {
-    const res = await search156Api(query)
+      const res = await search156Api(query, companyStore.currentCompanyId)
     const data = res.data || []
     cb(data.map(m => ({ value: m.materialCode, label: `${m.materialCode} - ${m.partName || m.systemName || ''}` })))
   } catch { cb([]) }

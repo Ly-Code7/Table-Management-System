@@ -48,9 +48,9 @@ public class BaseMaterial156Service {
         return r;
     }
 
-    public List<BaseMaterial156> searchByKeyword(String keyword) {
+    public List<BaseMaterial156> searchByKeyword(String keyword, Long companyId) {
         if (keyword == null || keyword.isBlank()) return List.of();
-        return mapper.searchByKeyword(keyword);
+        return mapper.searchByKeyword(keyword, companyId);
     }
 
     public BaseMaterial156 findByMaterialCode(String materialCode) {

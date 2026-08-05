@@ -4,8 +4,8 @@ export function getList(params) {
   return request.get('/material', { params })
 }
 
-export function search(keyword) {
-  return request.get('/material/search', { params: { keyword } })
+export function search(keyword, companyId) {
+  return request.get('/material/search', { params: { keyword, companyId } })
 }
 
 export function getDetail(id) {

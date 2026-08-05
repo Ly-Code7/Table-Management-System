@@ -485,7 +485,7 @@ async function handleVoiceParse() {
 async function searchMaterials(query, cb) {
   if (!query || query.length < 1) { cb([]); return }
   try {
-    const res = await searchMaterialsApi(query)
+      const res = await searchMaterialsApi(query, companyStore.currentCompanyId)
     const data = res.data || []
     materialSearchCache.value = data
     cb(data.map(m => ({ value: m.materialCode, label: `${m.materialCode} - ${m.materialName || ''}` })))

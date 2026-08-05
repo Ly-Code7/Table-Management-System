@@ -32,8 +32,9 @@ public class BaseMaterial156Controller {
     }
 
     @GetMapping("/search")
-    public Result<List<BaseMaterial156>> search(@RequestParam String keyword) {
-        return Result.ok(service.searchByKeyword(keyword));
+    public Result<List<BaseMaterial156>> search(@RequestParam String keyword,
+                                                @RequestParam(required = false) Long companyId) {
+        return Result.ok(service.searchByKeyword(keyword, companyId));
     }
 
     @GetMapping("/{id}")

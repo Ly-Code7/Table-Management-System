@@ -54,11 +54,12 @@ public interface BaseMaterial156Mapper {
     List<BaseMaterial156> search(@Param("companyId") Long companyId, @Param("keyword") String keyword,
                                   @Param("sortField") String sortField, @Param("sortOrder") String sortOrder);
 
-    @Select("SELECT * FROM base_material_156 WHERE " +
+    @Select("<script>SELECT * FROM base_material_156 WHERE " +
             "material_code LIKE CONCAT('%',#{keyword},'%') " +
             "OR system_name LIKE CONCAT('%',#{keyword},'%') " +
-            "OR part_name LIKE CONCAT('%',#{keyword},'%') LIMIT 15")
-    List<BaseMaterial156> searchByKeyword(@Param("keyword") String keyword);
+            "OR part_name LIKE CONCAT('%',#{keyword},'%') " +
+            "<if test='companyId != null'>AND company_id = #{companyId}</if> LIMIT 15</script>")
+    List<BaseMaterial156> searchByKeyword(@Param("keyword") String keyword, @Param("companyId") Long companyId);
 
     @Select("SELECT * FROM base_material_156 WHERE material_code = #{materialCode} LIMIT 1")
     BaseMaterial156 findByMaterialCode(@Param("materialCode") String materialCode);

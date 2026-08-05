@@ -91,9 +91,9 @@ public class MaterialService {
         mapper.batchDelete(ids);
     }
 
-    public List<Material> searchByKeyword(String keyword) {
+    public List<Material> searchByKeyword(String keyword, Long companyId) {
         if (keyword == null || keyword.isBlank()) return List.of();
-        return mapper.searchByKeyword(keyword);
+        return mapper.searchByKeyword(keyword, companyId);
     }
 
     // =============== Excel 导入 ===============
