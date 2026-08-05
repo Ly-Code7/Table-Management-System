@@ -550,7 +550,7 @@ public class UnwarrantedMaterialService {
     /**
      * 派生字段统一计算（单条场景：新增/编辑/预览）。覆盖前端传入值，保证一致性（参照 DeliveryStatsService.applyCalculations）。
      * warrantyStatus 由 {@link #applyCalculations(UnwarrantedMaterial, int, Integer, UnwarrantedMaterial)} 独立计算；
-     * repairAmount 按超比统计表含税单价 × 数量自动计算覆盖。
+     * repairAmount 按 156 项表同料号含税单价 × 数量自动计算覆盖（公司内）。
      */
     private void applyCalculations(UnwarrantedMaterial r) {
         applyCalculations(r, 0, null, null);
@@ -580,9 +580,11 @@ public class UnwarrantedMaterialService {
         }
 
         // 维修金额（合约）= 超比统计表含税单价 × 数量：按当前日期月份（yyyy-MM）+ 料号匹配超比统计表，查不到单价则置空
+        // 维修金额 = 156项表同料号含税单价 × 数量（公司内；不再依赖当月超比统计表单价）
         if (date != null && r.getCompanyId() != null && notBlank(r.getMaterialCode()) && r.getQuantity() != null) {
-            String ym = date.format(DateTimeFormatter.ofPattern("yyyy-MM"));
-            BigDecimal price = deliveryStatsMapper.findUnitPriceByMonthAndMaterial(r.getCompanyId(), ym, r.getMaterialCode());
+            com.metal.entity.BaseMaterial156 item =
+                    baseMaterial156Mapper.findByMaterialCodeAndCompany(r.getMaterialCode(), r.getCompanyId());
+            BigDecimal price = item != null ? item.getUnitPriceWithTax() : null;
             r.setRepairAmount(price != null ? price.multiply(BigDecimal.valueOf(r.getQuantity())) : null);
         } else {
             r.setRepairAmount(null);

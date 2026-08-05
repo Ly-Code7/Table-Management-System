@@ -63,4 +63,9 @@ public interface BaseMaterial156Mapper {
 
     @Select("SELECT * FROM base_material_156 WHERE material_code = #{materialCode} LIMIT 1")
     BaseMaterial156 findByMaterialCode(@Param("materialCode") String materialCode);
+
+    /** 按料号+公司精确查询（公司内），用于未过保物料维修金额取 156 项表含税单价 */
+    @Select("SELECT * FROM base_material_156 WHERE material_code = #{materialCode} AND company_id = #{companyId} LIMIT 1")
+    BaseMaterial156 findByMaterialCodeAndCompany(@Param("materialCode") String materialCode,
+                                                 @Param("companyId") Long companyId);
 }
