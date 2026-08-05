@@ -41,7 +41,7 @@
         <el-table-column prop="price" label="合约单价" width="100" align="right" />
       </template>
       <!-- 12 个月列 -->
-      <el-table-column v-for="m in monthKeys" :key="m" :prop="`months.${m}`" :label="m" width="80" align="right">
+      <el-table-column v-for="m in monthKeys" :key="m" :prop="`months.${m}`" :label="m" width="120" align="right">
         <template #default="{ row }">
           {{ formatCell(row.months?.[m], activeTab === 'repair-rate') }}
         </template>
@@ -51,7 +51,7 @@
         <template #default="{ row }">{{ formatPercent(row.average) }}</template>
       </el-table-column>
       <template v-else>
-        <el-table-column :label="isMachineTab ? '小计' : '合计'" width="100" align="right" fixed="right">
+        <el-table-column :label="isMachineTab ? '小计' : '合计'" width="150" align="right" fixed="right">
           <template #default="{ row }">{{ formatCell(row.total, false) }}</template>
         </el-table-column>
         <el-table-column v-if="!isMachineTab" prop="amount" label="金额" width="110" align="right" fixed="right">
