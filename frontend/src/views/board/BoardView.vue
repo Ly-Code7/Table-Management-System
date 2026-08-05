@@ -25,7 +25,7 @@
     </div>
 
     <el-table :data="pagedRows" v-loading="loading" border stripe style="width: 100%" :row-class-name="rowClassName"
-      :cell-class-name="cellClass" @cell-mouse-enter="onCellEnter" @cell-mouse-leave="onCellLeave">
+      @cell-mouse-enter="onCellEnter" @cell-mouse-leave="onCellLeave">
       <el-table-column label="序号" width="60">
         <template #default="{ row, $index }">{{ row.key === '合计' ? 0 : $index }}</template>
       </el-table-column>
@@ -145,18 +145,35 @@ function rowClassName({ row }) {
   return row.key === '合计' ? 'board-summary-row' : ''
 }
 
-// ===== 悬停行列高亮 =====
-const hoverPos = ref({ row: -1, colProp: null })
-function onCellEnter(row, column) {
-  hoverPos.value = { row: pagedRows.value.indexOf(row), colProp: column.property }
+// ===== 悬停行列高亮（DOM 直操作，避免响应式触发表格全量重渲染） =====
+function onCellEnter(row, column, cell) {
+  clearHoverCells()
+  const tables = document.querySelectorAll('.el-table__body')
+  if (!tables.length) return
+  const rowIndex = cell.closest('tr').rowIndex
+  const colLabel = column.label
+  tables.forEach(tb => {
+    const tableEl = tb.closest('.el-table')
+    if (!tableEl) return
+    const trs = tb.querySelectorAll('tr')
+    // 行高亮：所有表格（含 fixed 副本）同一行
+    const tr = trs[rowIndex]
+    if (tr) tr.querySelectorAll('td').forEach(td => td.classList.add('board-hover-cell'))
+    // 列高亮：按表头 label 匹配列号（fixed 副本表头与主表一致）
+    const ths = tableEl.querySelectorAll('.el-table__header th')
+    let colIdx = -1
+    ths.forEach((th, i) => { if (th.innerText.trim() === colLabel) colIdx = i })
+    if (colIdx >= 0) trs.forEach(r => {
+      const td = r.querySelectorAll('td')[colIdx]
+      if (td) td.classList.add('board-hover-cell')
+    })
+  })
 }
 function onCellLeave() {
-  hoverPos.value = { row: -1, colProp: null }
+  clearHoverCells()
 }
-function cellClass({ rowIndex, column }) {
-  const h = hoverPos.value
-  if (h.row < 0) return ''
-  return (h.row === rowIndex || (h.colProp !== null && column.property === h.colProp)) ? 'board-hover-cell' : ''
+function clearHoverCells() {
+  document.querySelectorAll('td.board-hover-cell').forEach(td => td.classList.remove('board-hover-cell'))
 }
 // ===== 悬停行列高亮 end =====
 
