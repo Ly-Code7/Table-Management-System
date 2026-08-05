@@ -82,6 +82,12 @@ public interface DeliveryRecordMapper {
     int countByMaterialCodeAndMonth(@Param("materialCode") String materialCode, @Param("month") String month,
                                     @Param("companyId") Long companyId);
 
+    /** 免费送货数量：产品属性为"免费"的送货数量（超比统计"送货免费"列） */
+    @Select("SELECT COALESCE(SUM(quantity), 0) FROM delivery_record WHERE material_code = #{materialCode} " +
+            "AND DATE_FORMAT(record_date, '%Y-%m') = #{month} AND company_id = #{companyId} AND product_attr = '免费'")
+    int countFreeByMaterialCodeAndMonth(@Param("materialCode") String materialCode, @Param("month") String month,
+                                        @Param("companyId") Long companyId);
+
     @Select("SELECT DAY(record_date) as day, COALESCE(SUM(quantity), 0) as cnt FROM delivery_record " +
             "WHERE material_code = #{materialCode} AND DATE_FORMAT(record_date, '%Y-%m') = #{month} " +
             "AND company_id = #{companyId} " +

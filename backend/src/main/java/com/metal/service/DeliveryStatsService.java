@@ -167,16 +167,24 @@ public class DeliveryStatsService {
                                 data.setRatio(r.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
                             }
                         }
-                        // 机台数自动计算：Excel 未提供机台数时，按料号+月份从结算机台数查询
-                        // （与手动录入 autoFill 口径一致：SUM(settlement_machine_count)，查不到置 0）。
-                        // 必须在 applyCalculations 之前：约定比例数量依赖机台数。
-                        if (data.getMachineCount() == null && data.getMaterialCode() != null
-                                && !data.getMaterialCode().isBlank() && data.getStatDate() != null) {
-                            String ym = data.getStatDate().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM"));
-                            Integer mc = settlementMachineMapper.sumMachineCountByMaterialCodeAndMonth(
-                                    data.getMaterialCode(), ym, data.getCompanyId());
-                            data.setMachineCount(mc != null ? mc : 0);
-                        }
+        // 机台数自动计算：Excel 未提供机台数时，按料号+月份从结算机台数查询
+        // （与手动录入 autoFill 口径一致：SUM(settlement_machine_count)，查不到置 0）。
+        // 必须在 applyCalculations 之前：约定比例数量依赖机台数。
+        if (data.getMachineCount() == null && data.getMaterialCode() != null
+                && !data.getMaterialCode().isBlank() && data.getStatDate() != null) {
+            String ym = data.getStatDate().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM"));
+            Integer mc = settlementMachineMapper.sumMachineCountByMaterialCodeAndMonth(
+                    data.getMaterialCode(), ym, data.getCompanyId());
+            data.setMachineCount(mc != null ? mc : 0);
+        }
+        // 送货免费自动计算：Excel 未提供时按料号+月份统计产品属性为"免费"的送货数量
+        // （与手动录入 autoFill 口径一致）
+        if (data.getFreeDeliveryQuantity() == null && data.getMaterialCode() != null
+                && !data.getMaterialCode().isBlank() && data.getStatDate() != null) {
+            String ym = data.getStatDate().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM"));
+            data.setFreeDeliveryQuantity(deliveryRecordMapper.countFreeByMaterialCodeAndMonth(
+                    data.getMaterialCode(), ym, data.getCompanyId()));
+        }
                         // 派生字段统一重算（年月/约定比例数量/超比数量/超比含税金额），
                         // 与新增/编辑/批量刷新口径一致，防止 Excel 原值或空值入库
                         applyCalculations(data);
@@ -410,6 +418,7 @@ public class DeliveryStatsService {
             template.setUnitPriceWithTax(BigDecimal.ZERO);
             template.setMachineCount(1);
             template.setDeliveryQuantity(0);
+            template.setFreeDeliveryQuantity(0);
             template.setMachineOnQuantity(0);
             template.setMonthRepair(0);
             template.setAgreedRatioQuantity(BigDecimal.ZERO);
@@ -453,11 +462,11 @@ public class DeliveryStatsService {
                             .setScale(2, RoundingMode.HALF_UP)
             );
         }
-        // 超比数量合计 = max(0, 送货数量 - 当月返修 - 约定比例数量)
-        int delivery = record.getDeliveryQuantity() != null ? record.getDeliveryQuantity() : 0;
+        // 超比数量合计 = max(0, 上机数量 - 当月返修 - 约定比例数量)
+        int machineOn = record.getMachineOnQuantity() != null ? record.getMachineOnQuantity() : 0;
         int repair = record.getMonthRepair() != null ? record.getMonthRepair() : 0;
         BigDecimal agreed = record.getAgreedRatioQuantity() != null ? record.getAgreedRatioQuantity() : BigDecimal.ZERO;
-        BigDecimal val = BigDecimal.valueOf(delivery - repair).subtract(agreed);
+        BigDecimal val = BigDecimal.valueOf(machineOn - repair).subtract(agreed);
         record.setExcessQuantity(val.compareTo(BigDecimal.ZERO) > 0 ? val : BigDecimal.ZERO);
         // 超比含税金额合计 = (含税单价 × 超比数量) / 1.13
         if (record.getExcessQuantity() != null && record.getUnitPriceWithTax() != null) {
@@ -507,11 +516,15 @@ public class DeliveryStatsService {
             int dq = deliveryRecordMapper.countByMaterialCodeAndMonth(materialCode, month, companyId);
             result.put("deliveryQuantity", dq);
 
-            // 5. 上机数量
+            // 5. 送货免费（产品属性为"免费"的送货数量）
+            int fdq = deliveryRecordMapper.countFreeByMaterialCodeAndMonth(materialCode, month, companyId);
+            result.put("freeDeliveryQuantity", fdq);
+
+            // 6. 上机数量
             int moq = originalRecordMapper.countByMaterialCodeAndMonth(materialCode, month, companyId);
             result.put("machineOnQuantity", moq);
 
-            // 6. 当月返修（未过保）
+            // 7. 当月返修（未过保）
             int mr = originalRecordMapper.countRepairByMaterialCodeAndMonth(materialCode, month, companyId);
             result.put("monthRepair", mr);
 

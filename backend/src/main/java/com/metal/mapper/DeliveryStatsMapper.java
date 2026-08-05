@@ -24,10 +24,10 @@ public interface DeliveryStatsMapper {
                                                @Param("materialCode") String materialCode);
 
     @Insert("INSERT INTO delivery_stats (company_id, category, material_code, system_name, part_name, unit_usage, ratio, " +
-            "unit_price_with_tax, machine_count, delivery_quantity, machine_on_quantity, month_repair, " +
+            "unit_price_with_tax, machine_count, delivery_quantity, free_delivery_quantity, machine_on_quantity, month_repair, " +
             "agreed_ratio_quantity, excess_quantity, excess_amount_with_tax, stat_date, `year_month`, created_by, updated_by) " +
             "VALUES (#{companyId}, #{category}, #{materialCode}, #{systemName}, #{partName}, #{unitUsage}, #{ratio}, " +
-            "#{unitPriceWithTax}, #{machineCount}, #{deliveryQuantity}, #{machineOnQuantity}, #{monthRepair}, " +
+            "#{unitPriceWithTax}, #{machineCount}, #{deliveryQuantity}, #{freeDeliveryQuantity}, #{machineOnQuantity}, #{monthRepair}, " +
             "#{agreedRatioQuantity}, #{excessQuantity}, #{excessAmountWithTax}, #{statDate}, #{yearMonth}, #{createdBy}, #{updatedBy})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(DeliveryStats record);
@@ -35,7 +35,8 @@ public interface DeliveryStatsMapper {
     @Update("UPDATE delivery_stats SET category=#{category}, material_code=#{materialCode}, " +
             "system_name=#{systemName}, part_name=#{partName}, unit_usage=#{unitUsage}, ratio=#{ratio}, " +
             "unit_price_with_tax=#{unitPriceWithTax}, machine_count=#{machineCount}, " +
-            "delivery_quantity=#{deliveryQuantity}, machine_on_quantity=#{machineOnQuantity}, " +
+            "delivery_quantity=#{deliveryQuantity}, free_delivery_quantity=#{freeDeliveryQuantity}, " +
+            "machine_on_quantity=#{machineOnQuantity}, " +
             "month_repair=#{monthRepair}, agreed_ratio_quantity=#{agreedRatioQuantity}, " +
             "excess_quantity=#{excessQuantity}, excess_amount_with_tax=#{excessAmountWithTax}, " +
             "stat_date=#{statDate}, `year_month`=#{yearMonth}, updated_by=#{updatedBy} WHERE id=#{id}")
@@ -50,11 +51,11 @@ public interface DeliveryStatsMapper {
     /** 批量插入 */
     @Insert("<script>" +
             "INSERT INTO delivery_stats (company_id, category, material_code, system_name, part_name, unit_usage, ratio, " +
-            "unit_price_with_tax, machine_count, delivery_quantity, machine_on_quantity, month_repair, " +
+            "unit_price_with_tax, machine_count, delivery_quantity, free_delivery_quantity, machine_on_quantity, month_repair, " +
             "agreed_ratio_quantity, excess_quantity, excess_amount_with_tax, stat_date, `year_month`, created_by, updated_by) VALUES " +
             "<foreach collection='list' item='r' separator=','>" +
             "(#{r.companyId}, #{r.category}, #{r.materialCode}, #{r.systemName}, #{r.partName}, #{r.unitUsage}, #{r.ratio}, " +
-            "#{r.unitPriceWithTax}, #{r.machineCount}, #{r.deliveryQuantity}, #{r.machineOnQuantity}, #{r.monthRepair}, " +
+            "#{r.unitPriceWithTax}, #{r.machineCount}, #{r.deliveryQuantity}, #{r.freeDeliveryQuantity}, #{r.machineOnQuantity}, #{r.monthRepair}, " +
             "#{r.agreedRatioQuantity}, #{r.excessQuantity}, #{r.excessAmountWithTax}, #{r.statDate}, #{r.yearMonth}, " +
             "#{r.createdBy}, #{r.updatedBy})" +
             "</foreach>" +

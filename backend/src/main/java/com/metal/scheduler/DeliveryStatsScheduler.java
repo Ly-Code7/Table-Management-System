@@ -113,10 +113,12 @@ public class DeliveryStatsScheduler {
             if (materialCode == null || materialCode.isBlank()) continue;
 
             int deliveryQty = deliveryRecordMapper.countByMaterialCodeAndMonth(materialCode, currentMonth, companyId);
+            int freeDeliveryQty = deliveryRecordMapper.countFreeByMaterialCodeAndMonth(materialCode, currentMonth, companyId);
             int machineOnQty = originalRecordMapper.countByMaterialCodeAndMonth(materialCode, currentMonth, companyId);
             int repairQty = originalRecordMapper.countRepairByMaterialCodeAndMonth(materialCode, currentMonth, companyId);
 
             stats.setDeliveryQuantity(deliveryQty);
+            stats.setFreeDeliveryQuantity(freeDeliveryQty);
             stats.setMachineOnQuantity(machineOnQty);
             stats.setMonthRepair(repairQty);
 

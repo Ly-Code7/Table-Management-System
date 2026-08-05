@@ -109,6 +109,20 @@ class DeliveryStatsCalculationTest {
         deliveryStatsMapper.insert(newStats(mc));
         addDelivery(mc, 30);
         addRepair(mc, 6);
+        // 再加一条"已过保"维修记录：只算上机数量，不算返修（countRepair 限定未过保）
+        OriginalRecord r2 = new OriginalRecord();
+        r2.setCompanyId(1L);
+        r2.setRecordDate(LocalDate.now());
+        r2.setFactory("测试厂房");
+        r2.setMachineNo("T-CALC-02");
+        r2.setFaultDescription("计算测试-处理方式2");
+        r2.setMachineOnMaterial("TMP-CALC-ON2");
+        r2.setRepairPerson("tester");
+        r2.setMaterialCode(mc);
+        r2.setPartName("TMP配件CALC2" + System.nanoTime());
+        r2.setIsOutOfWarranty("已过保");
+        r2.setQuantity(30);
+        originalRecordMapper.insert(r2);
 
         scheduler.refreshCurrentMonthStats();
 
@@ -119,10 +133,10 @@ class DeliveryStatsCalculationTest {
         assertEquals(6, s.getMonthRepair());
         // 约定比例数量 = 单台机用量 2 × 比例 0.5 × 机台数 10 = 10.00
         assertEquals(0, new BigDecimal("10.00").compareTo(s.getAgreedRatioQuantity()), "约定比例数量应重算");
-        // 超比数量 = max(0, 送货 30 - 返修 6 - 约定比例 10) = 14（Bug2：定时刷新不得漏减约定比例）
-        assertEquals(0, new BigDecimal("14").compareTo(s.getExcessQuantity()), "超比数量应 = 送货-返修-约定比例");
-        // 超比含税金额 = 100 × 14 ÷ 1.13 = 1238.94
-        assertEquals(0, new BigDecimal("1238.94").compareTo(s.getExcessAmountWithTax()), "超比含税金额应重算");
+        // 超比数量 = max(0, 上机数量 36 - 返修 6 - 约定比例 10) = 20（Bug2：定时刷新不得漏减约定比例；公式用上机数量口径）
+        assertEquals(0, new BigDecimal("20").compareTo(s.getExcessQuantity()), "超比数量应 = 上机-返修-约定比例");
+        // 超比含税金额 = 100 × 20 ÷ 1.13 = 1769.91
+        assertEquals(0, new BigDecimal("1769.91").compareTo(s.getExcessAmountWithTax()), "超比含税金额应重算");
     }
 
     @Test
@@ -130,6 +144,7 @@ class DeliveryStatsCalculationTest {
         String mc = "TMP-IMP-" + System.nanoTime();
         DeliveryStats row = newStats(mc);
         row.setDeliveryQuantity(30);
+        row.setMachineOnQuantity(30);
         row.setMonthRepair(6);
         // Excel 模板比例按百分比填写：50 表示 50%
         row.setRatio(new BigDecimal("50"));
@@ -154,8 +169,8 @@ class DeliveryStatsCalculationTest {
         assertEquals(0, new BigDecimal("0.5").compareTo(s.getRatio()), "比例 50 应转为 0.5");
         // 约定比例数量 = 2 × 0.5 × 10 = 10.00
         assertEquals(0, new BigDecimal("10.00").compareTo(s.getAgreedRatioQuantity()), "导入后约定比例数量应重算");
-        // 超比数量 = max(0, 30 - 6 - 10) = 14
-        assertEquals(0, new BigDecimal("14").compareTo(s.getExcessQuantity()), "导入后超比数量应重算");
+        // 超比数量 = max(0, 上机 30 - 返修 6 - 约定比例 10) = 14
+        assertEquals(0, new BigDecimal("14").compareTo(s.getExcessQuantity()), "导入后超比数量应重算（上机-返修-约定比例）");
         // 超比含税金额 = 100 × 14 ÷ 1.13 = 1238.94
         assertEquals(0, new BigDecimal("1238.94").compareTo(s.getExcessAmountWithTax()), "导入后超比含税金额应重算");
     }
@@ -211,5 +226,52 @@ class DeliveryStatsCalculationTest {
         assertEquals(7, s.getMachineCount(), "机台数应按料号从结算机台数 SUM 自动计算");
         // 约定比例数量随自动计算的机台数重算 = 2 × 0.5 × 7 = 7.00
         assertEquals(0, new BigDecimal("7.00").compareTo(s.getAgreedRatioQuantity()), "约定比例数量应按自动机台数重算");
+    }
+
+    @Test
+    void importExcel_autoFillsFreeDeliveryQuantity() throws Exception {
+        String mc = "TMP-FDQ-" + System.nanoTime();
+        // 免费送货 8 条 + 非免费送货 5 条：免费数量应只统计 product_attr='免费'
+        addDeliveryFree(mc, 8, "免费");
+        addDeliveryFree(mc, 5, "新品");
+
+        DeliveryStats row = newStats(mc);
+        row.setMachineOnQuantity(30);
+        row.setDeliveryQuantity(30);
+        row.setMonthRepair(6);
+        row.setRatio(new BigDecimal("50"));
+        // Excel 未提供送货免费（留空）→ 应自动按料号+月份统计免费数量
+        row.setFreeDeliveryQuantity(null);
+        row.setAgreedRatioQuantity(null);
+        row.setExcessQuantity(null);
+        row.setExcessAmountWithTax(null);
+        row.setYearMonth(null);
+
+        java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+        com.alibaba.excel.EasyExcel.write(bos, DeliveryStats.class).sheet("送货统计").doWrite(List.of(row));
+        org.springframework.mock.web.MockMultipartFile file = new org.springframework.mock.web.MockMultipartFile(
+                "file", "test.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", bos.toByteArray());
+
+        ImportResultDTO res = service.importExcel(file, 1L);
+        assertEquals(1, res.getSuccess());
+
+        List<DeliveryStats> hits = deliveryStatsMapper.findByYearMonth(month, 1L);
+        DeliveryStats s = hits.stream().filter(x -> mc.equals(x.getMaterialCode())).findFirst().orElse(null);
+        assertNotNull(s, "导入的记录应可按月份查到");
+        assertEquals(8, s.getFreeDeliveryQuantity(), "送货免费应只统计产品属性为免费的送货数量");
+    }
+
+    private void addDeliveryFree(String materialCode, int quantity, String productAttr) {
+        DeliveryRecord r = new DeliveryRecord();
+        r.setCompanyId(1L);
+        r.setRecordDate(LocalDate.now());
+        r.setCategory("测试类");
+        r.setMaterialCode(materialCode);
+        r.setQuantity(quantity);
+        r.setProductAttr(productAttr);
+        r.setYearMonth(month);
+        r.setCreatedBy("tester");
+        r.setUpdatedBy("tester");
+        deliveryRecordMapper.insert(r);
     }
 }

@@ -70,6 +70,7 @@
       <el-table-column prop="unitPriceWithTax" label="含税单价" width="100" />
       <el-table-column prop="machineCount" label="机台数" width="80" />
       <el-table-column prop="deliveryQuantity" label="送货数量" width="90" />
+      <el-table-column prop="freeDeliveryQuantity" label="送货免费" width="90" />
       <el-table-column prop="machineOnQuantity" label="上机数量" width="90" />
       <el-table-column prop="monthRepair" label="当月返修" width="90" />
       <el-table-column prop="agreedRatioQuantity" label="约定比例数量" width="120" />
@@ -167,6 +168,11 @@
           <el-col :span="6">
             <el-form-item label="送货数量" prop="deliveryQuantity">
               <el-input-number v-model="form.deliveryQuantity" :min="0" :disabled="true" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="6">
+            <el-form-item label="送货免费" prop="freeDeliveryQuantity">
+              <el-input-number v-model="form.freeDeliveryQuantity" :min="0" :disabled="true" style="width: 100%" />
             </el-form-item>
           </el-col>
           <el-col :span="6">
@@ -272,6 +278,7 @@ const defaultForm = {
   unitPriceWithTax: null,
   machineCount: null,
   deliveryQuantity: null,
+  freeDeliveryQuantity: null,
   machineOnQuantity: null,
   monthRepair: null,
   statDate: ''
@@ -286,12 +293,12 @@ const agreedRatio = computed(() => {
   }
   return null
 })
-// 超比数量 = max(0, 送货数量 - 当月返修 - 约定比例数量)
+// 超比数量 = max(0, 上机数量 - 当月返修 - 约定比例数量)
 const calcExcessQty = computed(() => {
-  const delivery = form.deliveryQuantity || 0
+  const machineOn = form.machineOnQuantity || 0
   const repair = form.monthRepair || 0
   const agreed = parseFloat(agreedRatio || 0)
-  const val = delivery - repair - agreed
+  const val = machineOn - repair - agreed
   return val > 0 ? val : 0
 })
 // 自动计算：含税金额合计 = 含税单价 × 超比数量 / 1.13
@@ -543,6 +550,7 @@ async function triggerAutoFill() {
     // 回填统计数据
     if (d.machineCount != null && d.machineCount !== 0) form.machineCount = d.machineCount
     if (d.deliveryQuantity != null) form.deliveryQuantity = d.deliveryQuantity
+    if (d.freeDeliveryQuantity != null) form.freeDeliveryQuantity = d.freeDeliveryQuantity
     if (d.machineOnQuantity != null) form.machineOnQuantity = d.machineOnQuantity
     if (d.monthRepair != null) form.monthRepair = d.monthRepair
     // 每日明细
@@ -593,7 +601,7 @@ async function handleBatchRefresh() {
 // 默认汇总月份为当前月份
 const voiceText = ref('')
 const voiceLoading = ref(false)
-const voicePlaceholder = '请按格式朗读: 类别风扇类 物料编码15297012400 系统名称冷却系统 配件名称驱动风扇 单台机用量1.5 比例0.8 含税单价120 机台数10 送货数量100 上机数量80 当月返修5 统计日期2026-07-01'
+const voicePlaceholder = '请按格式朗读: 类别风扇类 物料编码15297012400 系统名称冷却系统 配件名称驱动风扇 单台机用量1.5 比例0.8 含税单价120 机台数10 送货数量100 送货免费5 上机数量80 当月返修5 统计日期2026-07-01'
 async function handleVoiceParse() {
   if (!voiceText.value.trim()) { ElMessage.warning('请先输入文字'); return }
   voiceLoading.value = true
@@ -606,13 +614,14 @@ async function handleVoiceParse() {
       category: 'category', materialCode: 'materialCode', systemName: 'systemName',
       partName: 'partName', unitUsage: 'unitUsage', ratio: 'ratio',
       unitPriceWithTax: 'unitPriceWithTax', machineCount: 'machineCount',
-      deliveryQuantity: 'deliveryQuantity', machineOnQuantity: 'machineOnQuantity',
+      deliveryQuantity: 'deliveryQuantity', freeDeliveryQuantity: 'freeDeliveryQuantity',
+      machineOnQuantity: 'machineOnQuantity',
       monthRepair: 'monthRepair', statDate: 'statDate'
     }
     for (const [k, v] of Object.entries(fields)) {
       if (fm[k] && v) {
         if (['unitUsage', 'ratio', 'unitPriceWithTax'].includes(k)) { const n = parseFloat(v); if (!isNaN(n)) form[fm[k]] = k === 'ratio' ? n * 100 : n }
-        else if (['machineCount', 'deliveryQuantity', 'machineOnQuantity', 'monthRepair'].includes(k)) { const n = parseInt(v); if (!isNaN(n)) form[fm[k]] = n }
+        else if (['machineCount', 'deliveryQuantity', 'freeDeliveryQuantity', 'machineOnQuantity', 'monthRepair'].includes(k)) { const n = parseInt(v); if (!isNaN(n)) form[fm[k]] = n }
         else form[fm[k]] = v
       }
     }
