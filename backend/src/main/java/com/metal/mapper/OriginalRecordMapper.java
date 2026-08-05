@@ -16,13 +16,13 @@ public interface OriginalRecordMapper {
 
     @Insert("INSERT INTO original_record (company_id, `year_month`, record_date, shift, factory, serial_number, machine_no, plant_machine, " +
             "diagnostician, repair_person, repair_request_time, start_time, end_time, repair_hours, downtime_hours, " +
-            "machine_model, fault_phenomenon, fault_description, material_code, part_name, quantity, " +
+            "machine_model, fault_phenomenon, fault_description, material_code, material_156_name, part_name, quantity, " +
             "machine_on_material, machine_off_material, remark, confirmer, delivery_record_ref, document_no, " +
             "created_by, updated_by) " +
             "VALUES (#{companyId}, #{yearMonth}, #{recordDate}, #{shift}, #{factory}, #{serialNumber}, #{machineNo}, #{plantMachine}, " +
             "#{diagnostician}, #{repairPerson}, #{repairRequestTime}, #{startTime}, #{endTime}, " +
             "#{repairHours}, #{downtimeHours}, #{machineModel}, #{faultPhenomenon}, #{faultDescription}, " +
-            "#{materialCode}, #{partName}, #{quantity}, #{machineOnMaterial}, #{machineOffMaterial}, " +
+            "#{materialCode}, #{material156Name}, #{partName}, #{quantity}, #{machineOnMaterial}, #{machineOffMaterial}, " +
             "#{remark}, #{confirmer}, #{deliveryRecordRef}, #{documentNo}, " +
             "#{createdBy}, #{updatedBy})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
@@ -33,7 +33,7 @@ public interface OriginalRecordMapper {
             "diagnostician=#{diagnostician}, repair_person=#{repairPerson}, repair_request_time=#{repairRequestTime}, " +
             "start_time=#{startTime}, end_time=#{endTime}, repair_hours=#{repairHours}, downtime_hours=#{downtimeHours}, " +
             "machine_model=#{machineModel}, fault_phenomenon=#{faultPhenomenon}, fault_description=#{faultDescription}, " +
-            "material_code=#{materialCode}, part_name=#{partName}, quantity=#{quantity}, " +
+            "material_code=#{materialCode}, material_156_name=#{material156Name}, part_name=#{partName}, quantity=#{quantity}, " +
             "machine_on_material=#{machineOnMaterial}, machine_off_material=#{machineOffMaterial}, " +
             "remark=#{remark}, confirmer=#{confirmer}, delivery_record_ref=#{deliveryRecordRef}, document_no=#{documentNo}, " +
             "updated_by=#{updatedBy} " +
@@ -50,14 +50,14 @@ public interface OriginalRecordMapper {
     @Insert("<script>" +
             "INSERT INTO original_record (company_id, `year_month`, record_date, shift, factory, serial_number, machine_no, plant_machine, " +
             "diagnostician, repair_person, repair_request_time, start_time, end_time, repair_hours, downtime_hours, " +
-            "machine_model, fault_phenomenon, fault_description, material_code, part_name, quantity, " +
+            "machine_model, fault_phenomenon, fault_description, material_code, material_156_name, part_name, quantity, " +
             "machine_on_material, machine_off_material, remark, confirmer, delivery_record_ref, document_no, " +
             "created_by, updated_by) VALUES " +
             "<foreach collection='list' item='r' separator=','>" +
             "(#{r.companyId}, #{r.yearMonth}, #{r.recordDate}, #{r.shift}, #{r.factory}, #{r.serialNumber}, #{r.machineNo}, #{r.plantMachine}, " +
             "#{r.diagnostician}, #{r.repairPerson}, #{r.repairRequestTime}, #{r.startTime}, #{r.endTime}, " +
             "#{r.repairHours}, #{r.downtimeHours}, #{r.machineModel}, #{r.faultPhenomenon}, #{r.faultDescription}, " +
-            "#{r.materialCode}, #{r.partName}, #{r.quantity}, #{r.machineOnMaterial}, #{r.machineOffMaterial}, " +
+            "#{r.materialCode}, #{r.material156Name}, #{r.partName}, #{r.quantity}, #{r.machineOnMaterial}, #{r.machineOffMaterial}, " +
             "#{r.remark}, #{r.confirmer}, #{r.deliveryRecordRef}, #{r.documentNo}, " +
             "#{r.createdBy}, #{r.updatedBy})" +
             "</foreach>" +

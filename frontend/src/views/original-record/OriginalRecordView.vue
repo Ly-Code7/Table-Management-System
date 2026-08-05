@@ -172,12 +172,17 @@
           </el-col>
         </el-row>
         <el-row :gutter="16">
-          <el-col :span="12">
+          <el-col :span="8">
             <el-form-item label="料号" prop="materialCode">
               <el-autocomplete v-model="form.materialCode" :fetch-suggestions="searchMaterials" placeholder="输入料号关键字自动匹配" style="width:100%" @select="handleMaterialSelect" />
             </el-form-item>
           </el-col>
-          <el-col :span="12">
+          <el-col :span="8">
+            <el-form-item label="156项名称" prop="material156Name">
+              <el-input v-model="form.material156Name" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
             <el-form-item label="配件名称" prop="partName">
               <el-input v-model="form.partName" />
             </el-form-item>
@@ -344,7 +349,7 @@ const defaultForm = {
   id: null, recordDate: '', shift: '', factory: '', serialNumber: '', machineNo: '',
   diagnostician: '', repairPerson: '', confirmer: '', repairRequestTime: '', startTime: '',
   endTime: '', machineModel: '', faultPhenomenon: '', faultDescription: '',
-  materialCode: '', partName: '', quantity: null, machineOnMaterial: '', machineOffMaterial: '',
+  materialCode: '', material156Name: '', partName: '', quantity: null, machineOnMaterial: '', machineOffMaterial: '',
   remark: '', deliveryRecordRef: '', documentNo: ''
 }
 const form = reactive({ ...defaultForm })
@@ -444,11 +449,11 @@ async function searchMaterials(query, cb) {
 
 async function handleMaterialSelect(item) {
   form.materialCode = item.value
-  // 查询156项表，回填配件名称
+  // 查询156项表，回填156项名称（配件名称不再自动回填）
   try {
     const res = await api.lookup156(item.value)
     if (res.data && res.data.partName) {
-      form.partName = res.data.partName
+      form.material156Name = res.data.partName
     }
   } catch { /* 查不到就不回填 */ }
 }

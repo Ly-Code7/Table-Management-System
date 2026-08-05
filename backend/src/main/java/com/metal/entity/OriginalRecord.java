@@ -59,21 +59,23 @@ public class OriginalRecord {
     private String faultDescription;
     @ExcelProperty(value = "物料编码", index = 17)
     private String materialCode;
-    @ExcelProperty(value = "零件名称", index = 18)
+    @ExcelProperty(value = "156项名称", index = 18)
+    private String material156Name;
+    @ExcelProperty(value = "零件名称", index = 19)
     private String partName;
-    @ExcelProperty(value = "数量", index = 19)
+    @ExcelProperty(value = "数量", index = 20)
     private Integer quantity;
-    @ExcelProperty(value = "上机物料", index = 20)
+    @ExcelProperty(value = "上机物料", index = 21)
     private String machineOnMaterial;
-    @ExcelProperty(value = "下机物料", index = 21)
+    @ExcelProperty(value = "下机物料", index = 22)
     private String machineOffMaterial;
-    @ExcelProperty(value = "备注", index = 22)
+    @ExcelProperty(value = "备注", index = 23)
     private String remark;
-    @ExcelProperty(value = "确认人", index = 23)
+    @ExcelProperty(value = "确认人", index = 24)
     private String confirmer;
-    @ExcelProperty(value = "送货记录引用", index = 24)
+    @ExcelProperty(value = "送货记录引用", index = 25)
     private String deliveryRecordRef;
-    @ExcelProperty(value = "单据号", index = 25)
+    @ExcelProperty(value = "单据号", index = 26)
     private String documentNo;
     @ExcelIgnore
     private LocalDateTime createdAt;

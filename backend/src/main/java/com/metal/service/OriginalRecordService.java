@@ -317,6 +317,7 @@ public class OriginalRecordService {
             template.setFaultPhenomenon("示例故障现象");
             template.setFaultDescription("示例故障描述");
             template.setMaterialCode("示例物料编码");
+            template.setMaterial156Name("示例156项名称");
             template.setPartName("示例零件名称");
             template.setQuantity(1);
             template.setMachineOnMaterial("示例上机物料");

@@ -178,6 +178,7 @@ CREATE TABLE IF NOT EXISTS `original_record` (
     `fault_phenomenon` VARCHAR(500) COMMENT '故障现象',
     `fault_description` TEXT COMMENT '维修描述',
     `material_code` VARCHAR(100) COMMENT '物料编码/料号',
+    `material_156_name` VARCHAR(200) COMMENT '156项名称',
     `part_name` VARCHAR(200) COMMENT '配件名称',
     `quantity` INT COMMENT '数量',
     `machine_on_material` VARCHAR(200) COMMENT '上机物料号',

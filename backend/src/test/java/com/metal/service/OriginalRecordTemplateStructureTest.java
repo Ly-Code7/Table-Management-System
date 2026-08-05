@@ -50,6 +50,10 @@ class OriginalRecordTemplateStructureTest {
         assertEquals("序号", head.get(5));
         assertEquals("机台号", head.get(6));
         assertEquals("诊断人", head.get(7));
+        // 物料区：物料编码 → 156项名称 → 零件名称
+        assertEquals("物料编码", head.get(17));
+        assertEquals("156项名称", head.get(18));
+        assertEquals("零件名称", head.get(19));
         assertEquals("单据号", head.get(head.size() - 1));
     }
 

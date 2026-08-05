@@ -128,6 +128,7 @@ CREATE TABLE `original_record` (
   `fault_phenomenon` varchar(500) DEFAULT NULL COMMENT '故障现象',
   `fault_description` text COMMENT '维修描述',
   `material_code` varchar(100) DEFAULT NULL COMMENT '物料编码/料号',
+  `material_156_name` varchar(200) DEFAULT NULL COMMENT '156项名称',
   `part_name` varchar(200) DEFAULT NULL COMMENT '配件名称',
   `quantity` int DEFAULT NULL COMMENT '数量',
   `machine_on_material` varchar(200) DEFAULT NULL COMMENT '上机物料号',
