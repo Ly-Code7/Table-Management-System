@@ -52,6 +52,9 @@ public class DeliveryStatsService {
     @Autowired
     private com.metal.mapper.SettlementMachineMapper settlementMachineMapper;
 
+    @Autowired
+    private com.metal.mapper.UnwarrantedMaterialMapper unwarrantedMaterialMapper;
+
     public PageResult<DeliveryStats> query(int page, int pageSize, Long companyId, String keyword,
                                             String category, String yearMonth,
                                             String sortField, String sortOrder) {
@@ -524,8 +527,8 @@ public class DeliveryStatsService {
             int moq = originalRecordMapper.countByMaterialCodeAndMonth(materialCode, month, companyId);
             result.put("machineOnQuantity", moq);
 
-            // 7. 当月返修（未过保）
-            int mr = originalRecordMapper.countRepairByMaterialCodeAndMonth(materialCode, month, companyId);
+            // 7. 当月返修（未过保物料：料号+月份+未过保，与 Excel 原表口径一致）
+            int mr = unwarrantedMaterialMapper.countRepairByMaterialCodeAndMonth(materialCode, month, companyId);
             result.put("monthRepair", mr);
 
             // 7. 每日送货明细

@@ -142,4 +142,15 @@ public interface UnwarrantedMaterialMapper {
             "<if test='companyId != null'>AND company_id = #{companyId}</if> " +
             "GROUP BY original_record_id) t</script>")
     int countByOriginalRecordIds(@Param("ids") List<Long> ids, @Param("companyId") Long companyId);
+
+    /**
+     * 超比统计"当月返修"：按料号+月份统计未过保物料中 warranty_status='未过保' 的记录数量之和。
+     * （口径：与 Excel 原表一致，从未过保物料表取数，而非维修记录表）
+     */
+    @Select("SELECT COALESCE(SUM(quantity), 0) FROM unwarranted_material " +
+            "WHERE material_code = #{materialCode} AND DATE_FORMAT(record_date, '%Y-%m') = #{month} " +
+            "AND warranty_status = '未过保' AND company_id = #{companyId}")
+    int countRepairByMaterialCodeAndMonth(@Param("materialCode") String materialCode,
+                                          @Param("month") String month,
+                                          @Param("companyId") Long companyId);
 }

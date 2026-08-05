@@ -33,6 +33,8 @@ public class DeliveryStatsScheduler {
     @Autowired
     private OriginalRecordMapper originalRecordMapper;
     @Autowired
+    private UnwarrantedMaterialMapper unwarrantedMaterialMapper;
+    @Autowired
     private SysConfigMapper sysConfigMapper;
 
     /** 计算口径统一复用 Service（含约定比例数量/超比数量/超比含税金额公式），避免副本漂移 */
@@ -115,7 +117,7 @@ public class DeliveryStatsScheduler {
             int deliveryQty = deliveryRecordMapper.countByMaterialCodeAndMonth(materialCode, currentMonth, companyId);
             int freeDeliveryQty = deliveryRecordMapper.countFreeByMaterialCodeAndMonth(materialCode, currentMonth, companyId);
             int machineOnQty = originalRecordMapper.countByMaterialCodeAndMonth(materialCode, currentMonth, companyId);
-            int repairQty = originalRecordMapper.countRepairByMaterialCodeAndMonth(materialCode, currentMonth, companyId);
+            int repairQty = unwarrantedMaterialMapper.countRepairByMaterialCodeAndMonth(materialCode, currentMonth, companyId);
 
             stats.setDeliveryQuantity(deliveryQty);
             stats.setFreeDeliveryQuantity(freeDeliveryQty);

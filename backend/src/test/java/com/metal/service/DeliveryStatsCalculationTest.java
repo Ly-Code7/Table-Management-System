@@ -5,10 +5,12 @@ import com.metal.entity.DeliveryRecord;
 import com.metal.entity.DeliveryStats;
 import com.metal.entity.OriginalRecord;
 import com.metal.entity.SettlementMachine;
+import com.metal.entity.UnwarrantedMaterial;
 import com.metal.mapper.DeliveryRecordMapper;
 import com.metal.mapper.DeliveryStatsMapper;
 import com.metal.mapper.OriginalRecordMapper;
 import com.metal.mapper.SettlementMachineMapper;
+import com.metal.mapper.UnwarrantedMaterialMapper;
 import com.metal.scheduler.DeliveryStatsScheduler;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +52,9 @@ class DeliveryStatsCalculationTest {
 
     @Autowired
     private SettlementMachineMapper settlementMachineMapper;
+
+    @Autowired
+    private UnwarrantedMaterialMapper unwarrantedMaterialMapper;
 
     private final String month = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
 
@@ -103,13 +108,31 @@ class DeliveryStatsCalculationTest {
         originalRecordMapper.insert(r);
     }
 
+    /** 插入未过保物料记录（超比统计"当月返修"的取数口径：未过保物料表，料号+月份+未过保） */
+    private void addUnwarrantedMaterial(String materialCode, int quantity) {
+        UnwarrantedMaterial u = new UnwarrantedMaterial();
+        u.setCompanyId(1L);
+        u.setRecordDate(LocalDate.now());
+        u.setFactory("测试厂房");
+        u.setMachineNo("T-CALC-01");
+        u.setWarrantyStatus("未过保");
+        u.setPartName("TMP配件UW" + System.nanoTime());
+        u.setQuantity(quantity);
+        u.setMaterialCode(materialCode);
+        u.setCreatedBy("tester");
+        u.setUpdatedBy("tester");
+        unwarrantedMaterialMapper.batchInsert(List.of(u));
+    }
+
     @Test
     void scheduler_refresh_findsStatsByYyyyMmAndAppliesAgreedRatioFormula() {
         String mc = "TMP-SCH-" + System.nanoTime();
         deliveryStatsMapper.insert(newStats(mc));
         addDelivery(mc, 30);
         addRepair(mc, 6);
-        // 再加一条"已过保"维修记录：只算上机数量，不算返修（countRepair 限定未过保）
+        // 当月返修从未过保物料表取数（料号+月份+未过保）
+        addUnwarrantedMaterial(mc, 6);
+        // 再加一条"已过保"维修记录：只算上机数量，不算返修（未过保物料口径）
         OriginalRecord r2 = new OriginalRecord();
         r2.setCompanyId(1L);
         r2.setRecordDate(LocalDate.now());
