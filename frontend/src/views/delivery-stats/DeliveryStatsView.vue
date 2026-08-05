@@ -67,7 +67,9 @@
       <el-table-column prop="ratio" label="比例(%)" width="100">
         <template #default="{ row }">{{ row.ratio != null ? (row.ratio * 100).toFixed(2) + '%' : '' }}</template>
       </el-table-column>
-      <el-table-column prop="unitPriceWithTax" label="含税单价" width="100" />
+      <el-table-column prop="unitPriceWithTax" label="含税单价" width="100">
+        <template #default="{ row }">{{ row.unitPriceWithTax != null ? Number(row.unitPriceWithTax).toFixed(2) : '' }}</template>
+      </el-table-column>
       <el-table-column prop="machineCount" label="机台数" width="80" />
       <el-table-column prop="deliveryQuantity" label="送货数量" width="90" />
       <el-table-column prop="freeDeliveryQuantity" label="送货免费" width="90" />
