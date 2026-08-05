@@ -307,6 +307,7 @@ public class OriginalRecordService {
             template.setYearMonth("FY2607");
             template.setRecordDate(LocalDate.now());
             template.setShift("白班");
+            template.setPlantMachine("示例厂房-示例机台号");
             template.setFactory("示例厂房");
             template.setSerialNumber("示例序号");
             template.setMachineNo("示例机台号");

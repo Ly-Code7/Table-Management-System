@@ -17,63 +17,63 @@ public class OriginalRecord {
     private Long companyId;
     @ExcelProperty(value = "年+月", index = 0)
     private String yearMonth;
-    @ExcelProperty(value = "日期", index = 1)
+    /** 厂房+机台号（自动计算：厂房-机台号，添加/编辑/导入时由后端计算） */
+    @ExcelProperty(value = "厂房+机台", index = 1)
+    private String plantMachine;
+    @ExcelProperty(value = "日期", index = 2)
     @DateTimeFormat("yyyy-MM-dd")
     private LocalDate recordDate;
-    @ExcelProperty(value = "班次", index = 2)
+    @ExcelProperty(value = "班次", index = 3)
     private String shift;
-    @ExcelProperty(value = "厂房", index = 3)
+    @ExcelProperty(value = "厂房", index = 4)
     private String factory;
-    @ExcelProperty(value = "序号", index = 4)
+    @ExcelProperty(value = "序号", index = 5)
     private String serialNumber;
-    @ExcelProperty(value = "机台号", index = 5)
+    @ExcelProperty(value = "机台号", index = 6)
     private String machineNo;
-    /** 厂房+机台号（自动计算：厂房-机台号，添加/编辑/导入时由后端计算，不参与导入导出） */
-    @ExcelIgnore
-    private String plantMachine;
-    @ExcelProperty(value = "诊断人", index = 6)
+    @ExcelProperty(value = "诊断人", index = 7)
     private String diagnostician;
-    @ExcelProperty(value = "维修人", index = 7)
+    @ExcelProperty(value = "维修人", index = 8)
     private String repairPerson;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
-    @ExcelProperty(value = "报修时间", index = 8)
+    @ExcelProperty(value = "报修时间", index = 9)
     @DateTimeFormat("yyyy-MM-dd HH:mm:ss")
     private LocalDateTime repairRequestTime;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
-    @ExcelProperty(value = "开始时间", index = 9)
+    @ExcelProperty(value = "开始时间", index = 10)
     @DateTimeFormat("yyyy-MM-dd HH:mm:ss")
     private LocalDateTime startTime;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
-    @ExcelProperty(value = "结束时间", index = 10)
+    @ExcelProperty(value = "结束时间", index = 11)
     @DateTimeFormat("yyyy-MM-dd HH:mm:ss")
     private LocalDateTime endTime;
-    @ExcelProperty(value = "维修工时", index = 11)
+    @ExcelProperty(value = "维修工时", index = 12)
     private BigDecimal repairHours;
-    @ExcelProperty(value = "停机工时", index = 12)
+    @ExcelProperty(value = "停机工时", index = 13)
     private BigDecimal downtimeHours;
-    @ExcelProperty(value = "机型", index = 13)
+    @ExcelProperty(value = "机型", index = 14)
     private String machineModel;
-    @ExcelProperty(value = "故障现象", index = 14)
+    @ExcelProperty(value = "故障现象", index = 15)
     private String faultPhenomenon;
-    @ExcelProperty(value = "维修描述", index = 15)
+    @ExcelProperty(value = "维修描述", index = 16)
     private String faultDescription;
-    @ExcelProperty(value = "物料编码", index = 16)
+    @ExcelProperty(value = "物料编码", index = 17)
     private String materialCode;
-    @ExcelProperty(value = "零件名称", index = 17)
+    @ExcelProperty(value = "零件名称", index = 18)
     private String partName;
-    @ExcelProperty(value = "数量", index = 18)
+    @ExcelProperty(value = "数量", index = 19)
     private Integer quantity;
-    @ExcelProperty(value = "上机物料", index = 19)
+    @ExcelProperty(value = "上机物料", index = 20)
     private String machineOnMaterial;
-    @ExcelProperty(value = "下机物料", index = 20)
+    @ExcelProperty(value = "下机物料", index = 21)
     private String machineOffMaterial;
-    @ExcelProperty(value = "备注", index = 21)
+    @ExcelProperty(value = "备注", index = 22)
     private String remark;
-    @ExcelProperty(value = "确认人", index = 22)
+    @ExcelProperty(value = "确认人", index = 23)
     private String confirmer;
-    @ExcelProperty(value = "送货记录引用", index = 23)
+    @ExcelProperty(value = "送货记录引用", index = 24)
     private String deliveryRecordRef;
-    @ExcelProperty(value = "单据号", index = 24)
+    @ExcelProperty(value = "单据号", index = 25)
     private String documentNo;
     @ExcelIgnore
     private LocalDateTime createdAt;
