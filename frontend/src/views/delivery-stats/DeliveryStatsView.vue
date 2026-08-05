@@ -506,7 +506,7 @@ async function handleCopy(row) {
 async function searchMaterial156(query, cb) {
   if (!query || query.length < 1) { cb([]); return }
   try {
-    const res = await search156Api(query)
+    const res = await search156Api(query, companyStore.currentCompanyId)
     const data = res.data || []
     cb(data.map(m => ({ value: m.materialCode, label: `${m.materialCode} - ${m.partName || m.systemName || ''}`, item: m })))
   } catch { cb([]) }
@@ -515,7 +515,7 @@ async function searchMaterial156(query, cb) {
 async function searchBySystemName(query, cb) {
   if (!query || query.length < 1) { cb([]); return }
   try {
-    const res = await search156Api(query)
+    const res = await search156Api(query, companyStore.currentCompanyId)
     const data = res.data || []
     cb(data.map(m => ({ value: m.systemName, label: `${m.systemName} - ${m.materialCode}`, item: m })))
   } catch { cb([]) }
