@@ -2,7 +2,6 @@ package com.metal.mapper;
 
 import com.metal.entity.OriginalRecord;
 import org.apache.ibatis.annotations.*;
-import java.time.LocalDate;
 import java.util.List;
 
 @Mapper
@@ -19,12 +18,12 @@ public interface OriginalRecordMapper {
             "diagnostician, repair_person, repair_request_time, start_time, end_time, repair_hours, downtime_hours, " +
             "machine_model, fault_phenomenon, fault_description, material_code, part_name, quantity, " +
             "machine_on_material, machine_off_material, remark, confirmer, delivery_record_ref, document_no, " +
-            "last_machine_on_time, is_out_of_warranty, created_by, updated_by) " +
+            "created_by, updated_by) " +
             "VALUES (#{companyId}, #{yearMonth}, #{recordDate}, #{shift}, #{factory}, #{serialNumber}, #{machineNo}, #{plantMachine}, " +
             "#{diagnostician}, #{repairPerson}, #{repairRequestTime}, #{startTime}, #{endTime}, " +
             "#{repairHours}, #{downtimeHours}, #{machineModel}, #{faultPhenomenon}, #{faultDescription}, " +
             "#{materialCode}, #{partName}, #{quantity}, #{machineOnMaterial}, #{machineOffMaterial}, " +
-            "#{remark}, #{confirmer}, #{deliveryRecordRef}, #{documentNo}, #{lastMachineOnTime}, #{isOutOfWarranty}, " +
+            "#{remark}, #{confirmer}, #{deliveryRecordRef}, #{documentNo}, " +
             "#{createdBy}, #{updatedBy})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(OriginalRecord record);
@@ -37,7 +36,7 @@ public interface OriginalRecordMapper {
             "material_code=#{materialCode}, part_name=#{partName}, quantity=#{quantity}, " +
             "machine_on_material=#{machineOnMaterial}, machine_off_material=#{machineOffMaterial}, " +
             "remark=#{remark}, confirmer=#{confirmer}, delivery_record_ref=#{deliveryRecordRef}, document_no=#{documentNo}, " +
-            "last_machine_on_time=#{lastMachineOnTime}, is_out_of_warranty=#{isOutOfWarranty}, updated_by=#{updatedBy} " +
+            "updated_by=#{updatedBy} " +
             "WHERE id=#{id}")
     int update(OriginalRecord record);
 
@@ -53,24 +52,18 @@ public interface OriginalRecordMapper {
             "diagnostician, repair_person, repair_request_time, start_time, end_time, repair_hours, downtime_hours, " +
             "machine_model, fault_phenomenon, fault_description, material_code, part_name, quantity, " +
             "machine_on_material, machine_off_material, remark, confirmer, delivery_record_ref, document_no, " +
-            "last_machine_on_time, is_out_of_warranty, created_by, updated_by) VALUES " +
+            "created_by, updated_by) VALUES " +
             "<foreach collection='list' item='r' separator=','>" +
             "(#{r.companyId}, #{r.yearMonth}, #{r.recordDate}, #{r.shift}, #{r.factory}, #{r.serialNumber}, #{r.machineNo}, #{r.plantMachine}, " +
             "#{r.diagnostician}, #{r.repairPerson}, #{r.repairRequestTime}, #{r.startTime}, #{r.endTime}, " +
             "#{r.repairHours}, #{r.downtimeHours}, #{r.machineModel}, #{r.faultPhenomenon}, #{r.faultDescription}, " +
             "#{r.materialCode}, #{r.partName}, #{r.quantity}, #{r.machineOnMaterial}, #{r.machineOffMaterial}, " +
-            "#{r.remark}, #{r.confirmer}, #{r.deliveryRecordRef}, #{r.documentNo}, #{r.lastMachineOnTime}, #{r.isOutOfWarranty}, " +
+            "#{r.remark}, #{r.confirmer}, #{r.deliveryRecordRef}, #{r.documentNo}, " +
             "#{r.createdBy}, #{r.updatedBy})" +
             "</foreach>" +
             "</script>")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int batchInsert(@Param("list") List<OriginalRecord> records);
-
-    /**
-     * 查询某个下机物料的最后一次上机时间
-     */
-    @Select("SELECT MAX(record_date) FROM original_record WHERE machine_on_material = #{machineOnMaterial}")
-    LocalDate findLastMachineOnTime(@Param("machineOnMaterial") String machineOnMaterial);
 
     @Select("<script>" +
             "SELECT * FROM original_record WHERE 1=1 " +
@@ -88,7 +81,6 @@ public interface OriginalRecordMapper {
             "</if>" +
             "<if test='shift != null and shift != \"\"'>AND shift = #{shift}</if> " +
             "<if test='factory != null and factory != \"\"'>AND factory = #{factory}</if> " +
-            "<if test='isOutOfWarranty != null and isOutOfWarranty != \"\"'>AND is_out_of_warranty = #{isOutOfWarranty}</if> " +
             "<if test='startDate != null'>AND record_date &gt;= #{startDate}</if> " +
             "<if test='endDate != null'>AND record_date &lt;= #{endDate}</if> " +
             "<if test='excludeLinked != null and excludeLinked'>" +
@@ -100,7 +92,6 @@ public interface OriginalRecordMapper {
     List<OriginalRecord> search(@Param("companyId") Long companyId, @Param("keyword") String keyword,
                                 @Param("shift") String shift,
                                 @Param("factory") String factory,
-                                @Param("isOutOfWarranty") String isOutOfWarranty,
                                 @Param("startDate") String startDate,
                                 @Param("endDate") String endDate,
                                 @Param("sortField") String sortField,
@@ -112,8 +103,4 @@ public interface OriginalRecordMapper {
     int countByMaterialCodeAndMonth(@Param("materialCode") String materialCode, @Param("month") String month,
                                     @Param("companyId") Long companyId);
 
-    @Select("SELECT COALESCE(SUM(quantity), 0) FROM original_record WHERE material_code = #{materialCode} " +
-            "AND DATE_FORMAT(record_date, '%Y-%m') = #{month} AND is_out_of_warranty = '未过保' AND company_id = #{companyId}")
-    int countRepairByMaterialCodeAndMonth(@Param("materialCode") String materialCode, @Param("month") String month,
-                                          @Param("companyId") Long companyId);
 }

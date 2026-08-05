@@ -52,13 +52,13 @@ public class OriginalRecordService {
 
     public PageResult<OriginalRecord> query(int page, int pageSize, Long companyId, String keyword,
                                              String shift, String factory,
-                                             String isOutOfWarranty, String startDate, String endDate,
+                                             String startDate, String endDate,
                                              String sortField, String sortOrder,
                                              Boolean excludeLinked) {
         sortField = ServiceHelper.sanitizeSortField(sortField, "id");
         sortOrder = ServiceHelper.sanitizeSortOrder(sortOrder);
         PageHelper.startPage(page, pageSize);
-        List<OriginalRecord> list = mapper.search(companyId, keyword, shift, factory, isOutOfWarranty,
+        List<OriginalRecord> list = mapper.search(companyId, keyword, shift, factory,
                 startDate, endDate, sortField, sortOrder, excludeLinked);
         PageInfo<OriginalRecord> pageInfo = new PageInfo<>(list);
         return new PageResult<>(pageInfo.getTotal(), page, pageSize, list);
@@ -273,10 +273,10 @@ public class OriginalRecordService {
     // =============== Excel 导出 ===============
     public void exportExcel(HttpServletResponse response, Long companyId, String keyword,
                             String shift, String factory,
-                            String isOutOfWarranty, String startDate, String endDate) {
+                            String startDate, String endDate) {
         try {
             PageHelper.startPage(1, 0);
-            List<OriginalRecord> list = mapper.search(companyId, keyword, shift, factory, isOutOfWarranty,
+            List<OriginalRecord> list = mapper.search(companyId, keyword, shift, factory,
                     startDate, endDate, "id", "desc", null);
 
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -336,32 +336,6 @@ public class OriginalRecordService {
         }
     }
 
-    // =============== 过保实时查询 ===============
-    public java.util.Map<String, Object> lookupWarranty(String machineOffMaterial, String recordDate) {
-        java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
-        try {
-            if (machineOffMaterial == null || machineOffMaterial.isBlank()) {
-                result.put("lastMachineOnTime", null);
-                result.put("isOutOfWarranty", "无");
-                return result;
-            }
-            java.time.LocalDate baseDate = recordDate != null && !recordDate.isBlank()
-                    ? java.time.LocalDate.parse(recordDate) : java.time.LocalDate.now();
-            java.time.LocalDate lastTime = mapper.findLastMachineOnTime(machineOffMaterial);
-            result.put("lastMachineOnTime", lastTime != null ? lastTime.toString() : null);
-            if (lastTime != null) {
-                long months = java.time.temporal.ChronoUnit.MONTHS.between(lastTime, baseDate);
-                result.put("isOutOfWarranty", months >= 6 ? "已过保" : "未过保");
-            } else {
-                result.put("isOutOfWarranty", "无");
-            }
-        } catch (Exception e) {
-            result.put("lastMachineOnTime", null);
-            result.put("isOutOfWarranty", "无");
-        }
-        return result;
-    }
-
     // =============== 自动计算 ===============
     /**
      * 修复 Excel 时间字段的日期异常（Excel 纯时间存储为 0~1 的序列号，
@@ -413,20 +387,6 @@ public class OriginalRecordService {
         if (request != null && end != null) {
             long minutes = Duration.between(request, end).toMinutes();
             record.setDowntimeHours(BigDecimal.valueOf(minutes));
-        }
-        // 上次上机时间: 查询下机物料号上一次在上机物料列出现的日期
-        if (record.getMachineOffMaterial() != null && !record.getMachineOffMaterial().isBlank()) {
-            LocalDate lastTime = mapper.findLastMachineOnTime(record.getMachineOffMaterial());
-            record.setLastMachineOnTime(lastTime);
-            // 是否过保：以维修记录的日期为准，距上次上机是否 >= 6 个月
-            if (lastTime != null && record.getRecordDate() != null) {
-                long months = java.time.temporal.ChronoUnit.MONTHS.between(lastTime, record.getRecordDate());
-                record.setIsOutOfWarranty(months >= 6 ? "已过保" : "未过保");
-            } else {
-                record.setIsOutOfWarranty("无");
-            }
-        } else {
-            record.setIsOutOfWarranty("无");
         }
     }
 }

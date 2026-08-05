@@ -17,11 +17,6 @@
         style="width: 240px"
         @keyup.enter="handleSearch"
       />
-      <el-select v-model="searchForm.isOutOfWarranty" placeholder="是否过保" clearable style="width: 130px">
-        <el-option label="未过保" value="未过保" />
-        <el-option label="已过保" value="已过保" />
-        <el-option label="无" value="无" />
-      </el-select>
       <el-date-picker
         v-model="searchForm.dateRange"
         type="daterange"
@@ -53,11 +48,7 @@
       <el-table-column prop="materialCode" label="料号" width="120" show-overflow-tooltip />
       <el-table-column prop="partName" label="配件名称" width="120" show-overflow-tooltip />
       <el-table-column prop="quantity" label="数量" width="60" />
-      <el-table-column label="是否过保" width="90">
-        <template #default="{ row }">
-          <el-tag :type="warrantyTagType(row.isOutOfWarranty)" size="small">{{ row.isOutOfWarranty || '无' }}</el-tag>
-        </template>
-      </el-table-column>
+
       <el-table-column prop="faultDescription" label="维修描述" min-width="160" show-overflow-tooltip />
     </el-table>
 
@@ -94,12 +85,12 @@ const { list, total, loading, queryParams, fetchData, handlePageChange, handleSi
   (params) => originalRecordApi.getList({ ...params, companyId: props.companyId })
 )
 
-const searchForm = reactive({ keyword: '', isOutOfWarranty: '未过保', dateRange: [] })
+const searchForm = reactive({ keyword: '', dateRange: [] })
 
 function doFetch() {
   return fetchData({
     keyword: searchForm.keyword,
-    isOutOfWarranty: searchForm.isOutOfWarranty,
+
     startDate: searchForm.dateRange?.[0] || undefined,
     endDate: searchForm.dateRange?.[1] || undefined,
     companyId: props.companyId,
@@ -115,7 +106,7 @@ function handleSearch() {
 
 function handleReset() {
   searchForm.keyword = ''
-  searchForm.isOutOfWarranty = '未过保'
+
   searchForm.dateRange = []
   queryParams.page = 1
   doFetch()
@@ -135,11 +126,6 @@ function handleRowClick(row) {
   emit('update:modelValue', false)
 }
 
-function warrantyTagType(val) {
-  if (val === '未过保') return 'success'
-  if (val === '已过保') return 'danger'
-  return 'info'
-}
 </script>
 
 <style scoped>

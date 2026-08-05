@@ -38,7 +38,6 @@ class OriginalRecordAutoPushTest {
         r.setRepairPerson("tester");
         r.setMaterialCode("TMP-MC-001");
         r.setPartName("TMP配件AUTO" + System.nanoTime()); // 唯一标记，避免与真实数据冲突
-        r.setIsOutOfWarranty("未过保");
         r.setQuantity(quantity);
         return r;
     }
@@ -62,9 +61,8 @@ class OriginalRecordAutoPushTest {
         assertEquals("自动下推验证-处理方式", uw.getEquipRepairDebugging());
         assertEquals("TMP-ON-001", uw.getRepairMaterialOn());
         assertEquals("tester", uw.getRepairPerson());
-        // 未过保 ← 是否过保（维修记录由 applyCalculations 自动计算；"无"→空）
-        String expectedWarranty = "无".equals(saved.getIsOutOfWarranty()) ? "" : saved.getIsOutOfWarranty();
-        assertEquals(expectedWarranty, uw.getWarrantyStatus());
+        // 未过保列独立计算：首修（无上次维修记录）→ 空
+        assertEquals("", uw.getWarrantyStatus());
         assertEquals(r.getPartName(), uw.getPartName());
         assertEquals(1, uw.getQuantity());
         assertEquals("TMP-MC-001", uw.getMaterialCode());
@@ -93,9 +91,8 @@ class OriginalRecordAutoPushTest {
     }
 
     @Test
-    void warrantyNone_mapsToEmpty() {
+    void warrantyStatus_firstRepair_isEmpty() {
         OriginalRecord r = newRecord(2);
-        r.setIsOutOfWarranty("无");
         OriginalRecord saved = originalRecordService.create(r);
         List<UnwarrantedMaterial> hits = unwarrantedMaterialMapper.search(1L, r.getPartName(), null, null, null, null, "id", "desc");
         assertEquals(1, hits.size());

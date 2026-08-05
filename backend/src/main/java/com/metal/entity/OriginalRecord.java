@@ -75,10 +75,6 @@ public class OriginalRecord {
     private String deliveryRecordRef;
     @ExcelProperty(value = "单据号", index = 24)
     private String documentNo;
-    @ExcelProperty(value = "上次上机时间", index = 25)
-    private LocalDate lastMachineOnTime;
-    @ExcelProperty(value = "是否过保", index = 26)
-    private String isOutOfWarranty;
     @ExcelIgnore
     private LocalDateTime createdAt;
     @ExcelIgnore

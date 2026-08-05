@@ -56,6 +56,9 @@ class DeliveryStatsCalculationTest {
     @Autowired
     private UnwarrantedMaterialMapper unwarrantedMaterialMapper;
 
+    @Autowired
+    private UnwarrantedMaterialService unwarrantedMaterialService;
+
     private final String month = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
 
     private DeliveryStats newStats(String materialCode) {
@@ -103,7 +106,6 @@ class DeliveryStatsCalculationTest {
         r.setRepairPerson("tester");
         r.setMaterialCode(materialCode);
         r.setPartName("TMP配件CALC" + System.nanoTime());
-        r.setIsOutOfWarranty("未过保");
         r.setQuantity(quantity);
         originalRecordMapper.insert(r);
     }
@@ -143,7 +145,6 @@ class DeliveryStatsCalculationTest {
         r2.setRepairPerson("tester");
         r2.setMaterialCode(mc);
         r2.setPartName("TMP配件CALC2" + System.nanoTime());
-        r2.setIsOutOfWarranty("已过保");
         r2.setQuantity(30);
         originalRecordMapper.insert(r2);
 
@@ -335,6 +336,48 @@ class DeliveryStatsCalculationTest {
         assertEquals(9, s.getFreeDeliveryQuantity(), "手动刷新应同步计算送货免费");
         // 返修从未过保物料表取数（addUnwarrantedMaterial 6；addRepair 的维修记录不计入返修）
         assertEquals(6, s.getMonthRepair(), "手动刷新返修应从未过保物料表取数");
+    }
+
+    @Test
+    void unwarrantedMaterial_warrantyStatus_calculatedFromLastRepair() {
+        String part = "TMP配件WT" + System.nanoTime();
+        String mc = "TMP-WT-" + System.nanoTime();
+
+        // 首修（库中无上次维修记录）→ 未过保为空
+        UnwarrantedMaterial first = new UnwarrantedMaterial();
+        first.setCompanyId(1L);
+        first.setRecordDate(LocalDate.of(2026, 1, 15));
+        first.setFactory("测试厂房");
+        first.setMachineNo("T-WT-01");
+        first.setPartName(part);
+        first.setMaterialCode(mc);
+        first.setRepairPerson("tester");
+        UnwarrantedMaterial saved1 = unwarrantedMaterialService.create(first);
+        assertEquals("", saved1.getWarrantyStatus(), "首修（无上次维修）未过保应为空");
+
+        // 间隔 2 个月（<6）→ 未过保
+        UnwarrantedMaterial second = new UnwarrantedMaterial();
+        second.setCompanyId(1L);
+        second.setRecordDate(LocalDate.of(2026, 3, 15));
+        second.setFactory("测试厂房");
+        second.setMachineNo("T-WT-01");
+        second.setPartName(part);
+        second.setMaterialCode(mc);
+        second.setRepairPerson("tester");
+        UnwarrantedMaterial saved2 = unwarrantedMaterialService.create(second);
+        assertEquals("未过保", saved2.getWarrantyStatus(), "距上次维修 <6 个月应判未过保");
+
+        // 间隔 8 个月（>=6）→ 空
+        UnwarrantedMaterial third = new UnwarrantedMaterial();
+        third.setCompanyId(1L);
+        third.setRecordDate(LocalDate.of(2026, 9, 15));
+        third.setFactory("测试厂房");
+        third.setMachineNo("T-WT-01");
+        third.setPartName(part);
+        third.setMaterialCode(mc);
+        third.setRepairPerson("tester");
+        UnwarrantedMaterial saved3 = unwarrantedMaterialService.create(third);
+        assertEquals("", saved3.getWarrantyStatus(), "距上次维修 >=6 个月未过保应为空");
     }
 
     private void addDeliveryFree(String materialCode, int quantity, String productAttr) {

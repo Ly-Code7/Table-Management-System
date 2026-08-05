@@ -15,13 +15,6 @@
       <el-form-item label="厂房">
         <el-input v-model="searchForm.factory" placeholder="厂房" clearable style="width: 120px" />
       </el-form-item>
-      <el-form-item label="是否过保">
-        <el-select v-model="searchForm.isOutOfWarranty" placeholder="全部" clearable style="width: 110px">
-          <el-option label="未过保" value="未过保" />
-          <el-option label="已过保" value="已过保" />
-          <el-option label="无" value="无" />
-        </el-select>
-      </el-form-item>
       <el-form-item label="日期范围">
         <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始" end-placeholder="结束" value-format="YYYY-MM-DD" style="width: 240px" />
       </el-form-item>
@@ -77,15 +70,9 @@
       <el-table-column label="结束时间" width="100">
         <template #default="{ row }">{{ formatTime(row.endTime) }}</template>
       </el-table-column>
-      <el-table-column prop="lastMachineOnTime" label="上次上机时间" width="110" />
       <!-- 工时 & 过保 -->
       <el-table-column prop="repairHours" label="维修工时" width="90" />
       <el-table-column prop="downtimeHours" label="停机工时" width="90" />
-      <el-table-column prop="isOutOfWarranty" label="是否过保" width="90">
-        <template #default="{ row }">
-          <el-tag :type="warrantyTagType(row.isOutOfWarranty)" size="small">{{ row.isOutOfWarranty || '-' }}</el-tag>
-        </template>
-      </el-table-column>
       <el-table-column prop="deliveryRecordRef" label="送货记录引用" width="140" show-overflow-tooltip />
       <el-table-column prop="documentNo" label="单据号" width="110" show-overflow-tooltip />
       <el-table-column prop="createdBy" label="操作人" width="80" />
@@ -210,18 +197,6 @@
           <el-col :span="9">
             <el-form-item label="下机物料号" prop="machineOffMaterial">
               <el-input v-model="form.machineOffMaterial" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="16">
-          <el-col :span="12">
-            <el-form-item label="上次上机时间">
-              <el-input :model-value="warrantyInfo.lastMachineOnTime || '-'" disabled />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="是否过保">
-              <el-input :model-value="warrantyInfo.isOutOfWarranty || '-'" disabled />
             </el-form-item>
           </el-col>
         </el-row>
@@ -355,7 +330,7 @@ async function batchDelete() {
   }
 }
 
-const searchForm = reactive({ keyword: '', shift: '', factory: '', isOutOfWarranty: '' })
+const searchForm = reactive({ keyword: '', shift: '', factory: '' })
 const dateRange = ref([])
 const dialogVisible = ref(false)
 const isEdit = ref(false)
@@ -394,7 +369,7 @@ function doFetch() {
 
 function handleSearch() { queryParams.page = 1; doFetch() }
 function handleReset() {
-  Object.assign(searchForm, { keyword: '', shift: '', factory: '', isOutOfWarranty: '' })
+  Object.assign(searchForm, { keyword: '', shift: '', factory: '' })
   dateRange.value = []; queryParams.page = 1; doFetch()
 }
 
@@ -478,29 +453,6 @@ async function handleMaterialSelect(item) {
   } catch { /* 查不到就不回填 */ }
 }
 
-// 过保实时查询
-const warrantyInfo = reactive({ lastMachineOnTime: '', isOutOfWarranty: '' })
-let warrantyTimer = null
-watch(() => form.machineOffMaterial, (newVal) => {
-  if (warrantyTimer) clearTimeout(warrantyTimer)
-  if (!newVal || newVal.trim() === '') {
-    warrantyInfo.lastMachineOnTime = ''
-    warrantyInfo.isOutOfWarranty = ''
-    return
-  }
-  warrantyTimer = setTimeout(async () => {
-    try {
-      const res = await api.lookupWarranty(newVal, form.recordDate || undefined)
-      const data = res.data
-      warrantyInfo.lastMachineOnTime = data.lastMachineOnTime || ''
-      warrantyInfo.isOutOfWarranty = data.isOutOfWarranty || ''
-    } catch {
-      warrantyInfo.lastMachineOnTime = ''
-      warrantyInfo.isOutOfWarranty = ''
-    }
-  }, 500)
-})
-
 async function handleMachineOnMaterialBlur() {
   const serial = form.machineOnMaterial
   if (!serial || serial.trim() === '') return
@@ -528,11 +480,6 @@ async function handleMachineOnMaterialBlur() {
   }
 }
 
-function warrantyTagType(val) {
-  if (val === '未过保') return 'success'
-  if (val === '已过保') return 'danger'
-  return 'info'
-}
 
 function handleImport() {
   const input = document.createElement('input')

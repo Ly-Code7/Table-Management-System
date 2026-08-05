@@ -26,14 +26,13 @@ public class OriginalRecordController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String shift,
             @RequestParam(required = false) String factory,
-            @RequestParam(required = false) String isOutOfWarranty,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
             @RequestParam(defaultValue = "id") String sortField,
             @RequestParam(defaultValue = "desc") String sortOrder,
             @RequestParam(required = false) Boolean excludeLinked) {
         return Result.ok(service.query(page, pageSize, companyId, keyword, shift, factory,
-                isOutOfWarranty, startDate, endDate, sortField, sortOrder, excludeLinked));
+                startDate, endDate, sortField, sortOrder, excludeLinked));
     }
 
     @GetMapping("/{id}")
@@ -56,12 +55,6 @@ public class OriginalRecordController {
     @GetMapping("/copy/{id}")
     public Result<OriginalRecord> copy(@PathVariable Long id) {
         return Result.ok(service.copy(id));
-    }
-
-    @GetMapping("/lookup-warranty")
-    public Result<java.util.Map<String, Object>> lookupWarranty(@RequestParam String machineOffMaterial,
-                                                                 @RequestParam(required = false) String recordDate) {
-        return Result.ok(service.lookupWarranty(machineOffMaterial, recordDate));
     }
 
     @GetMapping("/lookup-156")
@@ -112,10 +105,9 @@ public class OriginalRecordController {
                             @RequestParam(required = false) String keyword,
                             @RequestParam(required = false) String shift,
                             @RequestParam(required = false) String factory,
-                            @RequestParam(required = false) String isOutOfWarranty,
                             @RequestParam(required = false) String startDate,
                             @RequestParam(required = false) String endDate) {
-        service.exportExcel(response, companyId, keyword, shift, factory, isOutOfWarranty, startDate, endDate);
+        service.exportExcel(response, companyId, keyword, shift, factory, startDate, endDate);
     }
 
     @GetMapping("/template")

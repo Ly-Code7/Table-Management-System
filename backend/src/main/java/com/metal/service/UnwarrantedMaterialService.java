@@ -157,9 +157,8 @@ public class UnwarrantedMaterialService {
         dto.setEquipRepairDebugging(o.getFaultDescription());
         dto.setRepairMaterialOn(o.getMachineOnMaterial());
         dto.setRepairPerson(o.getRepairPerson());
-        // 是否过保为"无"时不留存，其余回填原值
-        String w = o.getIsOutOfWarranty();
-        dto.setWarrantyStatus("无".equals(w) ? "" : w);
+        // 未过保列不再回填（独立计算，提交时由 applyCalculations 按唯一标识编号+上次维修日期判定）
+        dto.setWarrantyStatus("");
         dto.setPartName(o.getPartName());
         dto.setQuantity(o.getQuantity());
         dto.setMaterialCode(o.getMaterialCode());
@@ -310,8 +309,7 @@ public class UnwarrantedMaterialService {
         uw.setEquipRepairDebugging(o.getFaultDescription());
         uw.setRepairMaterialOn(o.getMachineOnMaterial());
         uw.setRepairPerson(o.getRepairPerson());
-        String w = o.getIsOutOfWarranty();
-        uw.setWarrantyStatus("无".equals(w) ? "" : w);
+        // 未过保列不再回填（独立计算，applyCalculations 按唯一标识编号+上次维修日期判定）
         uw.setPartName(o.getPartName());
         uw.setQuantity(o.getQuantity());
         uw.setMaterialCode(o.getMaterialCode());
@@ -343,10 +341,7 @@ public class UnwarrantedMaterialService {
                         data.setCompanyId(companyId != null ? companyId : 1L);
                         data.setCreatedBy(user);
                         data.setUpdatedBy(user);
-                        // 未过保字段文件没给时，按 厂房+机台号+料号+日期 反查维修记录回填
-                        if (data.getWarrantyStatus() == null || data.getWarrantyStatus().isBlank()) {
-                            backfillWarrantyStatus(data);
-                        }
+                        // 未过保列由阶段二 applyCalculations 独立计算，此处不回填
                         all.add(data);
                     } catch (Exception e) {
                         failDetails.add(new ImportResultDTO.FailDetail(counts[0], e.getMessage()));
@@ -403,25 +398,6 @@ public class UnwarrantedMaterialService {
         result.setFail(counts[2]);
         result.setFailDetails(failDetails);
         return result;
-    }
-
-    /** 按 厂房+机台号+料号+日期 反查维修记录，回填未过保字段（查不到留空） */
-    private void backfillWarrantyStatus(UnwarrantedMaterial data) {
-        if (data.getRecordDate() == null || !notBlank(data.getFactory())
-                || !notBlank(data.getMachineNo()) || !notBlank(data.getMaterialCode())) {
-            data.setWarrantyStatus("");
-            return;
-        }
-        String ds = data.getRecordDate().toString();
-        List<OriginalRecord> hits = originalRecordMapper.search(
-                data.getCompanyId(), data.getMaterialCode(), null, data.getFactory(),
-                null, ds, ds, "id", "desc", null);
-        if (!hits.isEmpty()) {
-            String w = hits.get(0).getIsOutOfWarranty();
-            data.setWarrantyStatus("无".equals(w) ? "" : w);
-        } else {
-            data.setWarrantyStatus("");
-        }
     }
 
     private void flushBatch(List<UnwarrantedMaterial> batch, int[] counts) {
@@ -537,7 +513,8 @@ public class UnwarrantedMaterialService {
 
     /**
      * 派生字段统一计算（单条场景：新增/编辑/预览）。覆盖前端传入值，保证一致性（参照 DeliveryStatsService.applyCalculations）。
-     * warrantyStatus 属于基础字段，此处不覆盖；repairAmount 按超比统计表含税单价 × 数量自动计算覆盖。
+     * warrantyStatus 由 {@link #applyCalculations(UnwarrantedMaterial, int, Integer, UnwarrantedMaterial)} 独立计算；
+     * repairAmount 按超比统计表含税单价 × 数量自动计算覆盖。
      */
     private void applyCalculations(UnwarrantedMaterial r) {
         applyCalculations(r, 0, null, null);
@@ -548,6 +525,7 @@ public class UnwarrantedMaterialService {
      * 一次性导入时同组（同唯一标识编号）记录尚未入库、互不可见，需要以组内前序条数/上一条记录补充顺序信息：
      * 第几次 = 库中已有（≤ 当天）条数 + 组内前序条数 + 1；总次数 = 库中已有（全部日期）+ 本组条数；
      * 上次日期/上次维修人优先取组内上一条记录（同日多条也正确）。
+     * 未过保列也在此独立计算（距上次维修 < 6 个月 → 未过保；首次/≥6 个月 → 空），覆盖前端传入值。
      *
      * @param groupExtra  组内排在本条之前的记录条数（非导入场景传 0）
      * @param groupSize   本组记录总条数（非导入场景传 null，此时总次数 = 库中已有 + 1）
@@ -603,6 +581,7 @@ public class UnwarrantedMaterialService {
             r.setLastDate(null);
             r.setLastDateNo(null);
             r.setCurrentDateNo(null);
+            r.setWarrantyStatus(""); // 无唯一标识编号/日期时无法判断是否未过保，置空
             r.setOverSixMonths(null);
             r.setUsageMonths(null);
             r.setLastRepairPerson(null);
@@ -636,6 +615,16 @@ public class UnwarrantedMaterialService {
         } else {
             r.setOverSixMonths(ChronoUnit.MONTHS.between(r.getLastDate(), date) >= 6 ? "Y" : "N");
             r.setUsageMonths(String.valueOf(wholeMonths(r.getLastDate(), date)));
+        }
+
+        // 未过保列独立计算（用户口径，2026-08）：按唯一标识编号查最近一次维修，
+        // 距本次 < 6 个月 → "未过保"；>= 6 个月或首次维修（无上次记录）→ 空。
+        // 覆盖前端传入/回填值，保证一致性；不再依赖维修记录"是否过保"字段。
+        if (r.getLastDate() != null && date != null
+                && ChronoUnit.MONTHS.between(r.getLastDate(), date) < 6) {
+            r.setWarrantyStatus("未过保");
+        } else {
+            r.setWarrantyStatus("");
         }
     }
 
