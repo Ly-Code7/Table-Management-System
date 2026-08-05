@@ -245,6 +245,18 @@ public class OriginalRecordService {
                         flushBatch(batch, counts);
                     }
                 }
+
+                @Override
+                public void onException(Exception exception, AnalysisContext ctx) {
+                    // 行级数据转换失败（如 Excel 错误值 #N/A 落入数字列）：跳过该行，不中断整次导入
+                    counts[0]++;
+                    int row = 0;
+                    if (exception instanceof com.alibaba.excel.exception.ExcelDataConvertException ex) {
+                        row = ex.getRowIndex() + 1; // EasyExcel rowIndex 为 0-based 绝对行号（含表头），+1 转 Excel 1-based 行号
+                    }
+                    failDetails.add(new ImportResultDTO.FailDetail(row, exception.getMessage()));
+                    counts[2]++;
+                }
             }).sheet().doRead();
         } catch (IOException e) {
             throw new BizException("文件读取失败: " + e.getMessage());
