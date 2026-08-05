@@ -1,5 +1,6 @@
 package com.metal.service;
 
+import com.metal.common.PageResult;
 import com.metal.dto.ImportResultDTO;
 import com.metal.entity.DeliveryRecord;
 import com.metal.entity.DeliveryStats;
@@ -378,6 +379,46 @@ class DeliveryStatsCalculationTest {
         third.setRepairPerson("tester");
         UnwarrantedMaterial saved3 = unwarrantedMaterialService.create(third);
         assertEquals("", saved3.getWarrantyStatus(), "距上次维修 >=6 个月未过保应为空");
+    }
+
+    @Test
+    void query_returnsLiveTotalCountByUniqueId() {
+        String part = "TMP配件TC" + System.nanoTime();
+        String mc = "TMP-TC-" + System.nanoTime();
+
+        // 同唯一标识编号创建 3 条（不同日期，保持唯一编号一致）
+        for (int i = 1; i <= 3; i++) {
+            UnwarrantedMaterial u = new UnwarrantedMaterial();
+            u.setCompanyId(1L);
+            u.setRecordDate(LocalDate.of(2026, 1, i));
+            u.setFactory("测试厂房");
+            u.setMachineNo("T-TC-01");
+            u.setPartName(part);
+            u.setMaterialCode(mc);
+            u.setRepairPerson("tester");
+            unwarrantedMaterialService.create(u);
+        }
+
+        // 列表查询：3 条记录的总次数应全部为实时值 3（而非落库快照 1/2/3）
+        PageResult<UnwarrantedMaterial> page = unwarrantedMaterialService.query(
+                1, 100, 1L, part, null, null, null, null, "id", "desc");
+        List<UnwarrantedMaterial> hits = page.getList().stream()
+                .filter(x -> part.equals(x.getPartName())).toList();
+        assertEquals(3, hits.size());
+        for (UnwarrantedMaterial u : hits) {
+            assertEquals(3, u.getTotalCount(), "同唯一标识编号的记录应显示实时总次数");
+        }
+
+        // 删除 1 条后：剩余 2 条的总次数应实时降为 2
+        unwarrantedMaterialService.delete(hits.get(0).getId());
+        PageResult<UnwarrantedMaterial> page2 = unwarrantedMaterialService.query(
+                1, 100, 1L, part, null, null, null, null, "id", "desc");
+        List<UnwarrantedMaterial> hits2 = page2.getList().stream()
+                .filter(x -> part.equals(x.getPartName())).toList();
+        assertEquals(2, hits2.size());
+        for (UnwarrantedMaterial u : hits2) {
+            assertEquals(2, u.getTotalCount(), "删除后总次数应实时减少");
+        }
     }
 
     private void addDeliveryFree(String materialCode, int quantity, String productAttr) {

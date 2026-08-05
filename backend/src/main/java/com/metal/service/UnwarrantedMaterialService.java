@@ -77,8 +77,31 @@ public class UnwarrantedMaterialService {
         PageHelper.startPage(page, pageSize);
         List<UnwarrantedMaterial> list = mapper.search(companyId, keyword, factory, warrantyStatus,
                 startDate, endDate, sortField, sortOrder);
+        // 总次数实时化：按当前页出现的唯一标识编号一次聚合，覆盖落库快照值
+        // （同一 unique_id 的所有记录显示同一实时值；新增/删除后刷新即变）
+        applyLiveTotalCount(list, companyId);
         PageInfo<UnwarrantedMaterial> pageInfo = new PageInfo<>(list);
         return new PageResult<>(pageInfo.getTotal(), page, pageSize, list);
+    }
+
+    /** 用实时聚合值覆盖列表行的 total_count（unique_id 为 null 的行保持原值） */
+    private void applyLiveTotalCount(List<UnwarrantedMaterial> list, Long companyId) {
+        if (list == null || list.isEmpty()) return;
+        List<String> uids = new java.util.ArrayList<>();
+        for (UnwarrantedMaterial r : list) {
+            if (r.getUniqueId() != null && !r.getUniqueId().isBlank()) uids.add(r.getUniqueId());
+        }
+        if (uids.isEmpty()) return;
+        java.util.Map<String, Integer> live = new java.util.HashMap<>();
+        for (java.util.Map<String, Object> row : mapper.countGroupedByUniqueIds(uids, companyId)) {
+            Object uid = row.get("uid");
+            Object cnt = row.get("cnt");
+            if (uid != null && cnt != null) live.put(String.valueOf(uid), ((Number) cnt).intValue());
+        }
+        for (UnwarrantedMaterial r : list) {
+            Integer v = live.get(r.getUniqueId());
+            if (v != null) r.setTotalCount(v);
+        }
     }
 
     public UnwarrantedMaterial getById(Long id) {
@@ -413,6 +436,19 @@ public class UnwarrantedMaterialService {
             PageHelper.startPage(1, 0);
             List<UnwarrantedMaterial> list = mapper.search(companyId, keyword, factory, warrantyStatus,
                     startDate, endDate, "id", "desc");
+            // 总次数实时化：导出全量用全量 GROUP BY 聚合覆盖（避免 IN 参数超限）
+            if (companyId != null) {
+                java.util.Map<String, Integer> live = new java.util.HashMap<>();
+                for (java.util.Map<String, Object> row : mapper.countGroupedByUniqueIdAll(companyId)) {
+                    Object uid = row.get("uid");
+                    Object cnt = row.get("cnt");
+                    if (uid != null && cnt != null) live.put(String.valueOf(uid), ((Number) cnt).intValue());
+                }
+                for (UnwarrantedMaterial r : list) {
+                    Integer v = live.get(r.getUniqueId());
+                    if (v != null) r.setTotalCount(v);
+                }
+            }
 
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
             response.setCharacterEncoding("UTF-8");

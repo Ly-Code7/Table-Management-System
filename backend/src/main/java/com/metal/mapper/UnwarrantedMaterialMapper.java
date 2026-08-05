@@ -153,4 +153,20 @@ public interface UnwarrantedMaterialMapper {
     int countRepairByMaterialCodeAndMonth(@Param("materialCode") String materialCode,
                                           @Param("month") String month,
                                           @Param("companyId") Long companyId);
+
+    /**
+     * 实时总次数：按唯一标识编号分组统计当前条数（列表分页场景，IN 限定当前页出现的编号）。
+     * 展示层用其覆盖落库的 total_count 快照（同一 unique_id 的所有记录显示同一实时值）。
+     */
+    @Select("<script>SELECT unique_id AS uid, COUNT(*) AS cnt FROM unwarranted_material " +
+            "WHERE company_id = #{companyId} AND unique_id IN " +
+            "<foreach collection='uniqueIds' item='id' open='(' close=')' separator=','>#{id}</foreach> " +
+            "GROUP BY unique_id</script>")
+    List<java.util.Map<String, Object>> countGroupedByUniqueIds(@Param("uniqueIds") List<String> uniqueIds,
+                                                                @Param("companyId") Long companyId);
+
+    /** 实时总次数（全量版）：公司内全部 unique_id 分组计数（导出场景，避免 IN 参数超限） */
+    @Select("SELECT unique_id AS uid, COUNT(*) AS cnt FROM unwarranted_material " +
+            "WHERE company_id = #{companyId} AND unique_id IS NOT NULL GROUP BY unique_id")
+    List<java.util.Map<String, Object>> countGroupedByUniqueIdAll(@Param("companyId") Long companyId);
 }
