@@ -285,6 +285,38 @@ class DeliveryStatsCalculationTest {
     }
 
     @Test
+    void importExcel_autoFillsMonthRepairFromUnwarrantedMaterial() throws Exception {
+        String mc = "TMP-MRP-" + System.nanoTime();
+        addUnwarrantedMaterial(mc, 7);
+
+        DeliveryStats row = newStats(mc);
+        row.setMachineOnQuantity(30);
+        row.setDeliveryQuantity(30);
+        row.setRatio(new BigDecimal("50"));
+        // Excel 未提供当月返修（留空）→ 应自动按料号+月份从未过保物料统计
+        row.setMonthRepair(null);
+        row.setAgreedRatioQuantity(null);
+        row.setExcessQuantity(null);
+        row.setExcessAmountWithTax(null);
+        row.setYearMonth(null);
+
+        java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+        com.alibaba.excel.EasyExcel.write(bos, DeliveryStats.class).sheet("送货统计").doWrite(List.of(row));
+        org.springframework.mock.web.MockMultipartFile file = new org.springframework.mock.web.MockMultipartFile(
+                "file", "test.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", bos.toByteArray());
+
+        ImportResultDTO res = service.importExcel(file, 1L);
+        assertEquals(1, res.getSuccess());
+
+        List<DeliveryStats> hits = deliveryStatsMapper.findByYearMonth(month, 1L);
+        DeliveryStats s = hits.stream().filter(x -> mc.equals(x.getMaterialCode())).findFirst().orElse(null);
+        assertNotNull(s, "导入的记录应可按月份查到");
+        assertEquals(7, s.getMonthRepair(), "导入时当月返修应自动从未过保物料表统计");
+        // 超比数量 = max(0, 上机30 - 返修7 - 约定比例10) = 13
+        assertEquals(0, new BigDecimal("13").compareTo(s.getExcessQuantity()), "超比数量应随自动返修重算");
+    }
+
+    @Test
     void batchRefreshByMonth_appliesFreeDeliveryAndNewRepairSource() {
         String mc = "TMP-BRF-" + System.nanoTime();
         deliveryStatsMapper.insert(newStats(mc));

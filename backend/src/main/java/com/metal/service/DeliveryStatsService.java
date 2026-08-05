@@ -188,6 +188,13 @@ public class DeliveryStatsService {
             data.setFreeDeliveryQuantity(deliveryRecordMapper.countFreeByMaterialCodeAndMonth(
                     data.getMaterialCode(), ym, data.getCompanyId()));
         }
+        // 当月返修自动计算：Excel 未提供时按料号+月份统计未过保物料（与 autoFill/定时刷新口径一致）
+        if (data.getMonthRepair() == null && data.getMaterialCode() != null
+                && !data.getMaterialCode().isBlank() && data.getStatDate() != null) {
+            String ym = data.getStatDate().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM"));
+            data.setMonthRepair(unwarrantedMaterialMapper.countRepairByMaterialCodeAndMonth(
+                    data.getMaterialCode(), ym, data.getCompanyId()));
+        }
                         // 派生字段统一重算（年月/约定比例数量/超比数量/超比含税金额），
                         // 与新增/编辑/批量刷新口径一致，防止 Excel 原值或空值入库
                         applyCalculations(data);
