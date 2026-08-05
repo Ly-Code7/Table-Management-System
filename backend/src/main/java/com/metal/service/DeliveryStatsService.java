@@ -78,10 +78,12 @@ public class DeliveryStatsService {
 
     @Transactional
     public DeliveryStats create(DeliveryStats record, List<DeliveryStatsDaily> dailies) {
-        // 料号+月份唯一性校验
+        // 公司兜底：未传时默认归属公司 1（与其他模块一致），防止 company_id NULL 入库
+        if (record.getCompanyId() == null) record.setCompanyId(1L);
+        // 料号+月份唯一性校验（公司内，防止跨公司误拒）
         if (record.getMaterialCode() != null && !record.getMaterialCode().isBlank()
                 && record.getYearMonth() != null && !record.getYearMonth().isBlank()) {
-            if (mapper.countByMaterialCodeAndYearMonth(record.getMaterialCode(), record.getYearMonth()) > 0) {
+            if (mapper.countByMaterialCodeAndYearMonth(record.getMaterialCode(), record.getYearMonth(), record.getCompanyId()) > 0) {
                 throw new BizException("该月已存在料号 '" + record.getMaterialCode() + "' 的统计记录");
             }
         }
@@ -450,18 +452,19 @@ public class DeliveryStatsService {
     }
 
     /**
-     * 派生字段统一计算：年月（由统计日期生成）、比例（百分数转小数）、约定比例数量、超比数量、超比含税金额。
+     * 派生字段统一计算：年月（由统计日期生成）、约定比例数量、超比数量、超比含税金额。
      * 供新增/编辑/批量刷新/Excel 导入使用；DeliveryStatsScheduler 定时刷新也复用本方法，
      * 保证所有入口计算口径一致（历史教训：Scheduler 曾自带一份漏减约定比例的副本导致口径漂移）。
+     *
+     * 注意：ratio 的比例→小数转换（如 15 → 0.15）只允许在数据入口做一次——
+     * Excel 导入由 importExcel 预处理、手动录入由前端提交时 /100；
+     * 本方法【不再】转换 ratio（曾在此除 100 导致 >100% 的比例被双重除、批量刷新非幂等，错 100 倍）。
+     * 本方法必须幂等：对库中已存小数（如 0.15）重复调用结果不变。
      */
     public void applyCalculations(DeliveryStats record) {
         // 年月根据统计日期自动生成（如 2026-07-28 → 2026-07），覆盖前端传入值，保证一致性
         if (record.getStatDate() != null) {
             record.setYearMonth(record.getStatDate().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM")));
-        }
-        // 比例从百分比转为小数（如 15 → 0.15），与 Excel 导入逻辑一致
-        if (record.getRatio() != null && record.getRatio().compareTo(BigDecimal.ONE) > 0) {
-            record.setRatio(record.getRatio().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
         }
         // 约定比例数量 = 机台数 × 单台机用量 × 比例
         if (record.getMachineCount() != null && record.getUnitUsage() != null && record.getRatio() != null) {
@@ -495,8 +498,10 @@ public class DeliveryStatsService {
         java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
         if (materialCode == null || materialCode.isBlank()) return result;
 
-        // 1. 从156项表查询基础信息
-        com.metal.entity.BaseMaterial156 item = baseMaterial156Mapper.findByMaterialCode(materialCode);
+        // 1. 从156项表查询基础信息（公司内，防止取到其他公司的 156 项单价/比例）
+        com.metal.entity.BaseMaterial156 item = companyId != null
+                ? baseMaterial156Mapper.findByMaterialCodeAndCompany(materialCode, companyId)
+                : baseMaterial156Mapper.findByMaterialCode(materialCode);
         if (item != null) {
             java.util.Map<String, Object> from156 = new java.util.LinkedHashMap<>();
             from156.put("category", item.getCategory());

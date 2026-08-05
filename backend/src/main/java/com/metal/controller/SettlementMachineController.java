@@ -74,8 +74,9 @@ public class SettlementMachineController {
     }
 
     @GetMapping("/lookup-156")
-    public Result<java.util.Map<String, Object>> lookupFrom156(@RequestParam String materialCode) {
-        return Result.ok(service.lookupFrom156(materialCode));
+    public Result<java.util.Map<String, Object>> lookupFrom156(@RequestParam String materialCode,
+                                                               @RequestParam(required = false) Long companyId) {
+        return Result.ok(service.lookupFrom156(materialCode, companyId));
     }
 
     @GetMapping("/template")

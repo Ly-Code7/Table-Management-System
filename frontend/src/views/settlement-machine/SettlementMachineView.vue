@@ -318,7 +318,7 @@ async function handleMaterialSelect(item) {
   form.materialCode = item.value
   // 查询156项表，回填关联字段
   try {
-    const res = await api.lookup156(item.value)
+    const res = await api.lookup156(item.value, companyStore.currentCompanyId)
     const d = res.data
     if (d && Object.keys(d).length > 0) {
       form.category = d.category || ''

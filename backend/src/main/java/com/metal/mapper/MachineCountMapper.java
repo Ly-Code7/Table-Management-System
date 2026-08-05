@@ -50,9 +50,9 @@ public interface MachineCountMapper {
                               @Param("sortField") String sortField,
                               @Param("sortOrder") String sortOrder);
 
-    /** 查找当月基准线（占比100%） */
-    @Select("SELECT * FROM machine_count WHERE stat_month = #{statMonth} AND ratio_pct = 100.00 LIMIT 1")
-    MachineCount findBaselineByMonth(@Param("statMonth") String statMonth);
+    /** 查找当月基准线（占比100%），公司内 */
+    @Select("SELECT * FROM machine_count WHERE stat_month = #{statMonth} AND company_id = #{companyId} AND ratio_pct = 100.00 LIMIT 1")
+    MachineCount findBaselineByMonth(@Param("statMonth") String statMonth, @Param("companyId") Long companyId);
 
     /** 查找当月所有记录（按数量降序，用于重算） */
     @Select("<script>" +
@@ -62,9 +62,9 @@ public interface MachineCountMapper {
             "</script>")
     List<MachineCount> findByMonth(@Param("statMonth") String statMonth, @Param("companyId") Long companyId);
 
-    /** 按月份删除非基准数据 */
-    @org.apache.ibatis.annotations.Update("DELETE FROM machine_count WHERE stat_month = #{statMonth} AND ratio_pct != 100.00")
-    int deleteByMonthExceptBaseline(@Param("statMonth") String statMonth);
+    /** 按月份删除非基准数据（公司内，防止跨公司误删） */
+    @org.apache.ibatis.annotations.Update("DELETE FROM machine_count WHERE stat_month = #{statMonth} AND company_id = #{companyId} AND ratio_pct != 100.00")
+    int deleteByMonthExceptBaseline(@Param("statMonth") String statMonth, @Param("companyId") Long companyId);
 
     /** 批量更新占比 */
     @Update("<script>" +

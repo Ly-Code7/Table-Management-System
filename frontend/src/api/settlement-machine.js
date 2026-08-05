@@ -38,8 +38,8 @@ export function exportExcel(params) {
   })
 }
 
-export function lookup156(materialCode) {
-  return request.get('/settlement-machine/lookup-156', { params: { materialCode } })
+export function lookup156(materialCode, companyId) {
+  return request.get('/settlement-machine/lookup-156', { params: { materialCode, companyId } })
 }
 
 export function downloadTemplate() {

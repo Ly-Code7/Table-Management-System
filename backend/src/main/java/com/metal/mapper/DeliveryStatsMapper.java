@@ -86,8 +86,8 @@ public interface DeliveryStatsMapper {
             "</script>")
     List<DeliveryStats> findByYearMonth(@Param("yearMonth") String yearMonth, @Param("companyId") Long companyId);
 
-    @Select("SELECT COUNT(*) FROM delivery_stats WHERE material_code = #{materialCode} AND `year_month` = #{yearMonth}")
-    int countByMaterialCodeAndYearMonth(@Param("materialCode") String materialCode, @Param("yearMonth") String yearMonth);
+    @Select("SELECT COUNT(*) FROM delivery_stats WHERE material_code = #{materialCode} AND `year_month` = #{yearMonth} AND company_id = #{companyId}")
+    int countByMaterialCodeAndYearMonth(@Param("materialCode") String materialCode, @Param("yearMonth") String yearMonth, @Param("companyId") Long companyId);
 
     @Select("SELECT MAX(id) FROM delivery_stats")
     Long findMaxId();

@@ -248,7 +248,7 @@ async function handleClearByMonth() {
     await ElMessageBox.confirm(`确认清除 ${clearMonth.value} 的所有开机数量数据？（基准线不会被删除）`, '二次确认', { type: 'warning' })
   } catch { return }
   try {
-    const res = await api.clearByMonth(clearMonth.value)
+    const res = await api.clearByMonth(clearMonth.value, companyStore.currentCompanyId)
     ElMessage.success(res.data || '清除成功')
     clearMonth.value = ''
     doFetch()

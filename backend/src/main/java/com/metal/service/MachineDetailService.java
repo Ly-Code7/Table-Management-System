@@ -51,6 +51,8 @@ public class MachineDetailService {
 
     @Transactional
     public MachineDetail create(MachineDetail record) {
+        // 公司兜底：未传时默认归属公司 1（与其他模块一致），防止 company_id NULL 入库
+        if (record.getCompanyId() == null) record.setCompanyId(1L);
         String user = ServiceHelper.getCurrentUserName();
         record.setCreatedBy(user);
         record.setUpdatedBy(user);

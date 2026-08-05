@@ -79,8 +79,9 @@ public class MachineCountController {
     }
 
     @PostMapping("/clear-by-month")
-    public Result<String> clearByMonth(@RequestParam String statMonth) {
-        int count = service.clearByMonth(statMonth);
+    public Result<String> clearByMonth(@RequestParam String statMonth,
+                                       @RequestParam(required = false) Long companyId) {
+        int count = service.clearByMonth(statMonth, companyId);
         return Result.ok("已清除 " + statMonth + " 月份数据 " + count + " 条（基准线保留）");
     }
 

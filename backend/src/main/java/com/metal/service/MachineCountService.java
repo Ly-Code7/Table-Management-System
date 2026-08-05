@@ -49,9 +49,10 @@ public class MachineCountService {
     }
 
     @Transactional
-    public int clearByMonth(String statMonth) {
+    public int clearByMonth(String statMonth, Long companyId) {
         if (statMonth == null || statMonth.isBlank()) throw new BizException("月份不能为空");
-        return mapper.deleteByMonthExceptBaseline(statMonth);
+        Long cid = companyId != null ? companyId : 1L;
+        return mapper.deleteByMonthExceptBaseline(statMonth, cid);
     }
 
     public MachineCount getById(Long id) {
@@ -65,6 +66,8 @@ public class MachineCountService {
         if (record.getStatMonth() == null || record.getStatMonth().isBlank()) {
             throw new BizException("统计月份不能为空");
         }
+        // 公司兜底：未传时默认归属公司 1（与其他模块一致），防止 company_id NULL 入库
+        if (record.getCompanyId() == null) record.setCompanyId(1L);
         // 前端勾选了基准线，设置占比为100
         if (Boolean.TRUE.equals(record.getIsBaseline())) {
             record.setRatioPct(new BigDecimal("100.00"));
@@ -74,9 +77,9 @@ public class MachineCountService {
         record.setUpdatedBy(user);
         applyRatioCalculation(record, null);
         mapper.insert(record);
-        // 如果当前记录是基准线，重算同月其他所有记录
+        // 如果当前记录是基准线，重算同月其他所有记录（公司内）
         if (isBaseline(record)) {
-            recalculateAllInMonth(record.getStatMonth(), record.getId());
+            recalculateAllInMonth(record.getStatMonth(), record.getId(), record.getCompanyId());
         }
         return record;
     }
@@ -85,6 +88,8 @@ public class MachineCountService {
     public MachineCount update(MachineCount record) {
         MachineCount exist = getById(record.getId());
         ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "编辑");
+        // 公司兜底：沿用原记录公司，防止 company_id NULL 入库
+        if (record.getCompanyId() == null) record.setCompanyId(exist.getCompanyId() != null ? exist.getCompanyId() : 1L);
         // 前端勾选了基准线，设置占比为100
         if (Boolean.TRUE.equals(record.getIsBaseline())) {
             record.setRatioPct(new BigDecimal("100.00"));
@@ -92,8 +97,8 @@ public class MachineCountService {
         record.setUpdatedBy(ServiceHelper.getCurrentUserName());
         applyRatioCalculation(record, exist.getId());
         mapper.update(record);
-        // 重算同月所有记录（排除自身，因为自身已更新）
-        recalculateAllInMonth(record.getStatMonth(), record.getId());
+        // 重算同月所有记录（排除自身，因为自身已更新；公司内）
+        recalculateAllInMonth(record.getStatMonth(), record.getId(), record.getCompanyId());
         return record;
     }
 
@@ -102,10 +107,11 @@ public class MachineCountService {
         MachineCount exist = getById(id);
         ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "删除");
         String statMonth = exist.getStatMonth();
+        Long companyId = exist.getCompanyId() != null ? exist.getCompanyId() : 1L;
 
-        // 检查是否删除的是基准线
+        // 检查是否删除的是基准线（公司内）
         if (isBaseline(exist)) {
-            List<MachineCount> others = mapper.findByMonth(statMonth, null);
+            List<MachineCount> others = mapper.findByMonth(statMonth, companyId);
             // 排除自身
             others.removeIf(r -> r.getId().equals(id));
             if (!others.isEmpty()) {
@@ -115,8 +121,8 @@ public class MachineCountService {
 
         mapper.deleteById(id);
 
-        // 删除后如果还有其他记录但没有基准线，选数量最大的作为新基准线
-        List<MachineCount> remaining = mapper.findByMonth(statMonth, null);
+        // 删除后如果还有其他记录但没有基准线，选数量最大的作为新基准线（公司内）
+        List<MachineCount> remaining = mapper.findByMonth(statMonth, companyId);
         if (!remaining.isEmpty()) {
             boolean hasBaseline = remaining.stream().anyMatch(this::isBaseline);
             if (!hasBaseline) {
@@ -124,7 +130,7 @@ public class MachineCountService {
                 MachineCount newBaseline = remaining.get(0); // 已按 count DESC 排序
                 newBaseline.setRatioPct(new BigDecimal("100.00"));
                 mapper.update(newBaseline);
-                recalculateAllInMonth(statMonth, newBaseline.getId());
+                recalculateAllInMonth(statMonth, newBaseline.getId(), companyId);
             }
         }
     }
@@ -162,8 +168,8 @@ public class MachineCountService {
         }
 
         if (isBaseline(record)) {
-            // 当前记录设为基准线：需要把同月旧基准线降级
-            MachineCount oldBaseline = mapper.findBaselineByMonth(record.getStatMonth());
+            // 当前记录设为基准线：需要把同月旧基准线降级（公司内）
+            MachineCount oldBaseline = mapper.findBaselineByMonth(record.getStatMonth(), record.getCompanyId());
             if (oldBaseline != null && !oldBaseline.getId().equals(excludeId)) {
                 // 旧基准线按新基准线重算占比
                 if (record.getCount() > 0) {
@@ -176,8 +182,8 @@ public class MachineCountService {
                 }
             }
         } else {
-            // 非基准线：根据当月基准线计算占比
-            MachineCount baseline = mapper.findBaselineByMonth(record.getStatMonth());
+            // 非基准线：根据当月基准线计算占比（公司内）
+            MachineCount baseline = mapper.findBaselineByMonth(record.getStatMonth(), record.getCompanyId());
             if (baseline != null && !baseline.getId().equals(excludeId) && baseline.getCount() > 0) {
                 BigDecimal ratio = BigDecimal.valueOf(record.getCount())
                         .divide(BigDecimal.valueOf(baseline.getCount()), 4, RoundingMode.HALF_UP)
@@ -192,15 +198,17 @@ public class MachineCountService {
     }
 
     /**
-     * 重算当月所有记录的占比（基于当前基准线）
+     * 重算当月所有记录的占比（基于当前基准线，公司内）
      * @param statMonth        统计月份
      * @param excludeBaselineId 排除的基准线ID（该基准线已更新，不需要重算自己）
+     * @param companyId        公司ID
      */
-    private void recalculateAllInMonth(String statMonth, Long excludeBaselineId) {
-        MachineCount baseline = mapper.findBaselineByMonth(statMonth);
+    private void recalculateAllInMonth(String statMonth, Long excludeBaselineId, Long companyId) {
+        Long cid = companyId != null ? companyId : 1L;
+        MachineCount baseline = mapper.findBaselineByMonth(statMonth, cid);
         if (baseline == null) return;
 
-        List<MachineCount> all = mapper.findByMonth(statMonth, null);
+        List<MachineCount> all = mapper.findByMonth(statMonth, cid);
         List<MachineCount> toUpdate = new ArrayList<>();
 
         for (MachineCount r : all) {

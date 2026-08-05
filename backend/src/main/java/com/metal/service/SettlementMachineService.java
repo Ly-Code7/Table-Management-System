@@ -56,14 +56,14 @@ public class SettlementMachineService {
 
     @Transactional
     public SettlementMachine create(SettlementMachine record) {
+        // 公司兜底：未传时默认归属公司 1（与其他模块一致），防止 company_id NULL 入库
+        if (record.getCompanyId() == null) record.setCompanyId(1L);
         // 质保期默认为6个月
         if (record.getWarrantyPeriod() == null || record.getWarrantyPeriod().isBlank()) {
             record.setWarrantyPeriod("6个月");
         }
-        // 比例从百分比转为小数（如 25 → 0.25），与 Excel 导入逻辑一致
-        if (record.getRatio() != null && record.getRatio().compareTo(BigDecimal.ONE) > 0) {
-            record.setRatio(record.getRatio().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
-        }
+        // 注意：ratio 的比例→小数转换（如 25 → 0.25）由数据入口完成（前端提交时 /100、Excel 导入时预处理），
+        // 此处不再转换，避免 >100% 的比例被双重除（曾导致 150% 被算成 1.5%）。
         String user = ServiceHelper.getCurrentUserName();
         record.setCreatedBy(user);
         record.setUpdatedBy(user);
@@ -75,10 +75,7 @@ public class SettlementMachineService {
     public SettlementMachine update(SettlementMachine record) {
         SettlementMachine exist = getById(record.getId());
         ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "编辑");
-        // 比例从百分比转为小数
-        if (record.getRatio() != null && record.getRatio().compareTo(BigDecimal.ONE) > 0) {
-            record.setRatio(record.getRatio().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
-        }
+        // 同上：ratio 转换由入口完成，此处不再转换
         record.setUpdatedBy(ServiceHelper.getCurrentUserName());
         mapper.update(record);
         return record;
@@ -92,11 +89,13 @@ public class SettlementMachineService {
     }
 
     /**
-     * 料号查156项表返回自动回填数据
+     * 料号查156项表返回自动回填数据（公司内，防止取到其他公司的 156 项单价/比例）
      */
-    public java.util.Map<String, Object> lookupFrom156(String materialCode) {
+    public java.util.Map<String, Object> lookupFrom156(String materialCode, Long companyId) {
         if (materialCode == null || materialCode.isBlank()) return java.util.Map.of();
-        com.metal.entity.BaseMaterial156 item = baseMaterial156Mapper.findByMaterialCode(materialCode);
+        com.metal.entity.BaseMaterial156 item = companyId != null
+                ? baseMaterial156Mapper.findByMaterialCodeAndCompany(materialCode, companyId)
+                : baseMaterial156Mapper.findByMaterialCode(materialCode);
         if (item != null) {
             java.util.Map<String, Object> map = new java.util.LinkedHashMap<>();
             map.put("category", item.getCategory());
