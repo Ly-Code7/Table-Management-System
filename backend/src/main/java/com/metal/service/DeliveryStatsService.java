@@ -167,6 +167,16 @@ public class DeliveryStatsService {
                                 data.setRatio(r.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
                             }
                         }
+                        // 机台数自动计算：Excel 未提供机台数时，按料号+月份从结算机台数查询
+                        // （与手动录入 autoFill 口径一致：SUM(settlement_machine_count)，查不到置 0）。
+                        // 必须在 applyCalculations 之前：约定比例数量依赖机台数。
+                        if (data.getMachineCount() == null && data.getMaterialCode() != null
+                                && !data.getMaterialCode().isBlank() && data.getStatDate() != null) {
+                            String ym = data.getStatDate().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM"));
+                            Integer mc = settlementMachineMapper.sumMachineCountByMaterialCodeAndMonth(
+                                    data.getMaterialCode(), ym, data.getCompanyId());
+                            data.setMachineCount(mc != null ? mc : 0);
+                        }
                         // 派生字段统一重算（年月/约定比例数量/超比数量/超比含税金额），
                         // 与新增/编辑/批量刷新口径一致，防止 Excel 原值或空值入库
                         applyCalculations(data);

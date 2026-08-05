@@ -4,9 +4,11 @@ import com.metal.dto.ImportResultDTO;
 import com.metal.entity.DeliveryRecord;
 import com.metal.entity.DeliveryStats;
 import com.metal.entity.OriginalRecord;
+import com.metal.entity.SettlementMachine;
 import com.metal.mapper.DeliveryRecordMapper;
 import com.metal.mapper.DeliveryStatsMapper;
 import com.metal.mapper.OriginalRecordMapper;
+import com.metal.mapper.SettlementMachineMapper;
 import com.metal.scheduler.DeliveryStatsScheduler;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +47,9 @@ class DeliveryStatsCalculationTest {
 
     @Autowired
     private OriginalRecordMapper originalRecordMapper;
+
+    @Autowired
+    private SettlementMachineMapper settlementMachineMapper;
 
     private final String month = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
 
@@ -153,5 +158,58 @@ class DeliveryStatsCalculationTest {
         assertEquals(0, new BigDecimal("14").compareTo(s.getExcessQuantity()), "导入后超比数量应重算");
         // 超比含税金额 = 100 × 14 ÷ 1.13 = 1238.94
         assertEquals(0, new BigDecimal("1238.94").compareTo(s.getExcessAmountWithTax()), "导入后超比含税金额应重算");
+    }
+
+    @Test
+    void importExcel_autoFillsMachineCountFromSettlementMachine() throws Exception {
+        String mc = "TMP-MC-" + System.nanoTime();
+        // 结算机台数：该料号当月结算 7 台（含多机型行，SUM 汇总）
+        SettlementMachine sm1 = new SettlementMachine();
+        sm1.setCompanyId(1L);
+        sm1.setMaterialCode(mc);
+        sm1.setCategory("测试类");
+        sm1.setPartName("测试配件");
+        sm1.setMachineModel("机型A");
+        sm1.setSettlementMachineCount(5);
+        sm1.setStatMonth(month);
+        sm1.setCreatedBy("tester");
+        sm1.setUpdatedBy("tester");
+        SettlementMachine sm2 = new SettlementMachine();
+        sm2.setCompanyId(1L);
+        sm2.setMaterialCode(mc);
+        sm2.setCategory("测试类");
+        sm2.setPartName("测试配件");
+        sm2.setMachineModel("机型B");
+        sm2.setSettlementMachineCount(2);
+        sm2.setStatMonth(month);
+        sm2.setCreatedBy("tester");
+        sm2.setUpdatedBy("tester");
+        settlementMachineMapper.batchInsert(List.of(sm1, sm2));
+
+        DeliveryStats row = newStats(mc);
+        row.setDeliveryQuantity(30);
+        row.setMonthRepair(6);
+        row.setRatio(new BigDecimal("50"));
+        // Excel 未提供机台数（留空）→ 应自动从结算机台数查询（5 + 2 = 7）
+        row.setMachineCount(null);
+        row.setAgreedRatioQuantity(null);
+        row.setExcessQuantity(null);
+        row.setExcessAmountWithTax(null);
+        row.setYearMonth(null);
+
+        java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+        com.alibaba.excel.EasyExcel.write(bos, DeliveryStats.class).sheet("送货统计").doWrite(List.of(row));
+        org.springframework.mock.web.MockMultipartFile file = new org.springframework.mock.web.MockMultipartFile(
+                "file", "test.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", bos.toByteArray());
+
+        ImportResultDTO res = service.importExcel(file, 1L);
+        assertEquals(1, res.getSuccess());
+
+        List<DeliveryStats> hits = deliveryStatsMapper.findByYearMonth(month, 1L);
+        DeliveryStats s = hits.stream().filter(x -> mc.equals(x.getMaterialCode())).findFirst().orElse(null);
+        assertNotNull(s, "导入的记录应可按月份查到");
+        assertEquals(7, s.getMachineCount(), "机台数应按料号从结算机台数 SUM 自动计算");
+        // 约定比例数量随自动计算的机台数重算 = 2 × 0.5 × 7 = 7.00
+        assertEquals(0, new BigDecimal("7.00").compareTo(s.getAgreedRatioQuantity()), "约定比例数量应按自动机台数重算");
     }
 }
