@@ -538,7 +538,9 @@ public class UnwarrantedMaterialService {
     private void fillPartName(UnwarrantedMaterial r) {
         if (!notBlank(r.getMaterialCode()) || notBlank(r.getPartName())) return;
         try {
-            com.metal.entity.BaseMaterial156 item = baseMaterial156Mapper.findByMaterialCode(r.getMaterialCode());
+            com.metal.entity.BaseMaterial156 item = r.getCompanyId() != null
+                    ? baseMaterial156Mapper.findByMaterialCodeAndCompany(r.getMaterialCode(), r.getCompanyId())
+                    : baseMaterial156Mapper.findByMaterialCode(r.getMaterialCode());
             if (item != null && notBlank(item.getPartName())) {
                 r.setPartName(item.getPartName());
             }

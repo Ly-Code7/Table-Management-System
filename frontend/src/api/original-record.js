@@ -57,8 +57,8 @@ export function lookupWarranty(machineOffMaterial, recordDate) {
   return request.get('/original-record/lookup-warranty', { params: { machineOffMaterial, recordDate } })
 }
 
-export function lookup156(materialCode) {
-  return request.get('/original-record/lookup-156', { params: { materialCode } })
+export function lookup156(materialCode, companyId) {
+  return request.get('/original-record/lookup-156', { params: { materialCode, companyId } })
 }
 
 export function lookupDeliveryRef(machineOnMaterial, recordDate, companyId) {

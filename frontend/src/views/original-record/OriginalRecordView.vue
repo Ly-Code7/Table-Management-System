@@ -451,7 +451,7 @@ async function handleMaterialSelect(item) {
   form.materialCode = item.value
   // 查询156项表，回填156项名称（配件名称不再自动回填）
   try {
-    const res = await api.lookup156(item.value)
+    const res = await api.lookup156(item.value, companyStore.currentCompanyId)
     if (res.data && res.data.partName) {
       form.material156Name = res.data.partName
     }

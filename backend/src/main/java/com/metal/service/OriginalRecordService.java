@@ -141,11 +141,13 @@ public class OriginalRecordService {
     /**
      * 根据料号查询156项表，返回配件名称（用于维修记录自动回填）
      */
-    public java.util.Map<String, String> lookupFrom156(String materialCode) {
+    public java.util.Map<String, String> lookupFrom156(String materialCode, Long companyId) {
         if (materialCode == null || materialCode.isBlank()) {
             return java.util.Map.of("partName", "");
         }
-        com.metal.entity.BaseMaterial156 item = baseMaterial156Mapper.findByMaterialCode(materialCode);
+        com.metal.entity.BaseMaterial156 item = companyId != null
+                ? baseMaterial156Mapper.findByMaterialCodeAndCompany(materialCode, companyId)
+                : baseMaterial156Mapper.findByMaterialCode(materialCode);
         if (item != null) {
             return java.util.Map.of("partName", item.getPartName() != null ? item.getPartName() : "");
         }
