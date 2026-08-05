@@ -24,8 +24,7 @@
       </div>
     </div>
 
-    <el-table :data="pagedRows" v-loading="loading" border stripe style="width: 100%" :row-class-name="rowClassName"
-      @cell-mouse-enter="onCellEnter" @cell-mouse-leave="onCellLeave">
+    <el-table :data="pagedRows" v-loading="loading" border stripe style="width: 100%" :row-class-name="rowClassName">
       <el-table-column label="序号" width="60">
         <template #default="{ row, $index }">{{ row.key === '合计' ? 0 : $index }}</template>
       </el-table-column>
@@ -145,43 +144,6 @@ function rowClassName({ row }) {
   return row.key === '合计' ? 'board-summary-row' : ''
 }
 
-// ===== 悬停行列高亮（DOM 直操作，避免响应式触发表格全量重渲染） =====
-function onCellEnter(row, column, cell) {
-  clearHoverCells()
-  const tables = document.querySelectorAll('.el-table__body')
-  if (!tables.length) return
-  const rowIndex = cell.closest('tr').rowIndex
-  const colLabel = column.label
-  tables.forEach(tb => {
-    const tableEl = tb.closest('.el-table')
-    if (!tableEl) return
-    const trs = tb.querySelectorAll('tr')
-    // 行高亮：所有表格（含 fixed 副本）同一行
-    const tr = trs[rowIndex]
-    if (tr) tr.querySelectorAll('td').forEach(td => td.classList.add('board-hover-cell'))
-    // 列高亮：用该 body 表自身对应的表头按 label 匹配列号（主表 ↔ header-wrapper，fixed 表 ↔ 同容器 header）
-    const fixedWrap = tb.closest('.el-table__fixed, .el-table__fixed-left, .el-table__fixed-right')
-    const headerEl = fixedWrap
-      ? fixedWrap.querySelectorAll('.el-table__fixed-header-wrapper th')
-      : tableEl.querySelectorAll('.el-table__header-wrapper th')
-    if (headerEl) {
-      let colIdx = -1
-      headerEl.forEach((th, i) => { if (th.innerText.trim() === colLabel) colIdx = i })
-      if (colIdx >= 0) trs.forEach(r => {
-        const td = r.querySelectorAll('td')[colIdx]
-        if (td) td.classList.add('board-hover-cell')
-      })
-    }
-  })
-}
-function onCellLeave() {
-  clearHoverCells()
-}
-function clearHoverCells() {
-  document.querySelectorAll('td.board-hover-cell').forEach(td => td.classList.remove('board-hover-cell'))
-}
-// ===== 悬停行列高亮 end =====
-
 function formatCell(v, isRate) {
   if (v === null || v === undefined || v === '') return ''
   if (isRate) return formatPercent(v)
@@ -249,6 +211,4 @@ onMounted(fetchAll)
 .row-count { color: #909399; font-size: 13px; }
 .board-summary-row { font-weight: 700; }
 .board-summary-row td.el-table__cell { background-color: #f5f7fa; }
-/* 悬停行列高亮（亮蓝） */
-.board-hover-cell { background-color: #a8d8ff !important; }
 </style>
