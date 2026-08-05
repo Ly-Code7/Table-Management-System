@@ -159,14 +159,19 @@ function onCellEnter(row, column, cell) {
     // 行高亮：所有表格（含 fixed 副本）同一行
     const tr = trs[rowIndex]
     if (tr) tr.querySelectorAll('td').forEach(td => td.classList.add('board-hover-cell'))
-    // 列高亮：按表头 label 匹配列号（fixed 副本表头与主表一致）
-    const ths = tableEl.querySelectorAll('.el-table__header th')
-    let colIdx = -1
-    ths.forEach((th, i) => { if (th.innerText.trim() === colLabel) colIdx = i })
-    if (colIdx >= 0) trs.forEach(r => {
-      const td = r.querySelectorAll('td')[colIdx]
-      if (td) td.classList.add('board-hover-cell')
-    })
+    // 列高亮：用该 body 表自身对应的表头按 label 匹配列号（主表 ↔ header-wrapper，fixed 表 ↔ 同容器 header）
+    const fixedWrap = tb.closest('.el-table__fixed, .el-table__fixed-left, .el-table__fixed-right')
+    const headerEl = fixedWrap
+      ? fixedWrap.querySelectorAll('.el-table__fixed-header-wrapper th')
+      : tableEl.querySelectorAll('.el-table__header-wrapper th')
+    if (headerEl) {
+      let colIdx = -1
+      headerEl.forEach((th, i) => { if (th.innerText.trim() === colLabel) colIdx = i })
+      if (colIdx >= 0) trs.forEach(r => {
+        const td = r.querySelectorAll('td')[colIdx]
+        if (td) td.classList.add('board-hover-cell')
+      })
+    }
   })
 }
 function onCellLeave() {
@@ -244,6 +249,6 @@ onMounted(fetchAll)
 .row-count { color: #909399; font-size: 13px; }
 .board-summary-row { font-weight: 700; }
 .board-summary-row td.el-table__cell { background-color: #f5f7fa; }
-/* 悬停行列高亮（浅蓝） */
-.board-hover-cell { background-color: #d9ecff !important; }
+/* 悬停行列高亮（亮蓝） */
+.board-hover-cell { background-color: #a8d8ff !important; }
 </style>
