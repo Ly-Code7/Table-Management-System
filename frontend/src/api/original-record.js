@@ -40,7 +40,10 @@ export function importExcel(file, companyId) {
   const formData = new FormData()
   formData.append('file', file)
   if (companyId) formData.append('companyId', companyId)
-  return request.post('/original-record/import', formData)
+  return request.post('/original-record/import', formData, {
+    // 大批量导入（几万条 + 未过保物料下推）耗时可能超过默认 30s，放宽到 10 分钟
+    timeout: 600000
+  })
 }
 
 export function exportExcel(params) {
