@@ -41,8 +41,9 @@ public interface MaterialMapper {
     List<Material> search(@Param("companyId") Long companyId, @Param("keyword") String keyword,
                           @Param("sortField") String sortField, @Param("sortOrder") String sortOrder);
 
-    @Select("<script>SELECT * FROM material WHERE material_code LIKE CONCAT('%',#{keyword},'%') " +
-            "OR material_name LIKE CONCAT('%',#{keyword},'%') " +
+    @Select("<script>SELECT * FROM material WHERE " +
+            "(material_code LIKE CONCAT('%',#{keyword},'%') " +
+            "OR material_name LIKE CONCAT('%',#{keyword},'%')) " +
             "<if test='companyId != null'>AND company_id = #{companyId}</if> LIMIT 15</script>")
     List<Material> searchByKeyword(@Param("keyword") String keyword, @Param("companyId") Long companyId);
 
