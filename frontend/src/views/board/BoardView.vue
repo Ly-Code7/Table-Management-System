@@ -24,7 +24,8 @@
       </div>
     </div>
 
-    <el-table :data="pagedRows" v-loading="loading" border stripe style="width: 100%" :row-class-name="rowClassName">
+    <el-table :data="pagedRows" v-loading="loading" border stripe style="width: 100%" :row-class-name="rowClassName"
+      :cell-class-name="cellClass" @cell-mouse-enter="onCellEnter" @cell-mouse-leave="onCellLeave">
       <el-table-column label="序号" width="60">
         <template #default="{ row, $index }">{{ row.key === '合计' ? 0 : $index }}</template>
       </el-table-column>
@@ -144,6 +145,21 @@ function rowClassName({ row }) {
   return row.key === '合计' ? 'board-summary-row' : ''
 }
 
+// ===== 悬停行列高亮 =====
+const hoverPos = ref({ row: -1, colProp: null })
+function onCellEnter(row, column) {
+  hoverPos.value = { row: pagedRows.value.indexOf(row), colProp: column.property }
+}
+function onCellLeave() {
+  hoverPos.value = { row: -1, colProp: null }
+}
+function cellClass({ rowIndex, column }) {
+  const h = hoverPos.value
+  if (h.row < 0) return ''
+  return (h.row === rowIndex || (h.colProp !== null && column.property === h.colProp)) ? 'board-hover-cell' : ''
+}
+// ===== 悬停行列高亮 end =====
+
 function formatCell(v, isRate) {
   if (v === null || v === undefined || v === '') return ''
   if (isRate) return formatPercent(v)
@@ -211,4 +227,6 @@ onMounted(fetchAll)
 .row-count { color: #909399; font-size: 13px; }
 .board-summary-row { font-weight: 700; }
 .board-summary-row td.el-table__cell { background-color: #f5f7fa; }
+/* 悬停行列高亮（浅蓝） */
+.board-hover-cell { background-color: #d9ecff !important; }
 </style>
