@@ -14,8 +14,10 @@ import java.util.Map;
 @Mapper
 public interface BoardMapper {
 
-    /** 机台清单：original_record 的 厂房-机台号 去重（与 Excel UNIQUE(总维修明细!B:B) 一致） */
-    @Select("SELECT DISTINCT CONCAT(factory,'-',machine_no) AS machine FROM original_record WHERE company_id = #{companyId}")
+    /** 机台清单：original_record 的 厂房-机台号 去重（与 Excel UNIQUE(总维修明细!B:B) 一致）。
+     * 厂房或机台号缺失的行（CONCAT 结果为 NULL）不构成有效机台，过滤避免看板 NPE。 */
+    @Select("SELECT DISTINCT CONCAT(factory,'-',machine_no) AS machine FROM original_record " +
+            "WHERE company_id = #{companyId} AND factory IS NOT NULL AND machine_no IS NOT NULL")
     List<String> machineList(@Param("companyId") Long companyId);
 
     /** 料号清单：156 项（含类别/配件名称/含税单价） */

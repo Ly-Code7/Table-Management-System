@@ -176,6 +176,7 @@ public class BoardService {
         }
         List<BoardRow> out = new ArrayList<>(machines.size());
         for (String m : machines) {
+            if (m == null) continue; // 机台键缺失（厂房或机台号为空）不构成看板行
             BoardRow row = new BoardRow();
             row.setKey(m);
             int idx = m.indexOf('-');
