@@ -579,10 +579,12 @@ public class DeliveryStatsService {
             }
 
             int deliveryQty = deliveryRecordMapper.countByMaterialCodeAndMonth(materialCode, month, companyId);
+            int freeDeliveryQty = deliveryRecordMapper.countFreeByMaterialCodeAndMonth(materialCode, month, companyId);
             int machineOnQty = originalRecordMapper.countByMaterialCodeAndMonth(materialCode, month, companyId);
-            int repairQty = originalRecordMapper.countRepairByMaterialCodeAndMonth(materialCode, month, companyId);
+            int repairQty = unwarrantedMaterialMapper.countRepairByMaterialCodeAndMonth(materialCode, month, companyId);
 
             stats.setDeliveryQuantity(deliveryQty);
+            stats.setFreeDeliveryQuantity(freeDeliveryQty);
             stats.setMachineOnQuantity(machineOnQty);
             stats.setMonthRepair(repairQty);
 

@@ -284,6 +284,27 @@ class DeliveryStatsCalculationTest {
         assertEquals(8, s.getFreeDeliveryQuantity(), "送货免费应只统计产品属性为免费的送货数量");
     }
 
+    @Test
+    void batchRefreshByMonth_appliesFreeDeliveryAndNewRepairSource() {
+        String mc = "TMP-BRF-" + System.nanoTime();
+        deliveryStatsMapper.insert(newStats(mc));
+        addDeliveryFree(mc, 9, "免费");
+        addDeliveryFree(mc, 3, "新品");
+        addRepair(mc, 6);
+        addUnwarrantedMaterial(mc, 6);
+
+        int count = service.batchRefreshByMonth(month, month, 1L);
+        assertEquals(1, count);
+
+        List<DeliveryStats> hits = deliveryStatsMapper.findByYearMonth(month, 1L);
+        DeliveryStats s = hits.stream().filter(x -> mc.equals(x.getMaterialCode())).findFirst().orElse(null);
+        assertNotNull(s, "刷新后应能查到记录");
+        assertEquals(12, s.getDeliveryQuantity(), "送货数量 = 免费+新品总和");
+        assertEquals(9, s.getFreeDeliveryQuantity(), "手动刷新应同步计算送货免费");
+        // 返修从未过保物料表取数（addUnwarrantedMaterial 6；addRepair 的维修记录不计入返修）
+        assertEquals(6, s.getMonthRepair(), "手动刷新返修应从未过保物料表取数");
+    }
+
     private void addDeliveryFree(String materialCode, int quantity, String productAttr) {
         DeliveryRecord r = new DeliveryRecord();
         r.setCompanyId(1L);
