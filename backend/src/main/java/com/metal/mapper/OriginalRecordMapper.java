@@ -75,6 +75,7 @@ public interface OriginalRecordMapper {
             "OR confirmer LIKE CONCAT('%',#{keyword},'%') OR factory LIKE CONCAT('%',#{keyword},'%') " +
             "OR fault_phenomenon LIKE CONCAT('%',#{keyword},'%') OR fault_description LIKE CONCAT('%',#{keyword},'%') " +
             "OR part_name LIKE CONCAT('%',#{keyword},'%') OR remark LIKE CONCAT('%',#{keyword},'%') " +
+            "OR plant_machine LIKE CONCAT('%',#{keyword},'%') " +
             "OR document_no LIKE CONCAT('%',#{keyword},'%') " +
             "OR machine_on_material LIKE CONCAT('%',#{keyword},'%') " +
             "OR machine_off_material LIKE CONCAT('%',#{keyword},'%') OR id LIKE CONCAT('%',#{keyword},'%')) " +

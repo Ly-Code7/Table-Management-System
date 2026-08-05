@@ -29,6 +29,7 @@
       </el-table-column>
       <!-- 日期信息 -->
       <el-table-column prop="recordDate" label="日期" width="105" sortable="custom" />
+      <el-table-column prop="plantMachine" label="厂房-机台" width="110" show-overflow-tooltip />
       <el-table-column prop="yearMonth" label="年月" width="85">
         <template #default="{ row }">
           {{ row.yearMonth || getYearMonth(row.recordDate) }}
