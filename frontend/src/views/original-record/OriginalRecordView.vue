@@ -191,6 +191,7 @@
         </el-row>
         <el-row :gutter="16">
           <el-col :span="6">
+            <div v-if="!isEdit" class="quantity-tip">数量大于1时，将自动下推到「未过保物料」</div>
             <el-form-item label="数量" prop="quantity">
               <el-input-number v-model="form.quantity" :min="0" style="width:100%" />
             </el-form-item>
@@ -497,7 +498,18 @@ function handleImport() {
     try {
       const res = await api.importExcel(file, companyStore.currentCompanyId)
       const d = res.data
-      ElMessage.success(`导入完成：成功 ${d.success} 条，失败 ${d.fail} 条`)
+      const failDetails = d.failDetails || []
+      if (d.fail > 0 && failDetails.length > 0) {
+        const reasons = failDetails.slice(0, 10).map(f => `第${f.row}行: ${f.reason}`).join('<br>')
+        const more = failDetails.length > 10 ? `<br>... 还有 ${failDetails.length - 10} 条` : ''
+        ElMessage.warning({ message: `导入完成：成功 ${d.success} 条，失败 ${d.fail} 条`, duration: 5000 })
+        setTimeout(() => {
+          ElMessageBox.alert(`<div style="max-height:300px;overflow-y:auto;font-size:13px">${reasons}${more}</div>`,
+            `失败明细 (${failDetails.length}条)`, { dangerouslyUseHTMLString: true, confirmButtonText: '知道了' })
+        }, 300)
+      } else {
+        ElMessage.success(`导入完成：成功 ${d.success} 条`)
+      }
       doFetch()
     } catch { /* error handled in interceptor */ }
   }
@@ -629,4 +641,5 @@ onMounted(() => doFetch())
 
 <style scoped>
 .pagination-wrap { display: flex; justify-content: flex-end; margin-top: 16px; }
+.quantity-tip { font-size: 12px; color: #f56c6c; line-height: 1.4; margin-bottom: 2px; }
 </style>

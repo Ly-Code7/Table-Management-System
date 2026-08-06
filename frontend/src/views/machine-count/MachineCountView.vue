@@ -13,7 +13,7 @@
 
     <ToolBar :selected-count="selectedRows.length" @add="handleAdd" @batch-delete="batchDelete" @import="handleImport" @export="handleExport" @template="handleTemplateDownload" />
 
-    <div style="margin-bottom:12px;display:flex;align-items:center;gap:12px">
+    <div v-if="false" style="margin-bottom:12px;display:flex;align-items:center;gap:12px">
       <el-date-picker v-model="clearMonth" type="month" placeholder="选择要清除的月份" value-format="YYYY-MM" style="width:180px" />
       <el-button type="danger" @click="handleClearByMonth">清除当月数据</el-button>
     </div>
