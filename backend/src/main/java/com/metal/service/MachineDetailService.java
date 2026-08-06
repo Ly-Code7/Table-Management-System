@@ -32,6 +32,9 @@ public class MachineDetailService {
     @Autowired
     private MachineDetailMapper mapper;
 
+    @Autowired
+    private OperationLogService logService;
+
     public PageResult<MachineDetail> query(int page, int pageSize, Long companyId, String keyword,
                                             String factory, String brand,
                                             String sortField, String sortOrder) {
@@ -59,6 +62,7 @@ public class MachineDetailService {
         applyPlantMachine(record);
         checkPlantMachineUnique(record.getPlantMachine(), record.getCompanyId(), null);
         mapper.insert(record);
+        logService.log("INSERT", "machine_detail", record.getId(), record.getCompanyId(), record.toString());
         return record;
     }
 
@@ -73,6 +77,7 @@ public class MachineDetailService {
             checkPlantMachineUnique(record.getPlantMachine(), record.getCompanyId(), record.getId());
         }
         mapper.update(record);
+        logService.log("UPDATE", "machine_detail", record.getId(), record.getCompanyId(), record.toString());
         return record;
     }
 
@@ -95,18 +100,22 @@ public class MachineDetailService {
         MachineDetail exist = getById(id);
         ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "删除");
         mapper.deleteById(id);
+        logService.log("DELETE", "machine_detail", id, exist.getCompanyId(), null);
     }
 
     @Transactional
     public void batchDelete(List<Long> ids) {
         if (ids == null || ids.isEmpty()) throw new BizException("请选择要删除的记录");
-        if (!ServiceHelper.isAdmin()) {
-            for (Long id : ids) {
-                MachineDetail exist = getById(id);
-                ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "删除");
-            }
+        List<MachineDetail> exists = new ArrayList<>(ids.size());
+        for (Long id : ids) {
+            MachineDetail exist = getById(id);
+            ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "删除");
+            exists.add(exist);
         }
         mapper.batchDelete(ids);
+        for (MachineDetail exist : exists) {
+            logService.log("DELETE", "machine_detail", exist.getId(), exist.getCompanyId(), null);
+        }
     }
 
     // =============== Excel 导入 ===============

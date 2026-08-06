@@ -32,6 +32,9 @@ public class MaterialService {
     @Autowired
     private MaterialMapper mapper;
 
+    @Autowired
+    private OperationLogService logService;
+
     public PageResult<Material> query(int page, int pageSize, Long companyId, String keyword) {
         PageHelper.startPage(page, pageSize);
         List<Material> list = mapper.search(companyId, keyword, "id", "desc");
@@ -60,6 +63,7 @@ public class MaterialService {
         material.setCreatedBy(user);
         material.setUpdatedBy(user);
         mapper.insert(material);
+        logService.log("INSERT", "material", material.getId(), material.getCompanyId(), material.toString());
         return material;
     }
 
@@ -69,6 +73,7 @@ public class MaterialService {
         ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "编辑");
         material.setUpdatedBy(ServiceHelper.getCurrentUserName());
         mapper.update(material);
+        logService.log("UPDATE", "material", material.getId(), material.getCompanyId(), material.toString());
         return material;
     }
 
@@ -77,18 +82,22 @@ public class MaterialService {
         Material exist = getById(id);
         ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "删除");
         mapper.deleteById(id);
+        logService.log("DELETE", "material", id, exist.getCompanyId(), null);
     }
 
     @Transactional
     public void batchDelete(List<Long> ids) {
         if (ids == null || ids.isEmpty()) throw new BizException("请选择要删除的记录");
-        if (!ServiceHelper.isAdmin()) {
-            for (Long id : ids) {
-                Material exist = getById(id);
-                ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "删除");
-            }
+        List<Material> exists = new ArrayList<>(ids.size());
+        for (Long id : ids) {
+            Material exist = getById(id);
+            ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "删除");
+            exists.add(exist);
         }
         mapper.batchDelete(ids);
+        for (Material exist : exists) {
+            logService.log("DELETE", "material", exist.getId(), exist.getCompanyId(), null);
+        }
     }
 
     public List<Material> searchByKeyword(String keyword, Long companyId) {

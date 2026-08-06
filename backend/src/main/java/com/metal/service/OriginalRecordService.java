@@ -14,6 +14,7 @@ import com.metal.entity.OriginalRecord;
 import com.metal.mapper.BaseMaterial156Mapper;
 import com.metal.mapper.OriginalRecordMapper;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +34,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Service
 public class OriginalRecordService {
 
@@ -47,6 +49,9 @@ public class OriginalRecordService {
 
     @Autowired
     private UnwarrantedMaterialService unwarrantedMaterialService;
+
+    @Autowired
+    private OperationLogService logService;
 
     private static final DateTimeFormatter YM_FMT = DateTimeFormatter.ofPattern("'FY'yyMM");
 
@@ -83,6 +88,7 @@ public class OriginalRecordService {
         if (record.getQuantity() != null && record.getQuantity() >= 1) {
             unwarrantedMaterialService.createFromOriginalRecord(record);
         }
+        logService.log("INSERT", "original_record", record.getId(), record.getCompanyId(), record.toString());
         return record;
     }
 
@@ -95,6 +101,7 @@ public class OriginalRecordService {
         mapper.update(record);
         // 同步已下推的未过保物料：已有关联则回填+重算；无关联且数量>=1 则下推
         unwarrantedMaterialService.pushFromOriginalRecord(record);
+        logService.log("UPDATE", "original_record", record.getId(), record.getCompanyId(), record.toString());
         return record;
     }
 
@@ -105,23 +112,26 @@ public class OriginalRecordService {
         // 级联删除关联的未过保物料（前端已提示"有关联记录，删除将一并删除"）
         unwarrantedMaterialService.deleteByOriginalRecordId(id, exist.getCompanyId());
         mapper.deleteById(id);
+        logService.log("DELETE", "original_record", id, exist.getCompanyId(), null);
     }
 
     @Transactional
     public void batchDelete(List<Long> ids) {
         if (ids == null || ids.isEmpty()) throw new BizException("请选择要删除的记录");
-        if (!ServiceHelper.isAdmin()) {
-            for (Long id : ids) {
-                OriginalRecord exist = getById(id);
-                ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "删除");
-            }
-        }
-        // 级联删除关联的未过保物料（前端已提示）
+        List<OriginalRecord> exists = new ArrayList<>(ids.size());
         for (Long id : ids) {
             OriginalRecord exist = getById(id);
-            unwarrantedMaterialService.deleteByOriginalRecordId(id, exist.getCompanyId());
+            ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "删除");
+            exists.add(exist);
+        }
+        // 级联删除关联的未过保物料（前端已提示）
+        for (OriginalRecord exist : exists) {
+            unwarrantedMaterialService.deleteByOriginalRecordId(exist.getId(), exist.getCompanyId());
         }
         mapper.batchDelete(ids);
+        for (OriginalRecord exist : exists) {
+            logService.log("DELETE", "original_record", exist.getId(), exist.getCompanyId(), null);
+        }
     }
 
     /** 某维修记录已关联的未过保物料条数（前端删除提示用） */
@@ -239,6 +249,7 @@ public class OriginalRecordService {
                             flushBatch(batch, counts);
                         }
                     } catch (Exception e) {
+                        log.warn("维修记录导入第 {} 行失败: {}", counts[0], e.getMessage());
                         failDetails.add(new ImportResultDTO.FailDetail(counts[0], e.getMessage()));
                         counts[2]++;
                     }
@@ -258,6 +269,7 @@ public class OriginalRecordService {
                     if (exception instanceof com.alibaba.excel.exception.ExcelDataConvertException ex) {
                         row = ex.getRowIndex() + 1; // EasyExcel rowIndex 为 0-based 绝对行号（含表头），+1 转 Excel 1-based 行号
                     }
+                    log.warn("维修记录导入第 {} 行解析失败: {}", row, exception.getMessage());
                     failDetails.add(new ImportResultDTO.FailDetail(row, exception.getMessage()));
                     counts[2]++;
                 }

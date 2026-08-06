@@ -37,6 +37,9 @@ public class SettlementMachineService {
     @Autowired
     private com.metal.mapper.BaseMaterial156Mapper baseMaterial156Mapper;
 
+    @Autowired
+    private OperationLogService logService;
+
     public PageResult<SettlementMachine> query(int page, int pageSize, Long companyId, String keyword,
                                                 String machineModel, String statMonth,
                                                 String sortField, String sortOrder) {
@@ -68,6 +71,7 @@ public class SettlementMachineService {
         record.setCreatedBy(user);
         record.setUpdatedBy(user);
         mapper.insert(record);
+        logService.log("INSERT", "settlement_machine", record.getId(), record.getCompanyId(), record.toString());
         return record;
     }
 
@@ -78,6 +82,7 @@ public class SettlementMachineService {
         // 同上：ratio 转换由入口完成，此处不再转换
         record.setUpdatedBy(ServiceHelper.getCurrentUserName());
         mapper.update(record);
+        logService.log("UPDATE", "settlement_machine", record.getId(), record.getCompanyId(), record.toString());
         return record;
     }
 
@@ -86,6 +91,7 @@ public class SettlementMachineService {
         SettlementMachine exist = getById(id);
         ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "删除");
         mapper.deleteById(id);
+        logService.log("DELETE", "settlement_machine", id, exist.getCompanyId(), null);
     }
 
     /**
@@ -111,13 +117,16 @@ public class SettlementMachineService {
     @Transactional
     public void batchDelete(List<Long> ids) {
         if (ids == null || ids.isEmpty()) throw new BizException("请选择要删除的记录");
-        if (!ServiceHelper.isAdmin()) {
-            for (Long id : ids) {
-                SettlementMachine exist = getById(id);
-                ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "删除");
-            }
+        List<SettlementMachine> exists = new ArrayList<>(ids.size());
+        for (Long id : ids) {
+            SettlementMachine exist = getById(id);
+            ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "删除");
+            exists.add(exist);
         }
         mapper.batchDelete(ids);
+        for (SettlementMachine exist : exists) {
+            logService.log("DELETE", "settlement_machine", exist.getId(), exist.getCompanyId(), null);
+        }
     }
 
     // =============== Excel 导入 ===============

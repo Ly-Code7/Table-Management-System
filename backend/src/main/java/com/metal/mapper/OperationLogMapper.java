@@ -8,8 +8,8 @@ import java.util.List;
 @Mapper
 public interface OperationLogMapper {
 
-    @Insert("INSERT INTO operation_log (user_id, username, action, table_name, record_id, detail, ip) " +
-            "VALUES (#{userId}, #{username}, #{action}, #{tableName}, #{recordId}, #{detail}, #{ip})")
+    @Insert("INSERT INTO operation_log (user_id, username, action, table_name, record_id, detail, ip, company_id) " +
+            "VALUES (#{userId}, #{username}, #{action}, #{tableName}, #{recordId}, #{detail}, #{ip}, #{companyId})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(OperationLog log);
 

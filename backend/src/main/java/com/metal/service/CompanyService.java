@@ -15,6 +15,9 @@ public class CompanyService {
     @Autowired
     private CompanyMapper mapper;
 
+    @Autowired
+    private OperationLogService logService;
+
     public List<Company> findAll() {
         return mapper.findAll();
     }
@@ -28,6 +31,7 @@ public class CompanyService {
     @Transactional
     public Company create(Company company) {
         mapper.insert(company);
+        logService.log("INSERT", "company", company.getId(), company.getId(), company.toString());
         return company;
     }
 
@@ -35,6 +39,7 @@ public class CompanyService {
     public Company update(Company company) {
         getById(company.getId());
         mapper.update(company);
+        logService.log("UPDATE", "company", company.getId(), company.getId(), company.toString());
         return company;
     }
 
@@ -42,5 +47,6 @@ public class CompanyService {
     public void delete(Long id) {
         getById(id);
         mapper.deleteById(id);
+        logService.log("DELETE", "company", id, id, null);
     }
 }

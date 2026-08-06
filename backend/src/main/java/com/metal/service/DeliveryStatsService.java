@@ -55,6 +55,9 @@ public class DeliveryStatsService {
     @Autowired
     private com.metal.mapper.UnwarrantedMaterialMapper unwarrantedMaterialMapper;
 
+    @Autowired
+    private OperationLogService logService;
+
     public PageResult<DeliveryStats> query(int page, int pageSize, Long companyId, String keyword,
                                             String category, String yearMonth,
                                             String sortField, String sortOrder) {
@@ -98,6 +101,7 @@ public class DeliveryStatsService {
             }
             dailyMapper.batchInsert(dailies);
         }
+        logService.log("INSERT", "delivery_stats", record.getId(), record.getCompanyId(), record.toString());
         return record;
     }
 
@@ -116,6 +120,7 @@ public class DeliveryStatsService {
             }
             dailyMapper.batchInsert(dailies);
         }
+        logService.log("UPDATE", "delivery_stats", record.getId(), record.getCompanyId(), record.toString());
         return record;
     }
 
@@ -125,21 +130,25 @@ public class DeliveryStatsService {
         ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "删除");
         dailyMapper.deleteByStatId(id);
         mapper.deleteById(id);
+        logService.log("DELETE", "delivery_stats", id, exist.getCompanyId(), null);
     }
 
     @Transactional
     public void batchDelete(List<Long> ids) {
         if (ids == null || ids.isEmpty()) throw new BizException("请选择要删除的记录");
-        if (!ServiceHelper.isAdmin()) {
-            for (Long id : ids) {
-                DeliveryStats exist = getById(id);
-                ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "删除");
-            }
-        }
+        List<DeliveryStats> exists = new ArrayList<>(ids.size());
         for (Long id : ids) {
-            dailyMapper.deleteByStatId(id);
+            DeliveryStats exist = getById(id);
+            ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "删除");
+            exists.add(exist);
+        }
+        for (DeliveryStats exist : exists) {
+            dailyMapper.deleteByStatId(exist.getId());
         }
         mapper.batchDelete(ids);
+        for (DeliveryStats exist : exists) {
+            logService.log("DELETE", "delivery_stats", exist.getId(), exist.getCompanyId(), null);
+        }
     }
 
     // =============== Excel 导入 ===============

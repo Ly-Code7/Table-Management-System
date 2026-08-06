@@ -34,6 +34,9 @@ public class MachineCountService {
     @Autowired
     private MachineCountMapper mapper;
 
+    @Autowired
+    private OperationLogService logService;
+
     public PageResult<MachineCount> query(int page, int pageSize, Long companyId, String keyword,
                                            String statMonth, String sortField, String sortOrder) {
         sortField = ServiceHelper.sanitizeSortField(sortField, "id");
@@ -52,7 +55,9 @@ public class MachineCountService {
     public int clearByMonth(String statMonth, Long companyId) {
         if (statMonth == null || statMonth.isBlank()) throw new BizException("月份不能为空");
         Long cid = companyId != null ? companyId : 1L;
-        return mapper.deleteByMonthExceptBaseline(statMonth, cid);
+        int count = mapper.deleteByMonthExceptBaseline(statMonth, cid);
+        logService.log("DELETE", "machine_count", null, cid, "清空月份 " + statMonth + "，删除 " + count + " 条（基准线保留）");
+        return count;
     }
 
     public MachineCount getById(Long id) {
@@ -81,6 +86,7 @@ public class MachineCountService {
         if (isBaseline(record)) {
             recalculateAllInMonth(record.getStatMonth(), record.getId(), record.getCompanyId());
         }
+        logService.log("INSERT", "machine_count", record.getId(), record.getCompanyId(), record.toString());
         return record;
     }
 
@@ -99,6 +105,7 @@ public class MachineCountService {
         mapper.update(record);
         // 重算同月所有记录（排除自身，因为自身已更新；公司内）
         recalculateAllInMonth(record.getStatMonth(), record.getId(), record.getCompanyId());
+        logService.log("UPDATE", "machine_count", record.getId(), record.getCompanyId(), record.toString());
         return record;
     }
 
@@ -120,6 +127,7 @@ public class MachineCountService {
         }
 
         mapper.deleteById(id);
+        logService.log("DELETE", "machine_count", id, companyId, null);
 
         // 删除后如果还有其他记录但没有基准线，选数量最大的作为新基准线（公司内）
         List<MachineCount> remaining = mapper.findByMonth(statMonth, companyId);

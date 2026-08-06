@@ -32,6 +32,9 @@ public class BaseMaterial156Service {
     @Autowired
     private BaseMaterial156Mapper mapper;
 
+    @Autowired
+    private OperationLogService logService;
+
     public PageResult<BaseMaterial156> query(int page, int pageSize, Long companyId, String keyword,
                                               String sortField, String sortOrder) {
         sortField = ServiceHelper.sanitizeSortField(sortField, "id");
@@ -72,6 +75,7 @@ public class BaseMaterial156Service {
         record.setCreatedBy(user);
         record.setUpdatedBy(user);
         mapper.insert(record);
+        logService.log("INSERT", "base_material_156", record.getId(), record.getCompanyId(), record.toString());
         return record;
     }
 
@@ -89,6 +93,7 @@ public class BaseMaterial156Service {
         }
         record.setUpdatedBy(ServiceHelper.getCurrentUserName());
         mapper.update(record);
+        logService.log("UPDATE", "base_material_156", record.getId(), record.getCompanyId(), record.toString());
         return record;
     }
 
@@ -97,18 +102,22 @@ public class BaseMaterial156Service {
         BaseMaterial156 exist = getById(id);
         ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "删除");
         mapper.deleteById(id);
+        logService.log("DELETE", "base_material_156", id, exist.getCompanyId(), null);
     }
 
     @Transactional
     public void batchDelete(List<Long> ids) {
         if (ids == null || ids.isEmpty()) throw new BizException("请选择要删除的记录");
-        if (!ServiceHelper.isAdmin()) {
-            for (Long id : ids) {
-                BaseMaterial156 exist = getById(id);
-                ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "删除");
-            }
+        List<BaseMaterial156> exists = new ArrayList<>(ids.size());
+        for (Long id : ids) {
+            BaseMaterial156 exist = getById(id);
+            ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "删除");
+            exists.add(exist);
         }
         mapper.batchDelete(ids);
+        for (BaseMaterial156 exist : exists) {
+            logService.log("DELETE", "base_material_156", exist.getId(), exist.getCompanyId(), null);
+        }
     }
 
     // =============== Excel 导入 ===============

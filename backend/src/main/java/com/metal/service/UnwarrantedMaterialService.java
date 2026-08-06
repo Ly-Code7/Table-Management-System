@@ -65,6 +65,9 @@ public class UnwarrantedMaterialService {
     @Autowired
     private com.metal.mapper.BaseMaterial156Mapper baseMaterial156Mapper;
 
+    @Autowired
+    private OperationLogService logService;
+
     private static final DateTimeFormatter YM_FMT = DateTimeFormatter.ofPattern("'FY'yyMM");
     private static final int IMPORT_BATCH_SIZE = 500;
 
@@ -119,6 +122,7 @@ public class UnwarrantedMaterialService {
         record.setCreatedBy(user);
         record.setUpdatedBy(user);
         mapper.insert(record);
+        logService.log("INSERT", "unwarranted_material", record.getId(), record.getCompanyId(), record.toString());
         return record;
     }
 
@@ -131,6 +135,7 @@ public class UnwarrantedMaterialService {
         applyCalculations(record);
         record.setUpdatedBy(ServiceHelper.getCurrentUserName());
         mapper.update(record);
+        logService.log("UPDATE", "unwarranted_material", record.getId(), record.getCompanyId(), record.toString());
         return record;
     }
 
@@ -147,18 +152,22 @@ public class UnwarrantedMaterialService {
         UnwarrantedMaterial exist = getById(id);
         ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "删除");
         mapper.deleteById(id);
+        logService.log("DELETE", "unwarranted_material", id, exist.getCompanyId(), null);
     }
 
     @Transactional
     public void batchDelete(List<Long> ids) {
         if (ids == null || ids.isEmpty()) throw new BizException("请选择要删除的记录");
-        if (!ServiceHelper.isAdmin()) {
-            for (Long id : ids) {
-                UnwarrantedMaterial exist = getById(id);
-                ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "删除");
-            }
+        List<UnwarrantedMaterial> exists = new ArrayList<>(ids.size());
+        for (Long id : ids) {
+            UnwarrantedMaterial exist = getById(id);
+            ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "删除");
+            exists.add(exist);
         }
         mapper.batchDelete(ids);
+        for (UnwarrantedMaterial exist : exists) {
+            logService.log("DELETE", "unwarranted_material", exist.getId(), exist.getCompanyId(), null);
+        }
     }
 
     // =============== 关联维修记录回填 ===============

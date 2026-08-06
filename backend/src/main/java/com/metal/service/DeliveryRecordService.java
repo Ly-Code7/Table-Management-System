@@ -11,8 +11,6 @@ import com.metal.common.PageResult;
 import com.metal.common.ServiceHelper;
 import com.metal.dto.ImportResultDTO;
 import com.metal.entity.DeliveryRecord;
-import com.metal.entity.OperationLog;
-import com.metal.interceptor.AuthInterceptor;
 import com.metal.mapper.DeliveryRecordMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,7 +72,7 @@ public class DeliveryRecordService {
         record.setCreatedBy(user);
         record.setUpdatedBy(user);
         mapper.insert(record);
-        log(record.getId(), "INSERT", record);
+        logService.log("INSERT", "delivery_record", record.getId(), record.getCompanyId(), record.toString());
         return record;
     }
 
@@ -85,7 +83,7 @@ public class DeliveryRecordService {
         applyYearMonth(record);
         record.setUpdatedBy(ServiceHelper.getCurrentUserName());
         mapper.update(record);
-        log(record.getId(), "UPDATE", record);
+        logService.log("UPDATE", "delivery_record", record.getId(), record.getCompanyId(), record.toString());
         return record;
     }
 
@@ -94,20 +92,22 @@ public class DeliveryRecordService {
         DeliveryRecord exist = getById(id);
         ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "删除");
         mapper.deleteById(id);
-        log(id, "DELETE", null);
+        logService.log("DELETE", "delivery_record", id, exist.getCompanyId(), null);
     }
 
     @Transactional
     public void batchDelete(List<Long> ids) {
         if (ids == null || ids.isEmpty()) throw new BizException("请选择要删除的记录");
-        if (!ServiceHelper.isAdmin()) {
-            for (Long id : ids) {
-                DeliveryRecord exist = getById(id);
-                ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "删除");
-            }
+        List<DeliveryRecord> exists = new ArrayList<>(ids.size());
+        for (Long id : ids) {
+            DeliveryRecord exist = getById(id);
+            ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "删除");
+            exists.add(exist);
         }
         mapper.batchDelete(ids);
-        for (Long id : ids) log(id, "DELETE", null);
+        for (DeliveryRecord exist : exists) {
+            logService.log("DELETE", "delivery_record", exist.getId(), exist.getCompanyId(), null);
+        }
     }
 
     public DeliveryRecord copy(Long id) {
@@ -182,13 +182,10 @@ public class DeliveryRecordService {
         return result;
     }
 
-    /** 将缓冲区数据批量写入数据库 */
+    /** 将缓冲区数据批量写入数据库（导入不写操作日志——用户决策，避免上万条导入放大日志开销） */
     private void flushBatch(List<DeliveryRecord> batch, int[] counts) {
         mapper.batchInsert(batch);
         counts[1] += batch.size();
-        for (DeliveryRecord r : batch) {
-            log(r.getId(), "INSERT", r);
-        }
         batch.clear();
     }
 
@@ -257,21 +254,5 @@ public class DeliveryRecordService {
         if (record.getRecordDate() != null) {
             record.setYearMonth(record.getRecordDate().format(YM_FMT));
         }
-    }
-
-    private void log(Long recordId, String action, DeliveryRecord data) {
-        OperationLog log = new OperationLog();
-        var ctx = AuthInterceptor.getCurrentUser();
-        if (ctx != null) {
-            log.setUserId(ctx.getUserId());
-            log.setUsername(ctx.getUsername());
-        }
-        log.setAction(action);
-        log.setTableName("delivery_record");
-        log.setRecordId(recordId);
-        if (data != null && !"DELETE".equals(action)) {
-            log.setDetail(data.toString());
-        }
-        logService.save(log);
     }
 }

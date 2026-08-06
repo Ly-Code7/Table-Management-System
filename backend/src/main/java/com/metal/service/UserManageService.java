@@ -20,6 +20,9 @@ public class UserManageService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private OperationLogService logService;
+
     public List<SysUser> listAll() {
         ServiceHelper.requireAdmin();
         return sysUserMapper.findAll();
@@ -34,6 +37,7 @@ public class UserManageService {
             throw new BizException("无效的角色");
         }
         sysUserMapper.updateRole(userId, role);
+        logService.log("UPDATE", "sys_user", userId, null, "角色变更: " + user.getRole() + " -> " + role);
     }
 
     @Transactional
@@ -49,6 +53,7 @@ public class UserManageService {
             }
         }
         sysUserMapper.deleteById(userId);
+        logService.log("DELETE", "sys_user", userId, null, "删除用户: " + user.getRealName() + " (" + user.getUsername() + ")");
     }
 
     @Transactional
@@ -60,5 +65,6 @@ public class UserManageService {
             throw new BizException("密码至少6位");
         }
         sysUserMapper.updatePassword(userId, passwordEncoder.encode(newPassword));
+        logService.log("UPDATE", "sys_user", userId, null, "重置密码: " + user.getRealName() + " (" + user.getUsername() + ")");
     }
 }
