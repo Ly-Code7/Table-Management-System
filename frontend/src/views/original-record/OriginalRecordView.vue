@@ -191,7 +191,6 @@
         </el-row>
         <el-row :gutter="16">
           <el-col :span="6">
-            <div v-if="!isEdit" class="quantity-tip">数量大于1时，将自动下推到「未过保物料」</div>
             <el-form-item label="数量" prop="quantity">
               <el-input-number v-model="form.quantity" :min="0" style="width:100%" />
             </el-form-item>
@@ -641,5 +640,4 @@ onMounted(() => doFetch())
 
 <style scoped>
 .pagination-wrap { display: flex; justify-content: flex-end; margin-top: 16px; }
-.quantity-tip { font-size: 12px; color: #f56c6c; line-height: 1.4; margin-bottom: 2px; }
 </style>
