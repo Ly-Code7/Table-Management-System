@@ -193,7 +193,7 @@ public class UnwarrantedMaterialService {
         dto.setWarrantyStatus("");
         dto.setPartName(o.getPartName());
         dto.setQuantity(o.getQuantity());
-        dto.setMaterialCode(o.getMaterialCode());
+        dto.setMaterialCode(o.getMachineOffCode());
         if (o.getRecordDate() != null) {
             dto.setYearMonth(o.getRecordDate().format(YM_FMT));
         }
@@ -344,7 +344,7 @@ public class UnwarrantedMaterialService {
         // 未过保列不再回填（独立计算，applyCalculations 按唯一标识编号+上次维修日期判定）
         uw.setPartName(o.getPartName());
         uw.setQuantity(o.getQuantity());
-        uw.setMaterialCode(o.getMaterialCode());
+        uw.setMaterialCode(o.getMachineOffCode());
     }
 
     // =============== Excel 导入 ===============

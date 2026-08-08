@@ -37,6 +37,7 @@ class OriginalRecordAutoPushTest {
         r.setMachineOnMaterial("TMP-ON-001");
         r.setRepairPerson("tester");
         r.setMaterialCode("TMP-MC-001");
+        r.setMachineOffCode("TMP-OFF-001");
         r.setPartName("TMP配件AUTO" + System.nanoTime()); // 唯一标记，避免与真实数据冲突
         r.setQuantity(quantity);
         return r;
@@ -65,7 +66,8 @@ class OriginalRecordAutoPushTest {
         assertEquals("", uw.getWarrantyStatus());
         assertEquals(r.getPartName(), uw.getPartName());
         assertEquals(1, uw.getQuantity());
-        assertEquals("TMP-MC-001", uw.getMaterialCode());
+        // 下推料号 = 维修记录的下机料号（不是上机料号）
+        assertEquals("TMP-OFF-001", uw.getMaterialCode());
         // 派生字段已自动计算
         assertEquals("测试厂房-T-AUTO-01" + r.getPartName(), uw.getUniqueId());
         assertEquals("FY2606", uw.getYearMonth());
