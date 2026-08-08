@@ -11,7 +11,7 @@
         <el-input v-model="searchForm.category" placeholder="类别" clearable style="width: 140px" />
       </el-form-item>
       <el-form-item label="统计月份">
-        <el-date-picker v-model="searchForm.yearMonth" type="month" multiple placeholder="选择月份（可多选）" value-format="YYYY-MM" clearable style="width: 200px" />
+        <el-date-picker v-model="searchForm.yearMonth" type="months" placeholder="选择月份（可多选）" value-format="YYYY-MM" clearable style="width: 200px" />
       </el-form-item>
     </SearchForm>
 
@@ -29,14 +29,14 @@
       <el-date-picker v-model="refreshMonth" type="month" placeholder="选择要更新的月份" value-format="YYYY-MM" style="width:180px" />
       <el-button type="warning" @click="handleBatchRefresh">更新当月数据</el-button>
       <span style="margin-left:24px;color:#909399;">|</span>
-      <el-date-picker v-model="exportMonth" type="month" multiple placeholder="选择要导出的月份（可多选）" value-format="YYYY-MM" style="width:200px" />
+      <el-date-picker v-model="exportMonth" type="months" placeholder="选择要导出的月份（可多选）" value-format="YYYY-MM" style="width:200px" />
       <el-button type="success" @click="handleExport">导出所选月份</el-button>
     </div>
 
     <!-- 全表合计 -->
     <div class="summary-row">
       <span class="summary-label">汇总（万元）</span>
-      <el-date-picker v-model="summaryMonth" type="month" multiple placeholder="选择月份（可多选）" value-format="YYYY-MM" clearable style="width:200px" @change="fetchTotals" />
+      <el-date-picker v-model="summaryMonth" type="months" placeholder="选择月份（可多选）" value-format="YYYY-MM" clearable style="width:200px" @change="fetchTotals" />
       <span class="summary-item">送货金额合计：<b>{{ totals.deliveryAmount.toFixed(2) }}</b></span>
       <span class="summary-item">上机金额合计：<b>{{ totals.machineOnAmount.toFixed(2) }}</b></span>
       <span class="summary-item">返修金额合计：<b>{{ totals.repairAmount.toFixed(2) }}</b></span>
