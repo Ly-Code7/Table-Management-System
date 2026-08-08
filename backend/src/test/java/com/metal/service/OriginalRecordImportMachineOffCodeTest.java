@@ -63,12 +63,16 @@ class OriginalRecordImportMachineOffCodeTest {
     }
 
     private MockMultipartFile buildFile(String machineOffMaterial) {
+        return buildFile(machineOffMaterial, "2026-07-01 08:00:00", "2026-07-01 08:30:00", "2026-07-01 09:00:00");
+    }
+
+    private MockMultipartFile buildFile(String machineOffMaterial, String repairTime, String startTime, String endTime) {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         List<List<Object>> data = new ArrayList<>();
-        // 物料编码列留空（触发下机料号回填场景），下机物料列按入参
+        // 物料编码列留空（触发下机料号回填场景），下机物料列按入参，时间列按入参
         data.add(List.of(
                 "FY2607", "B5-H1", "2026-07-01", "白班", "B5", "001", "H1", "张", "李",
-                "2026-07-01 08:00:00", "2026-07-01 08:30:00", "2026-07-01 09:00:00", 60, 30, "FANUC", "异响",
+                repairTime, startTime, endTime, 60, 30, "FANUC", "异响",
                 "换件", "", "名称", "配件", 1, "ON", machineOffMaterial, "备注", "王", "2", "DOC1"));
         EasyExcel.write(bos).head(HEAD.stream().map(h -> List.of(h)).toList())
                 .sheet("维修记录").doWrite(data);
@@ -105,5 +109,18 @@ class OriginalRecordImportMachineOffCodeTest {
         assertFalse(rows.isEmpty());
         assertTrue(rows.get(0).getMachineOffCode() == null || rows.get(0).getMachineOffCode().isBlank(),
                 "下机物料号未命中送货记录时，下机料号保持为空");
+    }
+
+    @Test
+    void importWithHmTimeTextFillsDatePartFromRecordDate() {
+        // 历史数据：时间列是"只有时分"的文本（如 8:30），导入不应失败，日期部分用记录日期重建
+        var res = service.importExcel(buildFile("OFF-X", "8:30", "8:30", "11:30"), 1L);
+        assertEquals(1, res.getSuccess(), "只有时分的文本时间应能导入成功");
+        List<OriginalRecord> rows = findImported("OFF-X");
+        assertFalse(rows.isEmpty());
+        assertEquals("2026-07-01T08:30", rows.get(0).getRepairRequestTime().toString(),
+                "报修时间应重建为记录日期 + 时分");
+        assertEquals("2026-07-01T11:30", rows.get(0).getEndTime().toString(),
+                "结束时间应重建为记录日期 + 时分");
     }
 }

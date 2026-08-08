@@ -36,15 +36,14 @@ public class OriginalRecord {
     @ExcelProperty(value = "维修人", index = 8)
     private String repairPerson;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
-    @ExcelProperty(value = "报修时间", index = 9)
-    @DateTimeFormat("yyyy-MM-dd HH:mm:ss")
+    @ExcelProperty(value = "报修时间", index = 9, converter = com.metal.excel.LocalDateTimeFlexibleConverter.class)
     private LocalDateTime repairRequestTime;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
-    @ExcelProperty(value = "开始时间", index = 10)
+    @ExcelProperty(value = "开始时间", index = 10, converter = com.metal.excel.LocalDateTimeFlexibleConverter.class)
     @DateTimeFormat("yyyy-MM-dd HH:mm:ss")
     private LocalDateTime startTime;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
-    @ExcelProperty(value = "结束时间", index = 11)
+    @ExcelProperty(value = "结束时间", index = 11, converter = com.metal.excel.LocalDateTimeFlexibleConverter.class)
     @DateTimeFormat("yyyy-MM-dd HH:mm:ss")
     private LocalDateTime endTime;
     @ExcelProperty(value = "维修工时", index = 12)
