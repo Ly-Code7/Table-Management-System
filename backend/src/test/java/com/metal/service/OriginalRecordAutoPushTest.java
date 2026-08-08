@@ -44,6 +44,19 @@ class OriginalRecordAutoPushTest {
     }
 
     @Test
+    void pushWithOnlyUpCodeFallsBackToUpCode() {
+        // 规则2：维修记录只有上机料号（无下机料号）时，下推料号 = 上机料号
+        OriginalRecord r = newRecord(1);
+        r.setMachineOffCode(null);
+        OriginalRecord saved = originalRecordService.create(r);
+        assertEquals(1, unwarrantedMaterialMapper.countByOriginalRecordId(saved.getId(), 1L, null));
+        List<UnwarrantedMaterial> hits = unwarrantedMaterialMapper.search(1L, r.getPartName(), null, null, null, null, "id", "desc");
+        assertEquals(1, hits.size());
+        assertEquals("TMP-MC-001", hits.get(0).getMaterialCode(),
+                "无下机料号时下推料号应回退为上机料号");
+    }
+
+    @Test
     void quantityGE1_triggersAutoPushWithBackfillAndCalculations() {
         OriginalRecord r = newRecord(1);
         OriginalRecord saved = originalRecordService.create(r);

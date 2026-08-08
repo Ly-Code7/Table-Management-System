@@ -193,7 +193,7 @@ public class UnwarrantedMaterialService {
         dto.setWarrantyStatus("");
         dto.setPartName(o.getPartName());
         dto.setQuantity(o.getQuantity());
-        dto.setMaterialCode(o.getMachineOffCode());
+        dto.setMaterialCode(resolvePushMaterialCode(o));
         if (o.getRecordDate() != null) {
             dto.setYearMonth(o.getRecordDate().format(YM_FMT));
         }
@@ -344,7 +344,18 @@ public class UnwarrantedMaterialService {
         // 未过保列不再回填（独立计算，applyCalculations 按唯一标识编号+上次维修日期判定）
         uw.setPartName(o.getPartName());
         uw.setQuantity(o.getQuantity());
-        uw.setMaterialCode(o.getMachineOffCode());
+        uw.setMaterialCode(resolvePushMaterialCode(o));
+    }
+
+    /**
+     * 下推未过保物料的料号取值：下机料号优先；维修记录无下机料号时回退用上机料号。
+     * （规则：两者都有 → 下机料号；只有上机料号 → 上机料号；都无 → 空）
+     */
+    private String resolvePushMaterialCode(OriginalRecord o) {
+        if (o.getMachineOffCode() != null && !o.getMachineOffCode().isBlank()) {
+            return o.getMachineOffCode();
+        }
+        return o.getMaterialCode();
     }
 
     // =============== Excel 导入 ===============
