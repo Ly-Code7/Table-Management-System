@@ -64,9 +64,18 @@ public class DeliveryStatsService {
         sortField = ServiceHelper.sanitizeSortField(sortField, "id");
         sortOrder = ServiceHelper.sanitizeSortOrder(sortOrder);
         PageHelper.startPage(page, pageSize);
-        List<DeliveryStats> list = mapper.search(companyId, keyword, category, yearMonth, sortField, sortOrder);
+        List<DeliveryStats> list = mapper.search(companyId, keyword, category, parseYearMonths(yearMonth), sortField, sortOrder);
         PageInfo<DeliveryStats> pageInfo = new PageInfo<>(list);
         return new PageResult<>(pageInfo.getTotal(), page, pageSize, list);
+    }
+
+    /** 逗号分隔的月份串（如 "2026-06,2026-07"）→ 过滤空串后的列表；null/空 → 空列表（查全部） */
+    private List<String> parseYearMonths(String yearMonth) {
+        if (yearMonth == null || yearMonth.isBlank()) return java.util.List.of();
+        return java.util.Arrays.stream(yearMonth.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
     }
 
     public DeliveryStats getById(Long id) {
@@ -290,7 +299,7 @@ public class DeliveryStatsService {
                             String category, String yearMonth) {
         try {
             PageHelper.startPage(1, 0); // 0 disables paging
-            List<DeliveryStats> list = mapper.search(companyId, keyword, category, yearMonth, "id", "asc");
+            List<DeliveryStats> list = mapper.search(companyId, keyword, category, parseYearMonths(yearMonth), "id", "asc");
 
             // 批量查询每日明细并填充到实体 transient 字段
             for (DeliveryStats s : list) {

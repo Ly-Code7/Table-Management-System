@@ -71,12 +71,14 @@ public interface DeliveryStatsMapper {
             "OR `year_month` LIKE CONCAT('%',#{keyword},'%') OR id LIKE CONCAT('%',#{keyword},'%')) " +
             "</if>" +
             "<if test='category != null and category != \"\"'>AND category = #{category}</if> " +
-            "<if test='yearMonth != null and yearMonth != \"\"'>AND `year_month` = #{yearMonth}</if> " +
+            "<if test='yearMonth != null and yearMonth.size() > 0'>" +
+            "AND `year_month` IN <foreach collection='yearMonth' item='ym' open='(' close=')' separator=','>#{ym}</foreach>" +
+            "</if> " +
             "ORDER BY ${sortField} ${sortOrder} " +
             "</script>")
     List<DeliveryStats> search(@Param("companyId") Long companyId, @Param("keyword") String keyword,
                                @Param("category") String category,
-                               @Param("yearMonth") String yearMonth,
+                               @Param("yearMonth") List<String> yearMonth,
                                @Param("sortField") String sortField,
                                @Param("sortOrder") String sortOrder);
 
