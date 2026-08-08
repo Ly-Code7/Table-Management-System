@@ -69,6 +69,8 @@ public class OriginalRecord {
     private String machineOnMaterial;
     @ExcelProperty(value = "下机物料", index = 22)
     private String machineOffMaterial;
+    @ExcelProperty(value = "下机料号", index = 27)
+    private String machineOffCode;
     @ExcelProperty(value = "备注", index = 23)
     private String remark;
     @ExcelProperty(value = "确认人", index = 24)

@@ -84,6 +84,13 @@ public class DeliveryRecordController {
         return Result.ok(service.getByMaterialSerial(materialSerial, companyId));
     }
 
+    /** 模糊匹配送货记录（料号/序列号/物料名称 LIKE），用于维修记录"下机料号"自动回填（公司内） */
+    @GetMapping("/lookup-fuzzy")
+    public Result<DeliveryRecord> lookupFuzzy(@RequestParam String keyword,
+                                              @RequestParam(required = false) Long companyId) {
+        return Result.ok(service.getFuzzyByKeyword(keyword, companyId));
+    }
+
     @PostMapping("/import")
     public Result<ImportResultDTO> importExcel(@RequestParam("file") MultipartFile file,
                                                @RequestParam(required = false) Long companyId) {

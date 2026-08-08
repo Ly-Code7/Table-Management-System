@@ -126,6 +126,12 @@ public class DeliveryRecordService {
         return mapper.findByMaterialSerial(materialSerial, companyId);
     }
 
+    /** 模糊匹配送货记录（料号/序列号/物料名称 LIKE），公司内取最近一条，用于维修记录"下机料号"自动回填；无匹配返回 null */
+    public DeliveryRecord getFuzzyByKeyword(String keyword, Long companyId) {
+        if (keyword == null || keyword.isBlank()) return null;
+        return mapper.findFuzzyByKeyword(keyword.trim(), companyId);
+    }
+
     // =============== Excel 导入 ===============
     private static final int IMPORT_BATCH_SIZE = 500; // 每批 500 条，平衡内存与数据库往返
 
