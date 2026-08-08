@@ -133,6 +133,7 @@ CREATE TABLE `original_record` (
   `quantity` int DEFAULT NULL COMMENT '数量',
   `machine_on_material` varchar(200) DEFAULT NULL COMMENT '上机物料号',
   `machine_off_material` varchar(200) DEFAULT NULL COMMENT '下机物料号',
+  `machine_off_code` varchar(100) DEFAULT NULL COMMENT '下机料号（自动回填：下机物料号模糊匹配送货记录）',
   `remark` text COMMENT '备注',
   `confirmer` varchar(50) DEFAULT NULL COMMENT '确认人',
   `delivery_record_ref` varchar(200) DEFAULT NULL COMMENT '送货记录引用',
