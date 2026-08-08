@@ -210,7 +210,7 @@
         <el-row :gutter="16">
           <el-col :span="8">
             <el-form-item label="下机料号" prop="machineOffCode">
-              <el-input v-model="form.machineOffCode" placeholder="填写下机物料号后自动回填" />
+              <el-autocomplete v-model="form.machineOffCode" :fetch-suggestions="searchMaterials" placeholder="输入料号关键字自动匹配" style="width:100%" @select="handleMachineOffCodeSelect" />
             </el-form-item>
           </el-col>
           <el-col :span="8">
@@ -458,6 +458,11 @@ async function handleMaterialSelect(item) {
       form.material156Name = res.data.partName
     }
   } catch { /* 查不到就不回填 */ }
+}
+
+// 下机料号：与上机料号相同的 156 项模糊匹配规则，选择后回填
+function handleMachineOffCodeSelect(item) {
+  form.machineOffCode = item.value
 }
 
 async function handleMachineOnMaterialBlur() {
