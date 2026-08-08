@@ -224,6 +224,13 @@
             </el-form-item>
           </el-col>
         </el-row>
+        <el-row :gutter="16">
+          <el-col :span="8">
+            <el-form-item label="备注" prop="remark">
+              <el-input v-model="form.remark" />
+            </el-form-item>
+          </el-col>
+        </el-row>
         <el-form-item label="OCR图片识别">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <el-upload
