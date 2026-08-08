@@ -226,6 +226,19 @@ public class OriginalRecordService {
                                 // 查询失败不阻塞导入
                             }
                         }
+                        // 导入时：如果下机料号为空但下机物料号有值，模糊匹配送货记录回填下机料号（与页面新增/编辑规则一致）
+                        if ((data.getMachineOffCode() == null || data.getMachineOffCode().isBlank())
+                                && data.getMachineOffMaterial() != null && !data.getMachineOffMaterial().isBlank()) {
+                            try {
+                                com.metal.entity.DeliveryRecord delivery = deliveryRecordMapper.findFuzzyByKeyword(
+                                        data.getMachineOffMaterial(), companyId);
+                                if (delivery != null && delivery.getMaterialCode() != null) {
+                                    data.setMachineOffCode(delivery.getMaterialCode());
+                                }
+                            } catch (Exception ignored) {
+                                // 查询失败不阻塞导入
+                            }
+                        }
                         // 导入时：如果送货记录引用为空但有上机物料，自动计算本月匹配数
                         if ((data.getDeliveryRecordRef() == null || data.getDeliveryRecordRef().isBlank())
                                 && data.getMachineOnMaterial() != null && !data.getMachineOnMaterial().isBlank()
