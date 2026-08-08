@@ -11,7 +11,7 @@
         <el-input v-model="searchForm.category" placeholder="类别" clearable style="width: 140px" />
       </el-form-item>
       <el-form-item label="统计月份">
-        <el-date-picker v-model="searchForm.yearMonth" type="month" placeholder="选择月份" value-format="YYYY-MM" clearable style="width: 160px" />
+        <el-date-picker v-model="searchForm.yearMonth" type="month" multiple placeholder="选择月份（可多选）" value-format="YYYY-MM" clearable style="width: 200px" />
       </el-form-item>
     </SearchForm>
 
@@ -29,14 +29,14 @@
       <el-date-picker v-model="refreshMonth" type="month" placeholder="选择要更新的月份" value-format="YYYY-MM" style="width:180px" />
       <el-button type="warning" @click="handleBatchRefresh">更新当月数据</el-button>
       <span style="margin-left:24px;color:#909399;">|</span>
-      <el-date-picker v-model="exportMonth" type="month" placeholder="选择要导出的月份" value-format="YYYY-MM" style="width:180px" />
-      <el-button type="success" @click="handleExport">导出当前月份</el-button>
+      <el-date-picker v-model="exportMonth" type="month" multiple placeholder="选择要导出的月份（可多选）" value-format="YYYY-MM" style="width:200px" />
+      <el-button type="success" @click="handleExport">导出所选月份</el-button>
     </div>
 
     <!-- 全表合计 -->
     <div class="summary-row">
       <span class="summary-label">汇总（万元）</span>
-      <el-date-picker v-model="summaryMonth" type="month" placeholder="选择月份" value-format="YYYY-MM" clearable style="width:160px" @change="fetchTotals" />
+      <el-date-picker v-model="summaryMonth" type="month" multiple placeholder="选择月份（可多选）" value-format="YYYY-MM" clearable style="width:200px" @change="fetchTotals" />
       <span class="summary-item">送货金额合计：<b>{{ totals.deliveryAmount.toFixed(2) }}</b></span>
       <span class="summary-item">上机金额合计：<b>{{ totals.machineOnAmount.toFixed(2) }}</b></span>
       <span class="summary-item">返修金额合计：<b>{{ totals.repairAmount.toFixed(2) }}</b></span>
@@ -55,9 +55,9 @@
       @sort-change="handleSortChange"
       style="width: 100%"
     >
-      <el-table-column type="selection" width="44" fixed="left" />
+      <el-table-column type="selection" width="44" fixed="left" :selectable="() => !isMergedView" />
       <el-table-column label="id" width="80" prop="id" sortable="custom">
-        <template #default="{ $index }">{{ sortOrder === 'desc' ? total - (queryParams.page - 1) * queryParams.pageSize - $index : (queryParams.page - 1) * queryParams.pageSize + $index + 1 }}</template>
+        <template #default="{ $index }">{{ isMergedView ? '—' : (sortOrder === 'desc' ? total - (queryParams.page - 1) * queryParams.pageSize - $index : (queryParams.page - 1) * queryParams.pageSize + $index + 1) }}</template>
       </el-table-column>
       <el-table-column prop="category" label="类别" width="100" />
       <el-table-column prop="materialCode" label="料号" width="130" show-overflow-tooltip />
@@ -83,9 +83,12 @@
       <el-table-column prop="createdBy" label="创建人" width="100" />
       <el-table-column label="操作" width="180" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
-          <el-button link type="primary" size="small" @click="handleCopy(row)">复制</el-button>
-          <el-button link type="danger" size="small" @click="handleDelete(row.id)">删除</el-button>
+          <template v-if="!isMergedView">
+            <el-button link type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
+            <el-button link type="primary" size="small" @click="handleCopy(row)">复制</el-button>
+            <el-button link type="danger" size="small" @click="handleDelete(row.id)">删除</el-button>
+          </template>
+          <span v-else style="color:#c0c4cc;font-size:12px;">多月视图只读</span>
         </template>
       </el-table-column>
     </el-table>
@@ -250,15 +253,19 @@ import SearchForm from '../../components/SearchForm.vue'
 import ToolBar from '../../components/ToolBar.vue'
 
 const companyStore = useCompanyStore()
-const { list, total, loading, queryParams, fetchData, handlePageChange, handleSizeChange } = usePagination(
+const pagination = usePagination(
   (params) => api.getList({ ...params, companyId: companyStore.currentCompanyId })
 )
+const { list, total, loading, queryParams, fetchData, handlePageChange: paginationHandlePageChange, handleSizeChange: paginationHandleSizeChange } = pagination
 const { selectedRows, handleSelectionChange } = useTableSelection()
+
+// 多月视图（统计月份选 ≥2 个）：表格按料号合并成一行、数量列取各月合计，只读
+const isMergedView = computed(() => Array.isArray(searchForm.yearMonth) && searchForm.yearMonth.length >= 2)
 
 const searchForm = reactive({
   keyword: '',
   category: '',
-  yearMonth: ''
+  yearMonth: []
 })
 
 const dialogVisible = ref(false)
@@ -320,7 +327,7 @@ const rules = {
 // 汇总金额 = Σ(含税单价 × 数量) ÷ 1.13 ÷ 10000，单位为万元
 const DIVISOR = 1.13 * 10000
 
-const summaryMonth = ref('')
+const summaryMonth = ref([])
 const totals = reactive({
   deliveryAmount: 0,
   machineOnAmount: 0,
@@ -333,7 +340,9 @@ const totals = reactive({
 async function fetchTotals() {
   try {
     const params = { page: 1, pageSize: 9999, companyId: companyStore.currentCompanyId }
-    if (summaryMonth.value) params.yearMonth = summaryMonth.value
+    if (Array.isArray(summaryMonth.value) && summaryMonth.value.length) {
+      params.yearMonth = summaryMonth.value.join(',')
+    }
     const res = await api.getList(params)
     const all = res.data.list || []
     const calc = (field) => all.reduce((acc, r) => acc + (Number(r.unitPriceWithTax) || 0) * (Number(r[field]) || 0), 0) / DIVISOR
@@ -348,15 +357,74 @@ async function fetchTotals() {
   } catch { /* ignore */ }
 }
 
+// ---- 多月合并视图 ----
+const rawRows = ref([])       // 多月模式：全量原始月度行
+const mergedRows = ref([])    // 多月模式：按料号合并后的行
+
+/** 按料号合并多月行：数量类列求和，属性类列取最新月（数据按 id desc，第一行即最新月） */
+function mergeByMaterial(rows) {
+  const map = new Map()
+  for (const r of rows) {
+    const key = r.materialCode
+    if (!map.has(key)) {
+      map.set(key, { ...r })
+    } else {
+      const m = map.get(key)
+      m.deliveryQuantity = (m.deliveryQuantity || 0) + (r.deliveryQuantity || 0)
+      m.freeDeliveryQuantity = (m.freeDeliveryQuantity || 0) + (r.freeDeliveryQuantity || 0)
+      m.machineOnQuantity = (m.machineOnQuantity || 0) + (r.machineOnQuantity || 0)
+      m.monthRepair = (m.monthRepair || 0) + (r.monthRepair || 0)
+      m.agreedRatioQuantity = (m.agreedRatioQuantity || 0) + (r.agreedRatioQuantity || 0)
+      m.excessQuantity = (m.excessQuantity || 0) + (r.excessQuantity || 0)
+      m.excessAmountWithTax = (m.excessAmountWithTax || 0) + (r.excessAmountWithTax || 0)
+      m.yearMonth = [m.yearMonth, r.yearMonth].filter(Boolean).sort().join(' ~ ')
+    }
+  }
+  return [...map.values()]
+}
+
+function renderMergedPage() {
+  const start = (queryParams.page - 1) * queryParams.pageSize
+  list.value = mergedRows.value.slice(start, start + queryParams.pageSize)
+}
+
 function doFetch() {
-  return fetchData({
+  queryParams.page = 1
+  const base = {
     keyword: searchForm.keyword,
     category: searchForm.category,
-    yearMonth: searchForm.yearMonth,
+    yearMonth: Array.isArray(searchForm.yearMonth) && searchForm.yearMonth.length
+      ? searchForm.yearMonth.join(',') : '',
     companyId: companyStore.currentCompanyId,
     sortField: sortField.value,
     sortOrder: sortOrder.value
-  })
+  }
+  if (isMergedView.value) {
+    loading.value = true
+    return api.getList({ ...base, page: 1, pageSize: 9999 })
+      .then(res => {
+        rawRows.value = res.data.list || []
+        mergedRows.value = mergeByMaterial(rawRows.value)
+        total.value = mergedRows.value.length
+        renderMergedPage()
+      })
+      .finally(() => { loading.value = false })
+  }
+  return fetchData(base)   // 单月/空月份：原逻辑（后端分页、逐行）
+}
+
+// 多月视图走前端切片，其余走后端分页
+function handlePageChange(page) {
+  queryParams.page = page
+  if (isMergedView.value) { renderMergedPage(); return }
+  paginationHandlePageChange(page)
+}
+
+function handleSizeChange(size) {
+  queryParams.pageSize = size
+  queryParams.page = 1
+  if (isMergedView.value) { renderMergedPage(); return }
+  paginationHandleSizeChange(size)
 }
 
 const { handleDelete, handleBatchDelete } = useCrud(api, doFetch)
@@ -373,7 +441,7 @@ function handleSearch() {
 function handleReset() {
   searchForm.keyword = ''
   searchForm.category = ''
-  searchForm.yearMonth = ''
+  searchForm.yearMonth = []
   queryParams.page = 1
   doFetch()
 }
@@ -409,13 +477,16 @@ function handleImport() {
 
 async function handleExport() {
   try {
+    const months = Array.isArray(exportMonth.value) && exportMonth.value.length
+      ? exportMonth.value
+      : (Array.isArray(searchForm.yearMonth) ? searchForm.yearMonth : [])
     const response = await api.exportExcel({
       keyword: searchForm.keyword,
       category: searchForm.category,
-      yearMonth: exportMonth.value || searchForm.yearMonth,
+      yearMonth: months.join(','),
       companyId: companyStore.currentCompanyId
     })
-    const filename = exportMonth.value ? `超比统计_${exportMonth.value}.xlsx` : '超比统计.xlsx'
+    const filename = months.length ? `超比统计_${months.join('_')}.xlsx` : '超比统计.xlsx'
     downloadBlob(response.data, filename)
     ElMessage.success('导出成功')
   } catch { /* error handled */ }
@@ -634,7 +705,7 @@ async function handleVoiceParse() {
 
 onMounted(() => {
   const now = new Date()
-  summaryMonth.value = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0')
+  summaryMonth.value = [now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0')]
   doFetch()
   fetchTotals()
 })
