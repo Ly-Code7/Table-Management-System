@@ -59,3 +59,7 @@ export function lookupByCode(materialCode, companyId) {
 export function lookupBySerial(materialSerial, companyId) {
   return request.get('/delivery-record/lookup-by-serial', { params: { materialSerial, companyId } })
 }
+
+export function lookupFuzzy(keyword, companyId) {
+  return request.get('/delivery-record/lookup-fuzzy', { params: { keyword, companyId } })
+}

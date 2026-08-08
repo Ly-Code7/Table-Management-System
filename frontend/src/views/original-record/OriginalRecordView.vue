@@ -55,12 +55,13 @@
       <el-table-column prop="faultPhenomenon" label="故障现象" width="130" show-overflow-tooltip />
       <el-table-column prop="faultDescription" label="维修描述" width="130" show-overflow-tooltip />
       <!-- 物料 -->
-      <el-table-column prop="materialCode" label="料号" width="115" sortable="custom" />
+      <el-table-column prop="materialCode" label="上机料号" width="115" sortable="custom" />
       <el-table-column prop="partName" label="配件" width="100" show-overflow-tooltip />
       <el-table-column prop="quantity" label="数量" width="65" />
       <!-- 上/下机 -->
       <el-table-column prop="machineOnMaterial" label="上机物料号" width="120" show-overflow-tooltip />
       <el-table-column prop="machineOffMaterial" label="下机物料号" width="120" show-overflow-tooltip />
+      <el-table-column prop="machineOffCode" label="下机料号" width="115" show-overflow-tooltip />
       <!-- 时间 -->
       <el-table-column label="报修时间" width="100">
         <template #default="{ row }">{{ formatTime(row.repairRequestTime) }}</template>
@@ -174,7 +175,7 @@
         </el-row>
         <el-row :gutter="16">
           <el-col :span="8">
-            <el-form-item label="料号" prop="materialCode">
+            <el-form-item label="上机料号" prop="materialCode">
               <el-autocomplete v-model="form.materialCode" :fetch-suggestions="searchMaterials" placeholder="输入料号关键字自动匹配" style="width:100%" @select="handleMaterialSelect" />
             </el-form-item>
           </el-col>
@@ -202,11 +203,16 @@
           </el-col>
           <el-col :span="9">
             <el-form-item label="下机物料号" prop="machineOffMaterial">
-              <el-input v-model="form.machineOffMaterial" />
+              <el-input v-model="form.machineOffMaterial" @blur="handleMachineOffMaterialBlur" />
             </el-form-item>
           </el-col>
         </el-row>
         <el-row :gutter="16">
+          <el-col :span="8">
+            <el-form-item label="下机料号" prop="machineOffCode">
+              <el-input v-model="form.machineOffCode" placeholder="填写下机物料号后自动回填" />
+            </el-form-item>
+          </el-col>
           <el-col :span="8">
             <el-form-item label="送货记录引用" prop="deliveryRecordRef">
               <el-input v-model="form.deliveryRecordRef" />
@@ -215,11 +221,6 @@
           <el-col :span="8">
             <el-form-item label="单据号">
               <el-input v-model="form.documentNo" placeholder="非必填" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="备注" prop="remark">
-              <el-input v-model="form.remark" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -264,7 +265,7 @@ import * as api from '../../api/original-record'
 import { parseVoiceText } from '../../api/voice-parse'
 import { recognizeOcr } from '../../api/ocr'
 import { search as search156Api } from '../../api/base-material-156'
-import { lookupBySerial } from '../../api/delivery-record'
+import { lookupBySerial, lookupFuzzy } from '../../api/delivery-record'
 import { useCompanyStore } from '../../stores/company'
 import { usePagination } from '../../composables/usePagination'
 import { useTableSelection } from '../../composables/useTableSelection'
@@ -350,7 +351,7 @@ const defaultForm = {
   id: null, recordDate: '', shift: '', factory: '', serialNumber: '', machineNo: '',
   diagnostician: '', repairPerson: '', confirmer: '', repairRequestTime: '', startTime: '',
   endTime: '', machineModel: '', faultPhenomenon: '', faultDescription: '',
-  materialCode: '', material156Name: '', partName: '', quantity: null, machineOnMaterial: '', machineOffMaterial: '',
+  materialCode: '', material156Name: '', partName: '', quantity: null, machineOnMaterial: '', machineOffMaterial: '', machineOffCode: '',
   remark: '', deliveryRecordRef: '', documentNo: ''
 }
 const form = reactive({ ...defaultForm })
@@ -487,6 +488,27 @@ async function handleMachineOnMaterialBlur() {
 }
 
 
+async function handleMachineOffMaterialBlur() {
+  const serial = form.machineOffMaterial
+  if (!serial || serial.trim() === '') {
+    form.machineOffCode = ''
+    return
+  }
+  try {
+    // 模糊匹配送货记录（料号/序列号/物料名称 LIKE），命中回填送货记录的料号，未命中置空
+    const res = await lookupFuzzy(serial.trim(), companyStore.currentCompanyId)
+    const data = res.data
+    if (data && data.materialCode) {
+      form.machineOffCode = data.materialCode
+    } else {
+      form.machineOffCode = ''
+    }
+  } catch {
+    // 查询失败不提示，静默处理
+  }
+}
+
+
 function handleImport() {
   const input = document.createElement('input')
   input.type = 'file'
@@ -544,7 +566,7 @@ const fieldMap = {
   repairRequestTime: 'repairRequestTime', startTime: 'startTime', endTime: 'endTime',
   faultPhenomenon: 'faultPhenomenon', faultDescription: 'faultDescription',
   materialCode: 'materialCode', partName: 'partName', quantity: 'quantity',
-  machineOnMaterial: 'machineOnMaterial', machineOffMaterial: 'machineOffMaterial',
+  machineOnMaterial: 'machineOnMaterial', machineOffMaterial: 'machineOffMaterial', machineOffCode: 'machineOffCode',
   remark: 'remark', deliveryRecordRef: 'deliveryRecordRef', documentNo: 'documentNo'
 }
 
