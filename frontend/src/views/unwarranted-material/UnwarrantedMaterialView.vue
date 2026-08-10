@@ -4,7 +4,7 @@
 
     <SearchForm :form="searchForm" @search="handleSearch" @reset="handleReset">
       <el-form-item label="关键词">
-        <el-input v-model="searchForm.keyword" placeholder="机台号/料号/配件/维修人…" clearable style="width: 200px" />
+        <el-input v-model="searchForm.keyword" placeholder="机台号/料号/配件/维修人/维修记录…" clearable style="width: 220px" />
       </el-form-item>
       <el-form-item label="厂房">
         <el-input v-model="searchForm.factory" placeholder="厂房" clearable style="width: 140px" />
@@ -32,7 +32,7 @@
     <ToolBar :show-add="false" :show-batch-delete="false" :show-import="false" :show-template="false" @export="handleExport" />
 
     <el-table :data="list" v-loading="loading" border stripe @sort-change="handleSortChange">
-      <el-table-column label="id" width="70" prop="id" sortable="custom">
+      <el-table-column label="id" width="100" prop="id" sortable="custom">
         <template #default="{ row }">{{ row.id }}</template>
       </el-table-column>
       <el-table-column prop="recordDate" label="日期" width="105" sortable="custom" />
