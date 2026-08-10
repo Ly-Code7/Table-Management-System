@@ -123,4 +123,34 @@ class OriginalRecordImportMachineOffCodeTest {
         assertEquals("2026-07-01T11:30", rows.get(0).getEndTime().toString(),
                 "结束时间应重建为记录日期 + 时分");
     }
+
+    @Test
+    void importWithDotTimeTextFillsDatePartFromRecordDate() {
+        // 历史数据：时间列是点号分隔的时分文本（如 8.30），导入不应失败，日期部分用记录日期重建
+        var res = service.importExcel(buildFile("OFF-X", "8.30", "10.30", "11.30"), 1L);
+        assertEquals(1, res.getSuccess(), "点号分隔的时分文本应能导入成功");
+        List<OriginalRecord> rows = findImported("OFF-X");
+        assertFalse(rows.isEmpty());
+        assertEquals("2026-07-01T08:30", rows.get(0).getRepairRequestTime().toString(),
+                "点号报修时间应重建为记录日期 + 时分");
+        assertEquals("2026-07-01T10:30", rows.get(0).getStartTime().toString(),
+                "点号开始时间应重建为记录日期 + 时分");
+        assertEquals("2026-07-01T11:30", rows.get(0).getEndTime().toString(),
+                "点号结束时间应重建为记录日期 + 时分");
+    }
+
+    @Test
+    void importWithFullWidthColonTimeTextParses() {
+        // 历史数据：时间列是全角冒号/分号的时分文本（输入法差异，如 8：30、15；00），应归一化为半角冒号解析
+        var res = service.importExcel(buildFile("OFF-X", "8：30", "15；00", "18:00"), 1L);
+        assertEquals(1, res.getSuccess(), "全角冒号/分号的时分文本应能导入成功");
+        List<OriginalRecord> rows = findImported("OFF-X");
+        assertFalse(rows.isEmpty());
+        assertEquals("2026-07-01T08:30", rows.get(0).getRepairRequestTime().toString(),
+                "全角冒号报修时间应归一化后重建");
+        assertEquals("2026-07-01T15:00", rows.get(0).getStartTime().toString(),
+                "全角分号开始时间应归一化后重建");
+        assertEquals("2026-07-01T18:00", rows.get(0).getEndTime().toString(),
+                "半角冒号结束时间不受影响");
+    }
 }

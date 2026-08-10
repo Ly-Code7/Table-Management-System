@@ -29,6 +29,8 @@ public class LocalDateTimeFlexibleConverter implements Converter<LocalDateTime> 
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"),
             DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss"),
             DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm"),
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH.mm"),
+            DateTimeFormatter.ofPattern("yyyy/MM/dd HH.mm"),
             DateTimeFormatter.ofPattern("HH:mm:ss"),
             DateTimeFormatter.ofPattern("HH:mm")
     };
@@ -47,7 +49,9 @@ public class LocalDateTimeFlexibleConverter implements Converter<LocalDateTime> 
     public LocalDateTime convertToJavaData(ReadConverterContext<?> context) {
         String text = context.getReadCellData().getStringValue();
         if (text == null) return null;
-        String s = text.trim();
+        // 全角冒号/分号/引号/逗号 → 半角冒号（历史数据输入法差异，如 8：30、15；00、6,40、11"30）
+        String s = text.trim().replace('：', ':').replace('；', ':')
+                .replace('"', ':').replace(',', ':');
         if (s.isEmpty()) return null;
         for (DateTimeFormatter fmt : PATTERNS) {
             try {
@@ -56,15 +60,17 @@ public class LocalDateTimeFlexibleConverter implements Converter<LocalDateTime> 
                 // 尝试下一种格式
             }
         }
-        // 无日期只有时分的格式（如 "8:30"）：日期部分用 1900-01-01 占位，由 fixTime 按记录日期重建
-        try {
-            LocalTime time = LocalTime.parse(s,
-                    DateTimeFormatter.ofPattern("H:mm", Locale.ROOT));
-            return LocalDateTime.of(LocalDate.of(1900, 1, 1), time);
-        } catch (Exception e) {
-            // 解析不了返回 null：时间列留空，不阻塞整行导入
-            return null;
+        // 无日期只有时分的格式（如 "8:30" / "8.30"）：日期部分用 1900-01-01 占位，由 fixTime 按记录日期重建
+        for (String pattern : new String[]{"H:mm", "H.mm"}) {
+            try {
+                LocalTime time = LocalTime.parse(s, DateTimeFormatter.ofPattern(pattern, Locale.ROOT));
+                return LocalDateTime.of(LocalDate.of(1900, 1, 1), time);
+            } catch (Exception ignored) {
+                // 尝试下一种
+            }
         }
+        // 解析不了返回 null：时间列留空，不阻塞整行导入
+        return null;
     }
 
     @Override
