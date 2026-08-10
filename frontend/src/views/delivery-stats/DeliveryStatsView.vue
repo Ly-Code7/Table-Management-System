@@ -77,7 +77,9 @@
       <el-table-column prop="monthRepair" label="当月返修" width="90" />
       <el-table-column prop="agreedRatioQuantity" label="约定比例数量" width="120" />
       <el-table-column prop="excessQuantity" label="超比数量" width="90" />
-      <el-table-column prop="excessAmountWithTax" label="超比含税金额" width="120" />
+      <el-table-column prop="excessAmountWithTax" label="超比含税金额" width="120">
+        <template #default="{ row }">{{ row.excessAmountWithTax != null ? Number(row.excessAmountWithTax).toFixed(2) : '' }}</template>
+      </el-table-column>
       <el-table-column prop="statDate" label="统计日期" width="110" />
       <el-table-column prop="yearMonth" label="年月" width="90" />
       <el-table-column prop="createdBy" label="创建人" width="100" />
