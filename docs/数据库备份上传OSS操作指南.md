@@ -77,22 +77,16 @@ sudo -E bash oss-backup-setup.sh
 
 ### 第 3 步：手动验证同步（重要，首次必须做）
 
-先试跑（dry-run，只看会传什么、不真传）：
+> 注：ossutil 1.x **没有 dry-run 选项**（v1.7.19 帮助文本无 `--dry-run`，传了会打印用法并退出）。`--update` 本身只上传"本地比远端新"的文件，重复执行不会重复传已传过的文件，直接执行即安全。
+
+真正执行首次同步（首次是全量传输，之后每天只传新增的）：
 
 ```bash
-ossutil sync /data/backup oss://on-site-tpmdata/db-backup/full/ --update --dry-run
+ossutil sync /data/backup oss://on-site-tpmdata/db-backup/full/ --update --loglevel=info
+ossutil sync /data/db_backup/mysql_binlog oss://on-site-tpmdata/db-backup/binlog/ --update --loglevel=info
 ```
 
-**作用**：确认 ossutil 配置正确、能连上 OSS、列出将要上传的文件清单。如果这里报权限/连接错误，说明密钥或网络有问题，先解决再继续。
-
-确认 dry-run 输出符合预期后，真正执行首次同步：
-
-```bash
-ossutil sync /data/backup oss://on-site-tpmdata/db-backup/full/ --update
-ossutil sync /data/db_backup/mysql_binlog oss://on-site-tpmdata/db-backup/binlog/ --update
-```
-
-**作用**：把服务器上现有的全部备份文件传到 OSS（首次是全量传输，之后每天只传新增的）。
+`--loglevel=info` 会在终端显示上传进度；去掉它则静默执行（crontab 定时任务里的版本不带该参数，输出进日志文件）。
 
 ### 第 4 步：核对上传结果
 

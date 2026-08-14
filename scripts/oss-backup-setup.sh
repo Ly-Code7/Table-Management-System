@@ -8,7 +8,7 @@
 #   3. 注册两条 crontab 定时任务（幂等，重复执行不产生重复行）：
 #      - 每月 1 号 3:05 同步全量备份目录  /data/backup              -> db-backup/full/
 #      - 每天 3:10 同步增量 binlog 目录   /data/db_backup/mysql_binlog -> db-backup/binlog/
-#   4. 首次手动同步验证（可选，--dry-run 先行）
+#   4. 首次手动同步验证（可选；ossutil 1.x 无 dry-run，--update 只传新增/变更文件，可直接执行）
 #
 # 用法（在 Linux 服务器项目根目录、以 root 执行——脚本可放任意目录，内部全部使用绝对路径）：
 #   export OSS_AK_ID="你的AccessKeyId"
@@ -107,8 +107,8 @@ for d in "$FULL_DIR" "$BINLOG_DIR"; do
 done
 
 echo ""
-echo "安装配置完成。建议先跑 dry-run 验证："
-echo "  ossutil sync $FULL_DIR oss://$BUCKET/$OSS_PREFIX/full/ --update --dry-run"
+echo "安装配置完成。--update 只上传新增/变更文件（增量语义），可直接执行首次同步："
+echo "  ossutil sync $FULL_DIR oss://$BUCKET/$OSS_PREFIX/full/ --update --loglevel=info"
 echo "确认无误后手动执行首次同步："
 echo "  ossutil sync $FULL_DIR oss://$BUCKET/$OSS_PREFIX/full/ --update"
 echo "  ossutil sync $BINLOG_DIR oss://$BUCKET/$OSS_PREFIX/binlog/ --update"
