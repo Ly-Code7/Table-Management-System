@@ -77,6 +77,20 @@
       <el-table-column prop="downtimeHours" label="停机工时" width="90" />
       <el-table-column prop="deliveryRecordRef" label="送货记录引用" width="140" show-overflow-tooltip />
       <el-table-column prop="documentNo" label="单据号" width="110" show-overflow-tooltip />
+      <el-table-column label="图片" width="70" fixed="right">
+        <template #default="{ row }">
+          <el-image
+            v-if="row.imageKey"
+            :src="previewUrlMap[row.id] || ''"
+            :preview-src-list="previewUrlMap[row.id] ? [previewUrlMap[row.id]] : []"
+            preview-teleported
+            fit="cover"
+            style="width:40px;height:40px;border-radius:4px;cursor:pointer"
+            @click="loadPreviewUrl(row)"
+          />
+          <span v-else style="color:#c0c4cc;font-size:12px">无</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="createdBy" label="操作人" width="80" />
       <el-table-column label="操作" width="180" fixed="right">
         <template #default="{ row }">
@@ -243,10 +257,11 @@
               :on-exceed="handleOcrExceed"
               :file-list="ocrFileList"
               :disabled="ocrLoading"
+              :on-remove="handleOcrRemove"
             >
               <el-button type="primary" :disabled="ocrLoading">选择图片</el-button>
               <template #tip>
-                <div style="font-size:12px;color:#909399;margin-top:4px">支持 jpg/png，大小不超过 10MB</div>
+                <div style="font-size:12px;color:#909399;margin-top:4px">支持 jpg/png，大小不超过 10MB，提交记录时图片将保存到 OSS</div>
               </template>
             </el-upload>
             <el-button type="primary" @click="handleOcrRecognize" :loading="ocrLoading" :disabled="!ocrImageFile">AI解析</el-button>
@@ -359,7 +374,7 @@ const defaultForm = {
   diagnostician: '', repairPerson: '', confirmer: '', repairRequestTime: '', startTime: '',
   endTime: '', machineModel: '', faultPhenomenon: '', faultDescription: '',
   materialCode: '', material156Name: '', partName: '', quantity: null, machineOnMaterial: '', machineOffMaterial: '', machineOffCode: '',
-  remark: '', deliveryRecordRef: '', documentNo: ''
+  remark: '', deliveryRecordRef: '', documentNo: '', imageKey: ''
 }
 const form = reactive({ ...defaultForm })
 const rules = {
@@ -393,7 +408,11 @@ function handleSortChange({ prop, order }) {
   queryParams.page = 1; doFetch()
 }
 
-function resetForm() { Object.assign(form, { ...defaultForm }) }
+function resetForm() {
+  Object.assign(form, { ...defaultForm })
+  ocrFileList.value = []
+  ocrImageFile.value = null
+}
 function handleAdd() { isEdit.value = false; isCopy.value = false; resetForm(); dialogVisible.value = true }
 async function handleEdit(row) {
   isEdit.value = true; isCopy.value = false
@@ -403,6 +422,17 @@ async function handleEdit(row) {
     startTime: extractTime(res.data.startTime),
     endTime: extractTime(res.data.endTime) }
   Object.assign(form, d)
+  // 回显已保存图片到 OCR 上传框（仅展示，不触发重新上传）
+  ocrFileList.value = form.imageKey ? [{
+    name: form.imageKey.split('/').pop(),
+    url: '',
+    status: 'success'
+  }] : []
+  if (form.imageKey) {
+    loadRepairImagePreview(form.imageKey).then(url => {
+      if (ocrFileList.value[0]) ocrFileList.value[0].url = url
+    })
+  }
   dialogVisible.value = true
 }
 async function handleCopy(row) {
@@ -413,7 +443,68 @@ async function handleCopy(row) {
     startTime: extractTime(res.data.startTime),
     endTime: extractTime(res.data.endTime) }
   Object.assign(form, d)
+  // 复制保留图片引用（imageKey 随复制，OCR 框展示）
+  ocrFileList.value = form.imageKey ? [{
+    name: form.imageKey.split('/').pop(),
+    url: '',
+    status: 'success'
+  }] : []
+  if (form.imageKey) {
+    loadRepairImagePreview(form.imageKey).then(url => {
+      if (ocrFileList.value[0]) ocrFileList.value[0].url = url
+    })
+  }
   dialogVisible.value = true
+}
+
+// =============== 维修图片（沿用 OCR 上传框，提交时保存到 OSS） ===============
+const repairImageUploading = ref(false)
+const previewUrlMap = reactive({}) // row.id -> 签名 URL（列表预览用，1 小时有效）
+
+/** OCR 框移除图片时：清空表单中的 imageKey；若该图已上传 OSS 则一并删除，防孤儿 */
+function handleOcrRemove() {
+  const oldKey = form.imageKey
+  ocrImageFile.value = null
+  ocrFileList.value = []
+  form.imageKey = ''
+  if (oldKey) {
+    try { api.removeImage(oldKey) } catch { /* 删除失败不阻塞 */ }
+  }
+}
+
+/** 提交前：若 OCR 框选了新图，上传到 OSS 并返回 key；无新图则保留原 imageKey */
+async function ensureImageUploaded() {
+  if (!ocrImageFile.value) return
+  repairImageUploading.value = true
+  try {
+    const res = await api.uploadImage(ocrImageFile.value)
+    const key = res.data?.key
+    if (!key) throw new Error('上传未返回 key')
+    // 换图：删除旧 OSS 文件，防止孤儿
+    if (form.imageKey && form.imageKey !== key) {
+      try { await api.removeImage(form.imageKey) } catch { /* 删除失败不阻塞 */ }
+    }
+    form.imageKey = key
+  } catch (e) {
+    ElMessage.error('图片上传失败: ' + (e?.response?.data?.msg || e?.message || '未知错误'))
+    throw e
+  } finally { repairImageUploading.value = false }
+}
+
+/** 按 key 拉签名 URL（1 小时有效） */
+async function loadRepairImagePreview(key) {
+  if (!key) return ''
+  try {
+    const res = await api.getImageUrl(key)
+    return res.data?.url || ''
+  } catch { return '' }
+}
+
+/** 列表预览：点击缩略图时按需加载签名 URL */
+async function loadPreviewUrl(row) {
+  if (previewUrlMap[row.id]) return
+  const url = await loadRepairImagePreview(row.imageKey)
+  if (url) previewUrlMap[row.id] = url
 }
 
 async function handleSubmit() {
@@ -421,6 +512,8 @@ async function handleSubmit() {
   if (!valid) return
   submitLoading.value = true
   try {
+    // 提交前：OCR 框选了新图则上传到 OSS（沿用同一张图）
+    await ensureImageUploaded()
     const dateStr = form.recordDate || ''
     const data = { ...form, companyId: companyStore.currentCompanyId,
       repairRequestTime: form.repairRequestTime ? dateStr + ' ' + form.repairRequestTime : '',
@@ -629,6 +722,8 @@ function convertDate(str) {
 function handleOcrFileChange(uploadFile, uploadFiles) {
   ocrFileList.value = uploadFiles
   ocrImageFile.value = uploadFiles.length > 0 ? uploadFiles[0].raw : null
+  // 选了新图：旧的已保存 OSS 图在 ensureImageUploaded 提交时覆盖删除，这里仅记录"图已更换"
+  if (uploadFiles.length > 0) form.imageKey = form.imageKey || '' // 保持原值，由 ensureImageUploaded 判断换图
 }
 
 function handleOcrExceed() {

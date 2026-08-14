@@ -70,3 +70,22 @@ export function downloadTemplate() {
     responseType: 'blob'
   })
 }
+
+/** 上传维修图片到 OSS，返回 { key } */
+export function uploadImage(file) {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request.post('/original-record/upload-image', formData, {
+    timeout: 60000
+  })
+}
+
+/** 按 key 生成 OSS 临时访问 URL（1 小时有效） */
+export function getImageUrl(key) {
+  return request.get('/original-record/image-url', { params: { key } })
+}
+
+/** 删除 OSS 图片（换图清理用） */
+export function removeImage(key) {
+  return request.delete('/original-record/image', { params: { key } })
+}

@@ -34,6 +34,13 @@ public class OriginalRecordController {
         return Result.ok(java.util.Map.of("url", ossService.signUrl(key)));
     }
 
+    /** 删除 OSS 图片（前端换图清理用；记录删除不级联，防误删） */
+    @DeleteMapping("/image")
+    public Result<Void> deleteImage(@RequestParam String key) {
+        ossService.delete(key);
+        return Result.ok();
+    }
+
     @GetMapping
     public Result<PageResult<OriginalRecord>> query(
             @RequestParam(defaultValue = "1") int page,
