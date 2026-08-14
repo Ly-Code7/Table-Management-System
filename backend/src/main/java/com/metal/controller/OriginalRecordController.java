@@ -21,10 +21,12 @@ public class OriginalRecordController {
     @Autowired
     private com.metal.service.OssService ossService;
 
-    /** 上传维修图片到 OSS，返回 object key（私有读，展示时经 image-url 接口签临时 URL） */
+    /** 上传维修图片到 OSS，返回 object key（私有读，展示时经 image-url 接口签临时 URL）。
+     *  id 为维修记录主键：非空时以 id 命名图片（original-record/{yyyyMMdd}/{id}.{ext}） */
     @PostMapping("/upload-image")
-    public Result<java.util.Map<String, String>> uploadImage(@RequestParam("file") MultipartFile file) {
-        String key = ossService.upload(file);
+    public Result<java.util.Map<String, String>> uploadImage(@RequestParam("file") MultipartFile file,
+                                                             @RequestParam(required = false) Long id) {
+        String key = ossService.upload(file, id);
         return Result.ok(java.util.Map.of("key", key));
     }
 

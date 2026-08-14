@@ -55,9 +55,11 @@ public class OssService {
     }
 
     /**
-     * 上传图片到 OSS，返回 object key
+     * 上传图片到 OSS，返回 object key。
+     * recordId 非 null 时以记录 id 命名（original-record/{yyyyMMdd}/{recordId}.{ext}，
+     * 便于按维修记录定位图片）；为 null 时用 UUID 命名（向后兼容）。
      */
-    public String upload(MultipartFile file) {
+    public String upload(MultipartFile file, Long recordId) {
         if (file == null || file.isEmpty()) {
             throw new BizException("请选择要上传的图片");
         }
@@ -69,8 +71,7 @@ public class OssService {
             throw new BizException("图片大小不能超过 10MB");
         }
         String ext = "image/png".equals(contentType) ? "png" : "jpg";
-        String key = KEY_PREFIX + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE)
-                + "/" + UUID.randomUUID() + "." + ext;
+        String key = buildKey(ext, recordId);
 
         try (InputStream in = file.getInputStream()) {
             ObjectMetadata meta = new ObjectMetadata();
@@ -91,6 +92,17 @@ public class OssService {
             log.error("OSS 上传失败: {}", e.getMessage(), e);
             throw new BizException("图片上传失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 生成 OSS object key。recordId 非空时以记录 id 命名（便于按维修记录定位），否则 UUID。
+     * 包级可见便于单测（不触发真实 OSS 上传）。
+     */
+    String buildKey(String ext, Long recordId) {
+        String dateDir = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
+        return recordId != null
+                ? KEY_PREFIX + dateDir + "/" + recordId + "." + ext
+                : KEY_PREFIX + dateDir + "/" + UUID.randomUUID() + "." + ext;
     }
 
     /**

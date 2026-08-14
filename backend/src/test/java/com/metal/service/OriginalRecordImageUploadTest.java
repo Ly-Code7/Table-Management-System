@@ -31,7 +31,7 @@ class OriginalRecordImageUploadTest {
     void uploadRejectsNonImageType() {
         MockMultipartFile txt = new MockMultipartFile("file", "a.txt",
                 "text/plain", "hello".getBytes());
-        BizException e = assertThrows(BizException.class, () -> ossService.upload(txt));
+        BizException e = assertThrows(BizException.class, () -> ossService.upload(txt, null));
         assertTrue(e.getMessage().contains("jpg/png"), "应提示仅支持 jpg/png，实际: " + e.getMessage());
     }
 
@@ -40,7 +40,7 @@ class OriginalRecordImageUploadTest {
         byte[] big = new byte[11 * 1024 * 1024];
         MockMultipartFile img = new MockMultipartFile("file", "big.png",
                 "image/png", big);
-        BizException e = assertThrows(BizException.class, () -> ossService.upload(img));
+        BizException e = assertThrows(BizException.class, () -> ossService.upload(img, null));
         assertTrue(e.getMessage().contains("10MB"), "应提示超 10MB，实际: " + e.getMessage());
     }
 
@@ -48,8 +48,31 @@ class OriginalRecordImageUploadTest {
     void uploadRejectsEmptyFile() {
         MockMultipartFile empty = new MockMultipartFile("file", "e.png",
                 "image/png", new byte[0]);
-        BizException e = assertThrows(BizException.class, () -> ossService.upload(empty));
+        BizException e = assertThrows(BizException.class, () -> ossService.upload(empty, null));
         assertTrue(e.getMessage().contains("选择"), "应提示选择图片，实际: " + e.getMessage());
+    }
+
+    @Test
+    void buildKeyWithRecordId_containsRecordId() {
+        // 包级方法：不触真实 OSS，直接验证 key 命名规则
+        String key = ossService.buildKey("jpg", 12345L);
+        assertTrue(key.startsWith("original-record/"), "key 应以 original-record/ 开头: " + key);
+        assertTrue(key.contains("/12345.jpg"), "key 应包含记录 id: " + key);
+        // 不应含 UUID 特征（8-4-4-4-12 十六进制模式），而应是纯 id
+        assertFalse(key.matches(".*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}.*"),
+                "id 命名不应含 UUID: " + key);
+
+        String pngKey = ossService.buildKey("png", 1L);
+        assertTrue(pngKey.endsWith("/1.png"), "png 扩展名与 id 应正确: " + pngKey);
+    }
+
+    @Test
+    void buildKeyWithoutRecordId_usesUuid() {
+        String key = ossService.buildKey("jpg", null);
+        assertTrue(key.startsWith("original-record/"), "key 应以 original-record/ 开头: " + key);
+        // UUID 命名含 8-4-4-4-12 特征
+        assertTrue(key.matches(".*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\..*"),
+                "无 id 时应使用 UUID: " + key);
     }
 
     @Test

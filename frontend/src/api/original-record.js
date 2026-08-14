@@ -71,10 +71,11 @@ export function downloadTemplate() {
   })
 }
 
-/** 上传维修图片到 OSS，返回 { key } */
-export function uploadImage(file) {
+/** 上传维修图片到 OSS，返回 { key }。id 为维修记录主键，非空时图片以 id 命名 */
+export function uploadImage(file, id) {
   const formData = new FormData()
   formData.append('file', file)
+  if (id) formData.append('id', id)
   return request.post('/original-record/upload-image', formData, {
     timeout: 60000
   })

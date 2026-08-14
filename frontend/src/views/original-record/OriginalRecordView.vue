@@ -443,17 +443,10 @@ async function handleCopy(row) {
     startTime: extractTime(res.data.startTime),
     endTime: extractTime(res.data.endTime) }
   Object.assign(form, d)
-  // 复制保留图片引用（imageKey 随复制，OCR 框展示）
-  ocrFileList.value = form.imageKey ? [{
-    name: form.imageKey.split('/').pop(),
-    url: '',
-    status: 'success'
-  }] : []
-  if (form.imageKey) {
-    loadRepairImagePreview(form.imageKey).then(url => {
-      if (ocrFileList.value[0]) ocrFileList.value[0].url = url
-    })
-  }
+  // 复制的新记录 id 与原记录不同：清空图片（图片以 id 命名，复制后不继承原图）
+  form.imageKey = ''
+  ocrFileList.value = []
+  ocrImageFile.value = null
   dialogVisible.value = true
 }
 
@@ -472,19 +465,19 @@ function handleOcrRemove() {
   }
 }
 
-/** 提交前：若 OCR 框选了新图，上传到 OSS 并返回 key；无新图则保留原 imageKey */
-async function ensureImageUploaded() {
-  if (!ocrImageFile.value) return
+/** 若 OCR 框选了新图，以记录 id 上传到 OSS 并返回 key；无新图返回 null（保留原 imageKey） */
+async function ensureImageUploaded(recordId) {
+  if (!ocrImageFile.value) return null
   repairImageUploading.value = true
   try {
-    const res = await api.uploadImage(ocrImageFile.value)
+    const res = await api.uploadImage(ocrImageFile.value, recordId)
     const key = res.data?.key
     if (!key) throw new Error('上传未返回 key')
     // 换图：删除旧 OSS 文件，防止孤儿
     if (form.imageKey && form.imageKey !== key) {
       try { await api.removeImage(form.imageKey) } catch { /* 删除失败不阻塞 */ }
     }
-    form.imageKey = key
+    return key
   } catch (e) {
     ElMessage.error('图片上传失败: ' + (e?.response?.data?.msg || e?.message || '未知错误'))
     throw e
@@ -512,16 +505,24 @@ async function handleSubmit() {
   if (!valid) return
   submitLoading.value = true
   try {
-    // 提交前：OCR 框选了新图则上传到 OSS（沿用同一张图）
-    await ensureImageUploaded()
     const dateStr = form.recordDate || ''
     const data = { ...form, companyId: companyStore.currentCompanyId,
       repairRequestTime: form.repairRequestTime ? dateStr + ' ' + form.repairRequestTime : '',
       startTime: form.startTime ? dateStr + ' ' + form.startTime : '',
       endTime: form.endTime ? dateStr + ' ' + form.endTime : '' }
     delete data.id
-    if (isEdit.value) await api.update(form.id, data)
-    else await api.create(data)
+    let saved
+    if (isEdit.value) saved = await api.update(form.id, data)
+    else saved = await api.create(data)
+    // 记录已存在（含 id），若选了新图则以记录 id 命名上传，再回填 imageKey
+    const recordId = saved.data?.id ?? form.id
+    if (ocrImageFile.value && recordId) {
+      const newKey = await ensureImageUploaded(recordId)
+      if (newKey && newKey !== data.imageKey) {
+        data.imageKey = newKey
+        await api.update(recordId, data)
+      }
+    }
     ElMessage.success(isEdit.value ? '修改成功' : '新增成功')
     dialogVisible.value = false; doFetch()
   } finally { submitLoading.value = false }
