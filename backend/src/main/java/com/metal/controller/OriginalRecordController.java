@@ -18,6 +18,22 @@ public class OriginalRecordController {
     @Autowired
     private OriginalRecordService service;
 
+    @Autowired
+    private com.metal.service.OssService ossService;
+
+    /** 上传维修图片到 OSS，返回 object key（私有读，展示时经 image-url 接口签临时 URL） */
+    @PostMapping("/upload-image")
+    public Result<java.util.Map<String, String>> uploadImage(@RequestParam("file") MultipartFile file) {
+        String key = ossService.upload(file);
+        return Result.ok(java.util.Map.of("key", key));
+    }
+
+    /** 按 key 生成 OSS 临时访问 URL（1 小时有效），仅允许 original-record/ 前缀 */
+    @GetMapping("/image-url")
+    public Result<java.util.Map<String, String>> imageUrl(@RequestParam String key) {
+        return Result.ok(java.util.Map.of("url", ossService.signUrl(key)));
+    }
+
     @GetMapping
     public Result<PageResult<OriginalRecord>> query(
             @RequestParam(defaultValue = "1") int page,

@@ -137,6 +137,7 @@ CREATE TABLE `original_record` (
   `remark` text COMMENT '备注',
   `confirmer` varchar(50) DEFAULT NULL COMMENT '确认人',
   `delivery_record_ref` varchar(200) DEFAULT NULL COMMENT '送货记录引用',
+  `image_key` varchar(255) DEFAULT NULL COMMENT '维修图片 OSS object key（私有读，经签名 URL 访问）',
   `last_machine_on_time` date DEFAULT NULL COMMENT '上次上机时间（自动查询）',
   `is_out_of_warranty` varchar(10) DEFAULT NULL COMMENT '是否过保: 未过保/已过保/无',
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,

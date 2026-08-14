@@ -31,6 +31,13 @@ ocr:
   dashscope:
     api-key: 你的百炼API-KEY
 
+# OSS 配置（维修记录图片上传，私有读）
+oss:
+  endpoint: oss-cn-xxx.aliyuncs.com
+  bucket: 你的Bucket名称
+  access-key-id: 你的AccessKeyId
+  access-key-secret: 你的AccessKeySecret
+
 pagehelper:
   helper-dialect: mysql
   reasonable: false
