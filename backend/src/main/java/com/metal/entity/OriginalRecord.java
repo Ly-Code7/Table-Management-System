@@ -78,6 +78,9 @@ public class OriginalRecord {
     private String deliveryRecordRef;
     @ExcelProperty(value = "单据号", index = 26)
     private String documentNo;
+    /** 维修图片 OSS object key（私有读，展示时经 image-url 接口签临时 URL） */
+    @ExcelIgnore
+    private String imageKey;
     @ExcelIgnore
     private LocalDateTime createdAt;
     @ExcelIgnore
