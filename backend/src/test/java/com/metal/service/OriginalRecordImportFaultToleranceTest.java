@@ -67,6 +67,26 @@ class OriginalRecordImportFaultToleranceTest {
                 "失败原因应指向 BigDecimal 转换失败，实际: " + res.getFailDetails().get(0).getReason());
     }
 
+    private List<Object> rowWithUnstoppedText() {
+        List<Object> r = new java.util.ArrayList<>(goodRow());
+        r.set(12, "未停机"); // 维修工时列 = 业务文本（无停机，无工时）
+        return r;
+    }
+
+    @Test
+    void importRowWithUnstoppedText_importsSuccessfullyAsNull() throws Exception {
+        MockMultipartFile file = buildFile(goodRow(), rowWithUnstoppedText());
+
+        ImportResultDTO res = originalRecordService.importExcel(file, 1L);
+
+        // 不中断且不失败：「未停机」映射为 null 工时，行正常导入
+        assertEquals(2, res.getTotal());
+        assertEquals(2, res.getSuccess());
+        assertEquals(0, res.getFail());
+        assertTrue(res.getFailDetails().isEmpty(),
+                "「未停机」不应计入失败明细，实际: " + res.getFailDetails());
+    }
+
     @Test
     void importAllGoodRows_noFail() throws Exception {
         MockMultipartFile file = buildFile(goodRow(), goodRow());

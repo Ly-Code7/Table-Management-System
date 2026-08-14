@@ -46,9 +46,9 @@ public class OriginalRecord {
     @ExcelProperty(value = "结束时间", index = 11, converter = com.metal.excel.LocalDateTimeFlexibleConverter.class)
     @DateTimeFormat("yyyy-MM-dd HH:mm:ss")
     private LocalDateTime endTime;
-    @ExcelProperty(value = "维修工时", index = 12)
+    @ExcelProperty(value = "维修工时", index = 12, converter = com.metal.excel.FlexibleBigDecimalConverter.class)
     private BigDecimal repairHours;
-    @ExcelProperty(value = "停机工时", index = 13)
+    @ExcelProperty(value = "停机工时", index = 13, converter = com.metal.excel.FlexibleBigDecimalConverter.class)
     private BigDecimal downtimeHours;
     @ExcelProperty(value = "机型", index = 14)
     private String machineModel;
