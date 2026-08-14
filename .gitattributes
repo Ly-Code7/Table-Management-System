@@ -1,0 +1,3 @@
+# 强制 shell 脚本 LF 行尾——Windows 编辑的脚本带 CRLF 会导致 Linux 执行报
+# "set: pipefail: invalid option name" 等诡异错误（\r 被并入选项名）
+*.sh text eol=lf
