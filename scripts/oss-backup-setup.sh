@@ -87,14 +87,14 @@ if grep -qF "ossutil sync $FULL_DIR" "$CRON_FILE" 2>/dev/null; then
     echo "   全量同步任务已存在，跳过"
 else
     echo "$BACKUP_MARKER full-backup" >> "$CRON_FILE"
-    echo "$FULL_CRON root ossutil sync $FULL_DIR oss://$BUCKET/$OSS_PREFIX/full/ --update >> $LOG_FILE 2>&1" >> "$CRON_FILE"
+    echo "$FULL_CRON root ossutil sync $FULL_DIR oss://$BUCKET/$OSS_PREFIX/full/ --update -c $CONFIG_FILE >> $LOG_FILE 2>&1" >> "$CRON_FILE"
     echo "   已添加全量同步任务（$FULL_CRON）"
 fi
 if grep -qF "ossutil sync $BINLOG_DIR" "$CRON_FILE" 2>/dev/null; then
     echo "   binlog 同步任务已存在，跳过"
 else
     echo "$BACKUP_MARKER binlog-backup" >> "$CRON_FILE"
-    echo "$BINLOG_CRON root ossutil sync $BINLOG_DIR oss://$BUCKET/$OSS_PREFIX/binlog/ --update >> $LOG_FILE 2>&1" >> "$CRON_FILE"
+    echo "$BINLOG_CRON root ossutil sync $BINLOG_DIR oss://$BUCKET/$OSS_PREFIX/binlog/ --update -c $CONFIG_FILE >> $LOG_FILE 2>&1" >> "$CRON_FILE"
     echo "   已添加 binlog 同步任务（$BINLOG_CRON）"
 fi
 

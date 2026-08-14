@@ -79,14 +79,14 @@ sudo -E bash oss-backup-setup.sh
 
 > 注：ossutil 1.x **没有 dry-run 选项**（v1.7.19 帮助文本无 `--dry-run`，传了会打印用法并退出）。`--update` 本身只上传"本地比远端新"的文件，重复执行不会重复传已传过的文件，直接执行即安全。
 
-真正执行首次同步（首次是全量传输，之后每天只传新增的）：
+真正执行首次同步（首次是全量传输，之后每天只传新增的；`-c` 显式指定配置文件，避免 sudo/root 环境读不到默认路径）：
 
 ```bash
-ossutil sync /data/backup oss://on-site-tpmdata/db-backup/full/ --update --loglevel=info
-ossutil sync /data/db_backup/mysql_binlog oss://on-site-tpmdata/db-backup/binlog/ --update --loglevel=info
+ossutil sync /data/backup oss://on-site-tpmdata/db-backup/full/ --update --loglevel=info -c /home/hyjm/.ossutilconfig
+ossutil sync /data/db_backup/mysql_binlog oss://on-site-tpmdata/db-backup/binlog/ --update --loglevel=info -c /home/hyjm/.ossutilconfig
 ```
 
-`--loglevel=info` 会在终端显示上传进度；去掉它则静默执行（crontab 定时任务里的版本不带该参数，输出进日志文件）。
+`--loglevel=info` 会在终端显示上传进度；去掉它则静默执行（crontab 定时任务里的版本不带该参数，输出进日志文件）。若 binlog 文件属主是 mysql/dnsmasq 且权限 640，普通用户读不了——定时任务以 root 运行不受影响，手动同步用 `sudo`（记得带 `-c`）。
 
 ### 第 4 步：核对上传结果
 
