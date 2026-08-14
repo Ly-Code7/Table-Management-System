@@ -77,20 +77,6 @@
       <el-table-column prop="downtimeHours" label="停机工时" width="90" />
       <el-table-column prop="deliveryRecordRef" label="送货记录引用" width="140" show-overflow-tooltip />
       <el-table-column prop="documentNo" label="单据号" width="110" show-overflow-tooltip />
-      <el-table-column label="图片" width="70" fixed="right">
-        <template #default="{ row }">
-          <el-image
-            v-if="row.imageKey"
-            :src="previewUrlMap[row.id] || ''"
-            :preview-src-list="previewUrlMap[row.id] ? [previewUrlMap[row.id]] : []"
-            preview-teleported
-            fit="cover"
-            style="width:40px;height:40px;border-radius:4px;cursor:pointer"
-            @click="loadPreviewUrl(row)"
-          />
-          <span v-else style="color:#c0c4cc;font-size:12px">无</span>
-        </template>
-      </el-table-column>
       <el-table-column prop="createdBy" label="操作人" width="80" />
       <el-table-column label="操作" width="180" fixed="right">
         <template #default="{ row }">
@@ -452,7 +438,6 @@ async function handleCopy(row) {
 
 // =============== 维修图片（沿用 OCR 上传框，提交时保存到 OSS） ===============
 const repairImageUploading = ref(false)
-const previewUrlMap = reactive({}) // row.id -> 签名 URL（列表预览用，1 小时有效）
 
 /** OCR 框移除图片时：清空表单中的 imageKey；若该图已上传 OSS 则一并删除，防孤儿 */
 function handleOcrRemove() {
@@ -491,13 +476,6 @@ async function loadRepairImagePreview(key) {
     const res = await api.getImageUrl(key)
     return res.data?.url || ''
   } catch { return '' }
-}
-
-/** 列表预览：点击缩略图时按需加载签名 URL */
-async function loadPreviewUrl(row) {
-  if (previewUrlMap[row.id]) return
-  const url = await loadRepairImagePreview(row.imageKey)
-  if (url) previewUrlMap[row.id] = url
 }
 
 async function handleSubmit() {
