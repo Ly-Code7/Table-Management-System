@@ -38,13 +38,13 @@
 
 ### 第 0 步：把脚本放到服务器
 
-把仓库里的 `scripts/oss-backup-setup.sh` 传到服务器任意目录（例如 `/root/` 或项目根目录），并确认两个备份目录存在：
+把仓库里的 `scripts/oss-backup-setup.sh` 传到服务器**项目根目录**（例如 `/root/Table-Management-System/oss-backup-setup.sh`，即与项目代码同目录），并确认两个备份目录存在：
 
 ```bash
 ls -d /data/backup /data/db_backup/mysql_binlog
 ```
 
-**作用**：确认脚本能找到备份目录。脚本第 4 步会再次检查，但提前确认可以避免定时任务注册后才发现目录路径不对。
+**作用**：确认脚本能找到备份目录。脚本第 4 步会再次检查，但提前确认可以避免定时任务注册后才发现目录路径不对。脚本内部全部使用绝对路径，放在项目根目录或任意位置均可运行。
 
 ### 第 1 步：设置密钥环境变量
 
@@ -58,11 +58,13 @@ export OSS_AK_SECRET="你的AccessKeySecret"
 ### 第 2 步：运行安装配置脚本
 
 ```bash
-sudo -E bash scripts/oss-backup-setup.sh
+sudo -E bash oss-backup-setup.sh
 ```
 
 > 如果 `sudo -E` 提示环境变量仍丢失，改用：
-> `sudo env OSS_AK_ID="你的AccessKeyId" OSS_AK_SECRET="你的AccessKeySecret" bash scripts/oss-backup-setup.sh`
+> `sudo env OSS_AK_ID="你的AccessKeyId" OSS_AK_SECRET="你的AccessKeySecret" bash oss-backup-setup.sh`
+>
+> 注：命令在**项目根目录**（脚本所在目录）执行；脚本放任意位置都可运行（内部全绝对路径），不在当前目录时把 `oss-backup-setup.sh` 换成实际路径即可。
 
 **作用**：脚本自动完成以下 4 件事（每一步都会打印 `[1/4]`~`[4/4]` 进度）：
 1. **安装 ossutil**：下载阿里云官方安装包到 `/usr/bin/ossutil`（若已安装则跳过）。

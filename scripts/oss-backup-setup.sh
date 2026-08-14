@@ -10,10 +10,10 @@
 #      - 每天 3:10 同步增量 binlog 目录   /data/db_backup/mysql_binlog -> db-backup/binlog/
 #   4. 首次手动同步验证（可选，--dry-run 先行）
 #
-# 用法（在 Linux 服务器上以 root 执行）：
+# 用法（在 Linux 服务器项目根目录、以 root 执行——脚本可放任意目录，内部全部使用绝对路径）：
 #   export OSS_AK_ID="你的AccessKeyId"
 #   export OSS_AK_SECRET="你的AccessKeySecret"
-#   sudo bash scripts/oss-backup-setup.sh
+#   sudo -E bash oss-backup-setup.sh
 #
 # 说明：
 #   - 密钥只从环境变量读取，脚本内不留明文；config 文件 chmod 600
