@@ -123,7 +123,13 @@
           </el-col>
           <el-col :span="8">
             <el-form-item label="机型" prop="machineModel">
-              <el-input v-model="form.machineModel" />
+              <el-select v-model="form.machineModel" style="width:100%">
+                <el-option label="发那科" value="发那科" />
+                <el-option label="台群" value="台群" />
+                <el-option label="兄弟" value="兄弟" />
+                <el-option label="佳铁" value="佳铁" />
+                <el-option label="精雕" value="精雕" />
+              </el-select>
             </el-form-item>
           </el-col>
         </el-row>
@@ -662,7 +668,7 @@ const ocrFileList = ref([])
 // 语音输入
 const voiceText = ref('')
 const voiceLoading = ref(false)
-const voicePlaceholder = '请按格式朗读: 日期2026年7月21日 班次白班 厂房A 序列号001 机台号ESS 机型FANUC 诊断人张三 维修人李四 确认人王五 报修时间15时 开始时间15时30分 结束时间18时 故障现象主轴异响 维修描述更换丝杆 料号2212673-0461 配件名称丝杆 数量1 上机物料号M001 下机物料号M002 备注无'
+const voicePlaceholder = '请按格式朗读: 日期2026年7月21日 班次白班 厂房A 序列号001 机台号ESS 机型发那科 诊断人张三 维修人李四 确认人王五 报修时间15时 开始时间15时30分 结束时间18时 故障现象主轴异响 维修描述更换丝杆 料号2212673-0461 配件名称丝杆 数量1 上机物料号M001 下机物料号M002 备注无'
 
 async function handleVoiceParse() {
   if (!voiceText.value.trim()) { ElMessage.warning('请先输入文字'); return }
