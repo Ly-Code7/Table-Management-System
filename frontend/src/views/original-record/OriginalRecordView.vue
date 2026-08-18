@@ -221,7 +221,7 @@
           </el-col>
           <el-col :span="8">
             <el-form-item label="送货记录引用" prop="deliveryRecordRef">
-              <el-input v-model="form.deliveryRecordRef" />
+              <el-input v-model="form.deliveryRecordRef" placeholder="根据上机物料号自动查询" />
             </el-form-item>
           </el-col>
           <el-col :span="8">
