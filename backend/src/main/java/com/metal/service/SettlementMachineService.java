@@ -105,7 +105,7 @@ public class SettlementMachineService {
         if (item != null) {
             java.util.Map<String, Object> map = new java.util.LinkedHashMap<>();
             map.put("category", item.getCategory());
-            map.put("partName", item.getPartName());
+            map.put("partName", item.getAccessory());
             map.put("unitUsage", item.getUnitUsage());
             map.put("ratio", item.getRatio());
             map.put("unitPriceWithTax", item.getUnitPriceWithTax());

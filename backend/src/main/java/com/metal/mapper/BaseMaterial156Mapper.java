@@ -13,15 +13,15 @@ public interface BaseMaterial156Mapper {
     @Select("SELECT COUNT(*) FROM base_material_156 WHERE material_code = #{materialCode} AND company_id = #{companyId}")
     int countByMaterialCode(@Param("materialCode") String materialCode, @Param("companyId") Long companyId);
 
-    @Insert("INSERT INTO base_material_156 (company_id, category, material_code, system_name, part_name, " +
+    @Insert("INSERT INTO base_material_156 (company_id, category, material_code, system_name, part_name, accessory, " +
             "unit_usage, ratio, unit_price_with_tax, created_by, updated_by) " +
-            "VALUES (#{companyId}, #{category}, #{materialCode}, #{systemName}, #{partName}, " +
+            "VALUES (#{companyId}, #{category}, #{materialCode}, #{systemName}, #{partName}, #{accessory}, " +
             "#{unitUsage}, #{ratio}, #{unitPriceWithTax}, #{createdBy}, #{updatedBy})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(BaseMaterial156 record);
 
     @Update("UPDATE base_material_156 SET category=#{category}, material_code=#{materialCode}, " +
-            "system_name=#{systemName}, part_name=#{partName}, unit_usage=#{unitUsage}, " +
+            "system_name=#{systemName}, part_name=#{partName}, accessory=#{accessory}, unit_usage=#{unitUsage}, " +
             "ratio=#{ratio}, unit_price_with_tax=#{unitPriceWithTax}, updated_by=#{updatedBy} WHERE id=#{id}")
     int update(BaseMaterial156 record);
 
@@ -33,10 +33,10 @@ public interface BaseMaterial156Mapper {
     int batchDelete(@Param("ids") List<Long> ids);
 
     @Insert("<script>" +
-            "INSERT INTO base_material_156 (company_id, category, material_code, system_name, part_name, " +
+            "INSERT INTO base_material_156 (company_id, category, material_code, system_name, part_name, accessory, " +
             "unit_usage, ratio, unit_price_with_tax, created_by, updated_by) VALUES " +
             "<foreach collection='list' item='r' separator=','>" +
-            "(#{r.companyId}, #{r.category}, #{r.materialCode}, #{r.systemName}, #{r.partName}, " +
+            "(#{r.companyId}, #{r.category}, #{r.materialCode}, #{r.systemName}, #{r.partName}, #{r.accessory}, " +
             "#{r.unitUsage}, #{r.ratio}, #{r.unitPriceWithTax}, #{r.createdBy}, #{r.updatedBy})" +
             "</foreach>" +
             "</script>")
@@ -47,7 +47,8 @@ public interface BaseMaterial156Mapper {
             "<if test='companyId != null'>AND company_id = #{companyId}</if> " +
             "<if test='keyword != null and keyword != \"\"'>" +
             "AND (material_code LIKE CONCAT('%',#{keyword},'%') OR system_name LIKE CONCAT('%',#{keyword},'%') " +
-            "OR part_name LIKE CONCAT('%',#{keyword},'%') OR category LIKE CONCAT('%',#{keyword},'%') OR id LIKE CONCAT('%',#{keyword},'%')) " +
+            "OR part_name LIKE CONCAT('%',#{keyword},'%') OR accessory LIKE CONCAT('%',#{keyword},'%') " +
+            "OR category LIKE CONCAT('%',#{keyword},'%') OR id LIKE CONCAT('%',#{keyword},'%')) " +
             "</if>" +
             "ORDER BY ${sortField} ${sortOrder} " +
             "</script>")
@@ -57,7 +58,8 @@ public interface BaseMaterial156Mapper {
     @Select("<script>SELECT * FROM base_material_156 WHERE " +
             "(material_code LIKE CONCAT('%',#{keyword},'%') " +
             "OR system_name LIKE CONCAT('%',#{keyword},'%') " +
-            "OR part_name LIKE CONCAT('%',#{keyword},'%')) " +
+            "OR part_name LIKE CONCAT('%',#{keyword},'%') " +
+            "OR accessory LIKE CONCAT('%',#{keyword},'%')) " +
             "<if test='companyId != null'>AND company_id = #{companyId}</if> LIMIT 15</script>")
     List<BaseMaterial156> searchByKeyword(@Param("keyword") String keyword, @Param("companyId") Long companyId);
 

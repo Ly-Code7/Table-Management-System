@@ -554,15 +554,15 @@ public class UnwarrantedMaterialService {
         }
     }
 
-    /** 按料号从 156 项表回填配件名称（已有值不覆盖；查不到保留原值）——分组键/唯一标识编号依赖配件名称 */
+    /** 按料号从 156 项表回填配件名称（配件 ← 156项表 accessory 列；已有值不覆盖；查不到保留原值）——分组键/唯一标识编号依赖配件名称 */
     private void fillPartName(UnwarrantedMaterial r) {
         if (!notBlank(r.getMaterialCode()) || notBlank(r.getPartName())) return;
         try {
             com.metal.entity.BaseMaterial156 item = r.getCompanyId() != null
                     ? baseMaterial156Mapper.findByMaterialCodeAndCompany(r.getMaterialCode(), r.getCompanyId())
                     : baseMaterial156Mapper.findByMaterialCode(r.getMaterialCode());
-            if (item != null && notBlank(item.getPartName())) {
-                r.setPartName(item.getPartName());
+            if (item != null && notBlank(item.getAccessory())) {
+                r.setPartName(item.getAccessory());
             }
         } catch (Exception ignored) {
             // 查询失败不阻塞

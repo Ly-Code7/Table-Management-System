@@ -37,7 +37,7 @@
       <template v-else>
         <el-table-column prop="category" label="类别" width="100" />
         <el-table-column prop="key" label="料号" width="130" fixed="left" show-overflow-tooltip />
-        <el-table-column prop="partName" label="配件名称" width="140" show-overflow-tooltip />
+        <el-table-column prop="partName" label="156项名称" width="140" show-overflow-tooltip />
         <el-table-column prop="price" label="合约单价" width="100" align="right" />
       </template>
       <!-- 12 个月列 -->
@@ -99,10 +99,10 @@ const yearOptions = computed(() => {
 
 const isMachineTab = computed(() => ['repair-amount', 'fault-frequency'].includes(activeTab.value))
 
-// 搜索框：按当前看板维度适配（机台类搜机台号/厂房，料号类搜料号/配件名称/类别）
+// 搜索框：按当前看板维度适配（机台类搜机台号/厂房，料号类搜料号/156项名称/类别）
 const keyword = ref('')
 const searchPlaceholder = computed(() =>
-  isMachineTab.value ? '搜索机台号/厂房' : '搜索料号/配件名称/类别'
+  isMachineTab.value ? '搜索机台号/厂房' : '搜索料号/156项名称/类别'
 )
 
 const monthKeys = computed(() => {

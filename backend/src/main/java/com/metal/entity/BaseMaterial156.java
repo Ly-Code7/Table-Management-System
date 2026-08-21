@@ -18,13 +18,15 @@ public class BaseMaterial156 {
     private String materialCode;
     @ExcelProperty(value = "系统名称", index = 2)
     private String systemName;
-    @ExcelProperty(value = "配件名称", index = 3)
+    @ExcelProperty(value = "156项名称", index = 3)
     private String partName;
-    @ExcelProperty(value = "单台机用量", index = 4)
+    @ExcelProperty(value = "配件", index = 4)
+    private String accessory;
+    @ExcelProperty(value = "单台机用量", index = 5)
     private BigDecimal unitUsage;
-    @ExcelProperty(value = "比例", index = 5)
+    @ExcelProperty(value = "比例", index = 6)
     private BigDecimal ratio;
-    @ExcelProperty(value = "含税单价", index = 6)
+    @ExcelProperty(value = "含税单价", index = 7)
     private BigDecimal unitPriceWithTax;
     @ExcelIgnore
     private LocalDateTime createdAt;

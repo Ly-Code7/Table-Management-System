@@ -312,7 +312,7 @@ public class BoardService {
         } else {
             head.add(twoLevel ? List.of("合计", "类别") : List.of("类别"));
             head.add(twoLevel ? List.of("", "料号") : List.of("料号"));
-            head.add(twoLevel ? List.of("", "配件名称") : List.of("配件名称"));
+            head.add(twoLevel ? List.of("", "156项名称") : List.of("156项名称"));
             head.add(twoLevel ? List.of("", "合约单价") : List.of("合约单价"));
         }
         for (String k : keys) {

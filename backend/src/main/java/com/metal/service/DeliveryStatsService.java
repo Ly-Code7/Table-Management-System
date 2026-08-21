@@ -524,7 +524,7 @@ public class DeliveryStatsService {
             java.util.Map<String, Object> from156 = new java.util.LinkedHashMap<>();
             from156.put("category", item.getCategory());
             from156.put("systemName", item.getSystemName());
-            from156.put("partName", item.getPartName());
+            from156.put("partName", item.getAccessory());
             from156.put("unitUsage", item.getUnitUsage());
             from156.put("ratio", item.getRatio());
             from156.put("unitPriceWithTax", item.getUnitPriceWithTax());

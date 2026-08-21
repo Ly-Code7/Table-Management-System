@@ -4,7 +4,7 @@
 
     <SearchForm :form="searchForm" @search="handleSearch" @reset="handleReset">
       <el-form-item label="关键词">
-        <el-input v-model="searchForm.keyword" placeholder="搜索料号/系统名称/配件名称/类别" clearable style="width: 260px" />
+        <el-input v-model="searchForm.keyword" placeholder="搜索料号/系统名称/156项名称/配件/类别" clearable style="width: 260px" />
       </el-form-item>
     </SearchForm>
 
@@ -32,7 +32,8 @@
       <el-table-column prop="category" label="类别" width="100" />
       <el-table-column prop="materialCode" label="料号" width="130" sortable="custom" show-overflow-tooltip />
       <el-table-column prop="systemName" label="系统名称" width="120" show-overflow-tooltip />
-      <el-table-column prop="partName" label="配件名称" width="140" show-overflow-tooltip />
+      <el-table-column prop="partName" label="156项名称" width="140" show-overflow-tooltip />
+      <el-table-column prop="accessory" label="配件" width="140" show-overflow-tooltip />
       <el-table-column prop="unitUsage" label="单台机用量" width="100" />
       <el-table-column label="比例" width="80">
         <template #default="{ row }">
@@ -93,8 +94,13 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="配件名称" prop="partName">
-              <el-input v-model="form.partName" placeholder="配件名称" />
+            <el-form-item label="156项名称" prop="partName">
+              <el-input v-model="form.partName" placeholder="156项名称" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="配件" prop="accessory">
+              <el-input v-model="form.accessory" placeholder="配件" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -159,6 +165,7 @@ const defaultForm = {
   materialCode: '',
   systemName: '',
   partName: '',
+  accessory: '',
   unitUsage: null,
   ratio: null,
   unitPriceWithTax: null

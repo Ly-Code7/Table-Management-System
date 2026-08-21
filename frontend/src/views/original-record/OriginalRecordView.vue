@@ -536,11 +536,12 @@ async function searchMaterials(query, cb) {
 
 async function handleMaterialSelect(item) {
   form.materialCode = item.value
-  // 查询156项表，回填156项名称（配件名称不再自动回填）
+  // 查询156项表，回填156项名称与配件名称
   try {
     const res = await api.lookup156(item.value, companyStore.currentCompanyId)
-    if (res.data && res.data.partName) {
-      form.material156Name = res.data.partName
+    if (res.data) {
+      if (res.data.material156Name) form.material156Name = res.data.material156Name
+      if (res.data.partName) form.partName = res.data.partName
     }
   } catch { /* 查不到就不回填 */ }
 }
