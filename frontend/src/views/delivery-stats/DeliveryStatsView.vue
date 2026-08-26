@@ -111,7 +111,7 @@
     <!-- 新增/编辑对话框 -->
     <el-dialog
       v-model="dialogVisible"
-      :title="isEdit ? '编辑送货超比统计' : (isCopy ? '复制送货超比统计' : '新增送货超比统计')"
+      :title="isEdit ? '编辑送货超比统计' : (isCopy ? '复制送货超比统计' : '新增超比统计')"
       width="1000px"
       :close-on-click-modal="false"
       destroy-on-close
@@ -169,7 +169,7 @@
         <el-row :gutter="20">
           <el-col :span="6">
             <el-form-item label="机台数" prop="machineCount">
-              <el-input-number v-model="form.machineCount" :min="0" :disabled="true" style="width: 100%" />
+              <el-input-number v-model="form.machineCount" :min="0" style="width: 100%" />
             </el-form-item>
           </el-col>
           <el-col :span="6">
