@@ -59,6 +59,7 @@
       <el-table-column label="id" width="80" prop="id" sortable="custom">
         <template #default="{ $index }">{{ isMergedView ? '—' : (sortOrder === 'desc' ? total - (queryParams.page - 1) * queryParams.pageSize - $index : (queryParams.page - 1) * queryParams.pageSize + $index + 1) }}</template>
       </el-table-column>
+      <el-table-column prop="yearMonth" label="年月" width="90" />
       <el-table-column prop="category" label="类别" width="100" />
       <el-table-column prop="materialCode" label="料号" width="130" show-overflow-tooltip />
       <el-table-column prop="systemName" label="系统名称" width="120" show-overflow-tooltip />
@@ -81,7 +82,6 @@
         <template #default="{ row }">{{ row.excessAmountWithTax != null ? Number(row.excessAmountWithTax).toFixed(2) : '' }}</template>
       </el-table-column>
       <el-table-column prop="statDate" label="统计日期" width="110" />
-      <el-table-column prop="yearMonth" label="年月" width="90" />
       <el-table-column prop="createdBy" label="创建人" width="100" />
       <el-table-column label="操作" width="180" fixed="right">
         <template #default="{ row }">
