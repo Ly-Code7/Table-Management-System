@@ -530,6 +530,9 @@ watch(() => form.statDate, (newDate) => {
 // ---- 对话框操作 ----
 
 function resetForm() {
+  // 清除 defaultForm 之外的残留键（如编辑/复制时 Object.assign 注入的 yearMonth），
+  // 防止提交时携带旧值影响后端查重
+  Object.keys(form).forEach(k => { if (!(k in defaultForm)) delete form[k] })
   Object.assign(form, { ...defaultForm })
   dailies.value = []
 }

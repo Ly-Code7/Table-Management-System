@@ -92,6 +92,10 @@ public class DeliveryStatsService {
     public DeliveryStats create(DeliveryStats record, List<DeliveryStatsDaily> dailies) {
         // 公司兜底：未传时默认归属公司 1（与其他模块一致），防止 company_id NULL 入库
         if (record.getCompanyId() == null) record.setCompanyId(1L);
+        // 先按统计日期推导派生字段（yearMonth 等），保证唯一性查重与入库口径一致：
+        // 前端表单在"编辑/复制后再新增"时会残留旧 yearMonth 随请求体上传，
+        // 查重若用请求体值会查错月份（误报已存在或漏拦当月重复），统一按 statDate 推导
+        applyCalculations(record);
         // 料号+月份唯一性校验（公司内，防止跨公司误拒）
         if (record.getMaterialCode() != null && !record.getMaterialCode().isBlank()
                 && record.getYearMonth() != null && !record.getYearMonth().isBlank()) {
@@ -99,7 +103,6 @@ public class DeliveryStatsService {
                 throw new BizException("该月已存在料号 '" + record.getMaterialCode() + "' 的统计记录");
             }
         }
-        applyCalculations(record);
         String user = ServiceHelper.getCurrentUserName();
         record.setCreatedBy(user);
         record.setUpdatedBy(user);
