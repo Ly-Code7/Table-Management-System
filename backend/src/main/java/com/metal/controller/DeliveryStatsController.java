@@ -36,7 +36,7 @@ public class DeliveryStatsController {
             @RequestParam(defaultValue = "desc") String sortOrder) {
         // 日期区间模式：实时统计 + 跨月料号合并为一行，全量返回（前端自行切片分页）
         if (startDate != null && !startDate.isBlank() && endDate != null && !endDate.isBlank()) {
-            List<DeliveryStats> rows = service.queryRange(companyId, keyword, category, startDate, endDate);
+            List<DeliveryStats> rows = service.queryRange(companyId, keyword, category, startDate, endDate, "desc");
             return Result.ok(new PageResult<>((long) rows.size(), 1, Math.max(rows.size(), 1), rows));
         }
         return Result.ok(service.query(page, pageSize, companyId, keyword, category, yearMonth, sortField, sortOrder));

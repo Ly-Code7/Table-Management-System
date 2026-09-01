@@ -153,7 +153,7 @@ class DeliveryStatsRangeQueryTest {
         machineCount("2026-07", 5);
         machineCount("2026-08", 3);
 
-        List<DeliveryStats> rows = service.queryRange(1L, materialCode, null, "2026-07-29", "2026-08-31");
+        List<DeliveryStats> rows = service.queryRange(1L, materialCode, null, "2026-07-29", "2026-08-31", "desc");
 
         assertEquals(1, rows.size(), "跨月区间同料号应合并为一行");
         DeliveryStats row = rows.get(0);
@@ -182,7 +182,7 @@ class DeliveryStatsRangeQueryTest {
         delivery(LocalDate.of(2026, 7, 31), 3, false);
         delivery(LocalDate.of(2026, 7, 28), 9, false);  // 区间外
 
-        List<DeliveryStats> rows = service.queryRange(1L, materialCode, null, "2026-07-29", "2026-07-31");
+        List<DeliveryStats> rows = service.queryRange(1L, materialCode, null, "2026-07-29", "2026-07-31", "desc");
 
         assertEquals(1, rows.size());
         DeliveryStats row = rows.get(0);
@@ -199,11 +199,11 @@ class DeliveryStatsRangeQueryTest {
     void 非法区间返回空() {
         deliveryStatsMapper.insert(stats("2026-07", LocalDate.of(2026, 7, 15), new BigDecimal("100")));
 
-        assertTrue(service.queryRange(1L, materialCode, null, "2026-08-31", "2026-07-29").isEmpty(),
+        assertTrue(service.queryRange(1L, materialCode, null, "2026-08-31", "2026-07-29", "desc").isEmpty(),
                 "end < start 应返回空");
-        assertTrue(service.queryRange(1L, materialCode, null, null, "2026-08-31").isEmpty(),
+        assertTrue(service.queryRange(1L, materialCode, null, null, "2026-08-31", "desc").isEmpty(),
                 "startDate 为空应返回空");
-        assertTrue(service.queryRange(1L, materialCode, null, "2026-07-29", "").isEmpty(),
+        assertTrue(service.queryRange(1L, materialCode, null, "2026-07-29", "", "desc").isEmpty(),
                 "endDate 为空应返回空");
     }
 
@@ -212,7 +212,7 @@ class DeliveryStatsRangeQueryTest {
     void 区间内无统计记录返回空() {
         deliveryStatsMapper.insert(stats("2026-07", LocalDate.of(2026, 7, 15), new BigDecimal("100")));
 
-        List<DeliveryStats> rows = service.queryRange(1L, materialCode, null, "2026-09-01", "2026-09-30");
+        List<DeliveryStats> rows = service.queryRange(1L, materialCode, null, "2026-09-01", "2026-09-30", "desc");
         assertTrue(rows.isEmpty(), "区间覆盖月份内无该料号统计记录应返回空");
     }
 
@@ -223,8 +223,34 @@ class DeliveryStatsRangeQueryTest {
         deliveryStatsMapper.insert(stats("2026-08", LocalDate.of(2026, 8, 20), new BigDecimal("100")));
         delivery(LocalDate.of(2026, 7, 30), 5, false);
 
-        DeliveryStats row = service.queryRange(1L, materialCode, null, "2026-07-29", "2026-08-31").get(0);
+        DeliveryStats row = service.queryRange(1L, materialCode, null, "2026-07-29", "2026-08-31", "desc").get(0);
         assertNull(row.getDay30(), "跨月区间每日明细应留空（日号会叠加）");
         assertEquals(5, row.getDeliveryQuantity(), "合计列仍按区间统计");
+    }
+
+    /** 导出排序：asc 与 desc 输出顺序相反（合并行按基础记录查询顺序输出） */
+    @Test
+    void 导出排序asc与desc相反() {
+        String codeA = "RANGE-ORDER-A-" + System.nanoTime();
+        String codeB = "RANGE-ORDER-B-" + System.nanoTime();
+        // 两个料号各自一条记录，B 后插入（id 更大）
+        DeliveryStats sa = stats("2026-07", LocalDate.of(2026, 7, 15), new BigDecimal("100"));
+        sa.setMaterialCode(codeA);
+        deliveryStatsMapper.insert(sa);
+        DeliveryStats sb = stats("2026-07", LocalDate.of(2026, 7, 15), new BigDecimal("100"));
+        sb.setMaterialCode(codeB);
+        deliveryStatsMapper.insert(sb);
+
+        List<DeliveryStats> desc = service.queryRange(1L, null, null, "2026-07-01", "2026-07-31", "desc");
+        List<DeliveryStats> asc = service.queryRange(1L, null, null, "2026-07-01", "2026-07-31", "asc");
+
+        // 过滤出本次测试的两个料号（区间内可能有库中其他料号）
+        List<DeliveryStats> descFiltered = desc.stream().filter(r -> r.getMaterialCode().startsWith("RANGE-ORDER-")).toList();
+        List<DeliveryStats> ascFiltered = asc.stream().filter(r -> r.getMaterialCode().startsWith("RANGE-ORDER-")).toList();
+        assertEquals(2, descFiltered.size(), "desc 应含两个测试料号");
+        assertEquals(2, ascFiltered.size(), "asc 应含两个测试料号");
+        // B id 更大 → desc 在前；asc 相反
+        assertEquals(codeB, descFiltered.get(0).getMaterialCode(), "desc 时最新（id 大）料号在前");
+        assertEquals(codeA, ascFiltered.get(0).getMaterialCode(), "asc 时顺序与 desc 相反");
     }
 }

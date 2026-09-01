@@ -91,7 +91,7 @@ public class DeliveryStatsService {
      * 注意：合并行 id 为 null（无真实记录可回），前端区间视图只读。
      */
     public List<DeliveryStats> queryRange(Long companyId, String keyword, String category,
-                                          String startDate, String endDate) {
+                                          String startDate, String endDate, String sortOrder) {
         if (startDate == null || startDate.isBlank() || endDate == null || endDate.isBlank()) {
             return java.util.List.of();
         }
@@ -176,6 +176,11 @@ public class DeliveryStatsService {
                 }
             }
             result.add(row);
+        }
+        // 输出排序：合并行顺序与基础记录查询顺序一致（默认 id desc，最新月在前）。
+        // sortOrder=asc 时翻转（导出场景：用户要求与列表相反的排序）。
+        if ("asc".equalsIgnoreCase(sortOrder)) {
+            java.util.Collections.reverse(result);
         }
         return result;
     }
@@ -411,7 +416,8 @@ public class DeliveryStatsService {
                     && endDate != null && !endDate.isBlank();
             List<DeliveryStats> list;
             if (rangeMode) {
-                list = queryRange(companyId, keyword, category, startDate, endDate);
+                // 导出排序与列表相反（asc：合并行按 id 正序输出）
+                list = queryRange(companyId, keyword, category, startDate, endDate, "asc");
             } else {
                 PageHelper.startPage(1, 0); // 0 disables paging
                 list = mapper.search(companyId, keyword, category, parseYearMonths(yearMonth), "id", "asc");
