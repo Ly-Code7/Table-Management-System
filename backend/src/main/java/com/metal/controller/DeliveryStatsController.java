@@ -30,8 +30,15 @@ public class DeliveryStatsController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String yearMonth,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
             @RequestParam(defaultValue = "id") String sortField,
             @RequestParam(defaultValue = "desc") String sortOrder) {
+        // 日期区间模式：实时统计 + 跨月料号合并为一行，全量返回（前端自行切片分页）
+        if (startDate != null && !startDate.isBlank() && endDate != null && !endDate.isBlank()) {
+            List<DeliveryStats> rows = service.queryRange(companyId, keyword, category, startDate, endDate);
+            return Result.ok(new PageResult<>((long) rows.size(), 1, Math.max(rows.size(), 1), rows));
+        }
         return Result.ok(service.query(page, pageSize, companyId, keyword, category, yearMonth, sortField, sortOrder));
     }
 
@@ -83,8 +90,10 @@ public class DeliveryStatsController {
                             @RequestParam(required = false) Long companyId,
                             @RequestParam(required = false) String keyword,
                             @RequestParam(required = false) String category,
-                            @RequestParam(required = false) String yearMonth) {
-        service.exportExcel(response, companyId, keyword, category, yearMonth);
+                            @RequestParam(required = false) String yearMonth,
+                            @RequestParam(required = false) String startDate,
+                            @RequestParam(required = false) String endDate) {
+        service.exportExcel(response, companyId, keyword, category, yearMonth, startDate, endDate);
     }
 
     @PostMapping("/batch-refresh")

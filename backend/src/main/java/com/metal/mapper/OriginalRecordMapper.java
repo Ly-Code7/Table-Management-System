@@ -104,4 +104,12 @@ public interface OriginalRecordMapper {
     int countByMaterialCodeAndMonth(@Param("materialCode") String materialCode, @Param("month") String month,
                                     @Param("companyId") Long companyId);
 
+    /** 区间上机数量：record_date 在 [startDate, endDate] 内（含端点）的上机数量合计（超比统计按日期区间实时统计） */
+    @Select("SELECT COALESCE(SUM(quantity), 0) FROM original_record WHERE material_code = #{materialCode} " +
+            "AND record_date >= #{startDate} AND record_date <= #{endDate} AND company_id = #{companyId}")
+    int countByMaterialCodeAndDateRange(@Param("materialCode") String materialCode,
+                                        @Param("startDate") String startDate,
+                                        @Param("endDate") String endDate,
+                                        @Param("companyId") Long companyId);
+
 }

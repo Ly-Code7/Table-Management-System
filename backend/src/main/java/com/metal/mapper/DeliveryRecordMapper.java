@@ -88,6 +88,34 @@ public interface DeliveryRecordMapper {
     int countFreeByMaterialCodeAndMonth(@Param("materialCode") String materialCode, @Param("month") String month,
                                         @Param("companyId") Long companyId);
 
+    /** 区间送货数量：record_date 在 [startDate, endDate] 内（含端点）的送货数量合计（超比统计按日期区间实时统计） */
+    @Select("SELECT COALESCE(SUM(quantity), 0) FROM delivery_record WHERE material_code = #{materialCode} " +
+            "AND record_date >= #{startDate} AND record_date <= #{endDate} AND company_id = #{companyId}")
+    int countByMaterialCodeAndDateRange(@Param("materialCode") String materialCode,
+                                        @Param("startDate") String startDate,
+                                        @Param("endDate") String endDate,
+                                        @Param("companyId") Long companyId);
+
+    /** 区间免费送货数量：record_date 在区间内且产品属性为"免费"（超比统计"送货免费"列，按日期区间实时统计） */
+    @Select("SELECT COALESCE(SUM(quantity), 0) FROM delivery_record WHERE material_code = #{materialCode} " +
+            "AND record_date >= #{startDate} AND record_date <= #{endDate} " +
+            "AND company_id = #{companyId} AND product_attr = '免费'")
+    int countFreeByMaterialCodeAndDateRange(@Param("materialCode") String materialCode,
+                                            @Param("startDate") String startDate,
+                                            @Param("endDate") String endDate,
+                                            @Param("companyId") Long companyId);
+
+    /** 区间每日送货明细：record_date 在区间内按日分组（DAY(record_date)）。跨月区间同日号会叠加，调用方仅在单月区间内使用 */
+    @Select("SELECT DAY(record_date) as day, COALESCE(SUM(quantity), 0) as cnt FROM delivery_record " +
+            "WHERE material_code = #{materialCode} AND record_date >= #{startDate} AND record_date <= #{endDate} " +
+            "AND company_id = #{companyId} " +
+            "GROUP BY DAY(record_date) ORDER BY day")
+    List<java.util.Map<String, Object>> countDailyByMaterialCodeAndDateRange(
+            @Param("materialCode") String materialCode,
+            @Param("startDate") String startDate,
+            @Param("endDate") String endDate,
+            @Param("companyId") Long companyId);
+
     @Select("SELECT DAY(record_date) as day, COALESCE(SUM(quantity), 0) as cnt FROM delivery_record " +
             "WHERE material_code = #{materialCode} AND DATE_FORMAT(record_date, '%Y-%m') = #{month} " +
             "AND company_id = #{companyId} " +

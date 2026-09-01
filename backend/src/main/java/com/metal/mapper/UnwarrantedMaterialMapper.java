@@ -165,6 +165,15 @@ public interface UnwarrantedMaterialMapper {
                                           @Param("month") String month,
                                           @Param("companyId") Long companyId);
 
+    /** 区间返修数量：record_date 在 [startDate, endDate] 内（含端点）且未过保的返修数量合计（超比统计按日期区间实时统计） */
+    @Select("SELECT COALESCE(SUM(quantity), 0) FROM unwarranted_material " +
+            "WHERE material_code = #{materialCode} AND record_date >= #{startDate} AND record_date <= #{endDate} " +
+            "AND warranty_status = '未过保' AND company_id = #{companyId}")
+    int countRepairByMaterialCodeAndDateRange(@Param("materialCode") String materialCode,
+                                              @Param("startDate") String startDate,
+                                              @Param("endDate") String endDate,
+                                              @Param("companyId") Long companyId);
+
     /**
      * 实时总次数：按唯一标识编号分组统计当前条数（列表分页场景，IN 限定当前页出现的编号）。
      * 展示层用其覆盖落库的 total_count 快照（同一 unique_id 的所有记录显示同一实时值）。

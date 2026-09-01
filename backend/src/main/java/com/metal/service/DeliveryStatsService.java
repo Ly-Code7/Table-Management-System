@@ -78,6 +78,108 @@ public class DeliveryStatsService {
                 .toList();
     }
 
+    /**
+     * 按日期区间实时统计超比数据（跨月料号合并为一行）。
+     *
+     * 语义（方案 A 精确区间统计）：
+     *  - 区间覆盖的每个自然月内的 delivery_stats 记录提供「料号集合 + 属性基座」（属性取该料号最新月记录）；
+     *  - 送货/免费/上机/返修数量按 record_date ∈ [startDate, endDate] 实时统计，不再读月度快照；
+     *  - 机台数 = 区间覆盖各月结算机台数之和（结算机台数按月存储，无法按日切割）；
+     *  - 约定比例数量/超比数量/超比金额由 applyCalculations 统一重算；
+     *  - 每日明细：单月区间按日分组填充；跨月区间留空（day01-31 共 31 列放不下 34 天，且同日号会叠加）。
+     *
+     * 注意：合并行 id 为 null（无真实记录可回），前端区间视图只读。
+     */
+    public List<DeliveryStats> queryRange(Long companyId, String keyword, String category,
+                                          String startDate, String endDate) {
+        if (startDate == null || startDate.isBlank() || endDate == null || endDate.isBlank()) {
+            return java.util.List.of();
+        }
+        java.time.LocalDate start;
+        java.time.LocalDate end;
+        try {
+            start = java.time.LocalDate.parse(startDate);
+            end = java.time.LocalDate.parse(endDate);
+        } catch (Exception e) {
+            return java.util.List.of();
+        }
+        if (end.isBefore(start)) return java.util.List.of();
+
+        // 1. 区间覆盖的自然月列表（如 2026-07-29 ~ 2026-08-31 → ["2026-07", "2026-08"]）
+        java.time.YearMonth ym = java.time.YearMonth.from(start);
+        java.time.YearMonth endYm = java.time.YearMonth.from(end);
+        List<String> months = new ArrayList<>();
+        while (!ym.isAfter(endYm)) {
+            months.add(ym.toString());
+            ym = ym.plusMonths(1);
+        }
+
+        // 2. 取区间覆盖月份的统计记录：确定料号集合 + 属性基座（固定按 id desc，保证每个料号取到最新月记录）
+        List<DeliveryStats> statsList = mapper.search(companyId, keyword, category, months, "id", "desc");
+        if (statsList.isEmpty()) return java.util.List.of();
+
+        // 3. 按料号合并：属性取最新月记录（id desc 第一条即最新月）
+        java.util.Map<String, DeliveryStats> merged = new java.util.LinkedHashMap<>();
+        for (DeliveryStats s : statsList) {
+            merged.putIfAbsent(s.getMaterialCode(), s);
+        }
+
+        // 4. 对每个料号按日期区间实时统计
+        List<DeliveryStats> result = new ArrayList<>(merged.size());
+        for (DeliveryStats base : merged.values()) {
+            String code = base.getMaterialCode();
+            Long cid = base.getCompanyId() != null ? base.getCompanyId() : 1L;
+
+            DeliveryStats row = new DeliveryStats();
+            row.setId(null); // 合并行无真实 id
+            row.setCompanyId(cid);
+            // 属性基座：取最新月记录的值
+            row.setCategory(base.getCategory());
+            row.setMaterialCode(code);
+            row.setSystemName(base.getSystemName());
+            row.setPartName(base.getPartName());
+            row.setUnitUsage(base.getUnitUsage());
+            row.setRatio(base.getRatio());
+            row.setUnitPriceWithTax(base.getUnitPriceWithTax());
+            row.setStatDate(base.getStatDate());
+            row.setYearMonth(String.join(" ~ ", months)); // 合并行年月显示为区间覆盖月份串
+
+            // 数量字段：按 record_date ∈ [start, end] 实时统计
+            row.setDeliveryQuantity(deliveryRecordMapper.countByMaterialCodeAndDateRange(code, startDate, endDate, cid));
+            row.setFreeDeliveryQuantity(deliveryRecordMapper.countFreeByMaterialCodeAndDateRange(code, startDate, endDate, cid));
+            row.setMachineOnQuantity(originalRecordMapper.countByMaterialCodeAndDateRange(code, startDate, endDate, cid));
+            row.setMonthRepair(unwarrantedMaterialMapper.countRepairByMaterialCodeAndDateRange(code, startDate, endDate, cid));
+
+            // 机台数：区间覆盖各月结算机台数之和
+            int machineCount = 0;
+            for (String m : months) {
+                Integer mc = settlementMachineMapper.sumMachineCountByMaterialCodeAndMonth(code, m, cid);
+                if (mc != null) machineCount += mc;
+            }
+            row.setMachineCount(machineCount);
+
+            // 派生字段统一重算（约定比例数量/超比数量/超比含税金额）
+            applyCalculations(row);
+            // applyCalculations 会按 statDate 重写 yearMonth，此处覆盖为区间覆盖月份串
+            row.setYearMonth(String.join(" ~ ", months));
+
+            // 每日明细：单月区间按日分组填充（同日号不冲突）；跨月区间留空
+            if (months.size() == 1) {
+                java.util.List<java.util.Map<String, Object>> dailyCounts =
+                        deliveryRecordMapper.countDailyByMaterialCodeAndDateRange(code, startDate, endDate, cid);
+                for (java.util.Map<String, Object> d : dailyCounts) {
+                    Number day = (Number) d.get("day");
+                    Number cnt = (Number) d.get("cnt");
+                    if (day != null && cnt != null) {
+                        setDayValue(row, day.intValue(), java.math.BigDecimal.valueOf(cnt.intValue()));
+                    }
+                }
+            }
+            result.add(row);
+        }
+        return result;
+    }
+
     public DeliveryStats getById(Long id) {
         DeliveryStats r = mapper.findById(id);
         if (r == null) throw new BizException("记录不存在");
@@ -298,14 +400,27 @@ public class DeliveryStatsService {
     }
 
     // =============== Excel 导出 ===============
+    /**
+     * 导出超比统计。startDate/endDate 同时非空时走「区间实时统计合并导出」（跨月料号合并为一行，
+     * 单月区间带每日明细、跨月区间明细留空）；否则走原按月份筛选逐条导出。
+     */
     public void exportExcel(HttpServletResponse response, Long companyId, String keyword,
-                            String category, String yearMonth) {
+                            String category, String yearMonth, String startDate, String endDate) {
         try {
-            PageHelper.startPage(1, 0); // 0 disables paging
-            List<DeliveryStats> list = mapper.search(companyId, keyword, category, parseYearMonths(yearMonth), "id", "asc");
+            boolean rangeMode = startDate != null && !startDate.isBlank()
+                    && endDate != null && !endDate.isBlank();
+            List<DeliveryStats> list;
+            if (rangeMode) {
+                list = queryRange(companyId, keyword, category, startDate, endDate);
+            } else {
+                PageHelper.startPage(1, 0); // 0 disables paging
+                list = mapper.search(companyId, keyword, category, parseYearMonths(yearMonth), "id", "asc");
+            }
 
-            // 批量查询每日明细并填充到实体 transient 字段
+            // 批量查询每日明细并填充到实体 transient 字段。
+            // 区间合并行 id 为 null：queryRange 已在单月区间填充明细，跨月区间明细留空，无需查库。
             for (DeliveryStats s : list) {
+                if (s.getId() == null) continue;
                 List<DeliveryStatsDaily> dailies = dailyMapper.findByStatId(s.getId());
                 for (DeliveryStatsDaily d : dailies) {
                     setDayValue(s, d.getDayNumber(), d.getValue());

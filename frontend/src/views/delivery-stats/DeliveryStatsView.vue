@@ -10,8 +10,8 @@
       <el-form-item label="类别">
         <el-input v-model="searchForm.category" placeholder="类别" clearable style="width: 140px" />
       </el-form-item>
-      <el-form-item label="统计月份">
-        <el-date-picker v-model="searchForm.yearMonth" type="months" placeholder="选择月份（可多选）" value-format="YYYY-MM" clearable style="width: 200px" />
+      <el-form-item label="统计日期">
+        <el-date-picker v-model="searchForm.dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" value-format="YYYY-MM-DD" clearable style="width: 260px" />
       </el-form-item>
     </SearchForm>
 
@@ -28,9 +28,6 @@
     <div style="margin-bottom:12px;display:flex;align-items:center;gap:12px">
       <el-date-picker v-model="refreshMonth" type="month" placeholder="选择要更新的月份" value-format="YYYY-MM" style="width:180px" />
       <el-button type="warning" @click="handleBatchRefresh">更新当月数据</el-button>
-      <span style="margin-left:24px;color:#909399;">|</span>
-      <el-date-picker v-model="exportMonth" type="months" placeholder="选择要导出的月份（可多选）" value-format="YYYY-MM" style="width:200px" />
-      <el-button type="success" @click="handleExport">导出所选月份</el-button>
     </div>
 
     <!-- 全表合计 -->
@@ -55,9 +52,9 @@
       @sort-change="handleSortChange"
       style="width: 100%"
     >
-      <el-table-column type="selection" width="44" fixed="left" :selectable="() => !isMergedView" />
+      <el-table-column type="selection" width="44" fixed="left" :selectable="() => !isRangeView" />
       <el-table-column label="id" width="80" prop="id" sortable="custom">
-        <template #default="{ $index }">{{ isMergedView ? '—' : (sortOrder === 'desc' ? total - (queryParams.page - 1) * queryParams.pageSize - $index : (queryParams.page - 1) * queryParams.pageSize + $index + 1) }}</template>
+        <template #default="{ $index }">{{ isRangeView ? '—' : (sortOrder === 'desc' ? total - (queryParams.page - 1) * queryParams.pageSize - $index : (queryParams.page - 1) * queryParams.pageSize + $index + 1) }}</template>
       </el-table-column>
       <el-table-column prop="yearMonth" label="年月" width="90" />
       <el-table-column prop="category" label="类别" width="100" />
@@ -85,7 +82,7 @@
       <el-table-column prop="createdBy" label="创建人" width="100" />
       <el-table-column label="操作" width="180" fixed="right">
         <template #default="{ row }">
-          <template v-if="!isMergedView">
+          <template v-if="!isRangeView">
             <el-button link type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
             <el-button link type="primary" size="small" @click="handleCopy(row)">复制</el-button>
             <el-button link type="danger" size="small" @click="handleDelete(row.id)">删除</el-button>
@@ -261,13 +258,13 @@ const pagination = usePagination(
 const { list, total, loading, queryParams, fetchData, handlePageChange: paginationHandlePageChange, handleSizeChange: paginationHandleSizeChange } = pagination
 const { selectedRows, handleSelectionChange } = useTableSelection()
 
-// 多月视图（统计月份选 ≥2 个）：表格按料号合并成一行、数量列取各月合计，只读
-const isMergedView = computed(() => Array.isArray(searchForm.yearMonth) && searchForm.yearMonth.length >= 2)
+// 区间视图（选了起止日期）：后端按日期区间实时统计并跨月料号合并为一行，表格只读
+const isRangeView = computed(() => Array.isArray(searchForm.dateRange) && searchForm.dateRange.length === 2)
 
 const searchForm = reactive({
   keyword: '',
   category: '',
-  yearMonth: []
+  dateRange: []
 })
 
 const dialogVisible = ref(false)
@@ -342,7 +339,10 @@ const totals = reactive({
 async function fetchTotals() {
   try {
     const params = { page: 1, pageSize: 9999, companyId: companyStore.currentCompanyId }
-    if (Array.isArray(summaryMonth.value) && summaryMonth.value.length) {
+    if (isRangeView.value) {
+      params.startDate = searchForm.dateRange[0]
+      params.endDate = searchForm.dateRange[1]
+    } else if (Array.isArray(summaryMonth.value) && summaryMonth.value.length) {
       params.yearMonth = summaryMonth.value.join(',')
     }
     const res = await api.getList(params)
@@ -359,31 +359,8 @@ async function fetchTotals() {
   } catch { /* ignore */ }
 }
 
-// ---- 多月合并视图 ----
-const rawRows = ref([])       // 多月模式：全量原始月度行
-const mergedRows = ref([])    // 多月模式：按料号合并后的行
-
-/** 按料号合并多月行：数量类列求和，属性类列取最新月（数据按 id desc，第一行即最新月） */
-function mergeByMaterial(rows) {
-  const map = new Map()
-  for (const r of rows) {
-    const key = r.materialCode
-    if (!map.has(key)) {
-      map.set(key, { ...r })
-    } else {
-      const m = map.get(key)
-      m.deliveryQuantity = (m.deliveryQuantity || 0) + (r.deliveryQuantity || 0)
-      m.freeDeliveryQuantity = (m.freeDeliveryQuantity || 0) + (r.freeDeliveryQuantity || 0)
-      m.machineOnQuantity = (m.machineOnQuantity || 0) + (r.machineOnQuantity || 0)
-      m.monthRepair = (m.monthRepair || 0) + (r.monthRepair || 0)
-      m.agreedRatioQuantity = (m.agreedRatioQuantity || 0) + (r.agreedRatioQuantity || 0)
-      m.excessQuantity = (m.excessQuantity || 0) + (r.excessQuantity || 0)
-      m.excessAmountWithTax = (m.excessAmountWithTax || 0) + (r.excessAmountWithTax || 0)
-      m.yearMonth = [m.yearMonth, r.yearMonth].filter(Boolean).sort().join(' ~ ')
-    }
-  }
-  return [...map.values()]
-}
+// ---- 区间合并视图（后端按日期区间实时统计并合并，前端仅切片） ----
+const mergedRows = ref([])    // 区间模式：后端返回的合并行（跨月料号已合并）
 
 function renderMergedPage() {
   const start = (queryParams.page - 1) * queryParams.pageSize
@@ -395,37 +372,39 @@ function doFetch() {
   const base = {
     keyword: searchForm.keyword,
     category: searchForm.category,
-    yearMonth: Array.isArray(searchForm.yearMonth) && searchForm.yearMonth.length
-      ? searchForm.yearMonth.join(',') : '',
     companyId: companyStore.currentCompanyId,
     sortField: sortField.value,
     sortOrder: sortOrder.value
   }
-  if (isMergedView.value) {
+  if (isRangeView.value) {
     loading.value = true
-    return api.getList({ ...base, page: 1, pageSize: 9999 })
+    return api.getList({
+      ...base,
+      startDate: searchForm.dateRange[0],
+      endDate: searchForm.dateRange[1],
+      page: 1, pageSize: 9999
+    })
       .then(res => {
-        rawRows.value = res.data.list || []
-        mergedRows.value = mergeByMaterial(rawRows.value)
+        mergedRows.value = res.data.list || []
         total.value = mergedRows.value.length
         renderMergedPage()
       })
       .finally(() => { loading.value = false })
   }
-  return fetchData(base)   // 单月/空月份：原逻辑（后端分页、逐行）
+  return fetchData(base)   // 无区间：原逻辑（后端分页、逐行）
 }
 
-// 多月视图走前端切片，其余走后端分页
+// 区间视图走前端切片，其余走后端分页
 function handlePageChange(page) {
   queryParams.page = page
-  if (isMergedView.value) { renderMergedPage(); return }
+  if (isRangeView.value) { renderMergedPage(); return }
   paginationHandlePageChange(page)
 }
 
 function handleSizeChange(size) {
   queryParams.pageSize = size
   queryParams.page = 1
-  if (isMergedView.value) { renderMergedPage(); return }
+  if (isRangeView.value) { renderMergedPage(); return }
   paginationHandleSizeChange(size)
 }
 
@@ -438,12 +417,13 @@ function batchDelete() {
 function handleSearch() {
   queryParams.page = 1
   doFetch()
+  fetchTotals()
 }
 
 function handleReset() {
   searchForm.keyword = ''
   searchForm.category = ''
-  searchForm.yearMonth = []
+  searchForm.dateRange = []
   queryParams.page = 1
   doFetch()
 }
@@ -479,16 +459,18 @@ function handleImport() {
 
 async function handleExport() {
   try {
-    const months = Array.isArray(exportMonth.value) && exportMonth.value.length
-      ? exportMonth.value
-      : (Array.isArray(searchForm.yearMonth) ? searchForm.yearMonth : [])
-    const response = await api.exportExcel({
+    const params = {
       keyword: searchForm.keyword,
       category: searchForm.category,
-      yearMonth: months.join(','),
       companyId: companyStore.currentCompanyId
-    })
-    const filename = months.length ? `超比统计_${months.join('_')}.xlsx` : '超比统计.xlsx'
+    }
+    let filename = '超比统计.xlsx'
+    if (isRangeView.value) {
+      params.startDate = searchForm.dateRange[0]
+      params.endDate = searchForm.dateRange[1]
+      filename = `超比统计_${searchForm.dateRange[0]}_${searchForm.dateRange[1]}.xlsx`
+    }
+    const response = await api.exportExcel(params)
     downloadBlob(response.data, filename)
     ElMessage.success('导出成功')
   } catch { /* error handled */ }
@@ -664,7 +646,6 @@ async function handleSubmit() {
 }
 
 const refreshMonth = ref('')
-const exportMonth = ref('')
 
 async function handleBatchRefresh() {
   if (!refreshMonth.value) { ElMessage.warning('请先选择要更新的月份'); return }
