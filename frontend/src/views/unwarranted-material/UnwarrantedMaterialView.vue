@@ -9,10 +9,11 @@
       <el-form-item label="厂房">
         <el-input v-model="searchForm.factory" placeholder="厂房" clearable style="width: 140px" />
       </el-form-item>
-      <el-form-item label="未过保">
+      <el-form-item label="返修判定">
         <el-select v-model="searchForm.warrantyStatus" placeholder="全部" clearable style="width: 120px">
           <el-option label="未过保" value="未过保" />
           <el-option label="已过保" value="已过保" />
+          <el-option label="客户物料" value="客户物料" />
         </el-select>
       </el-form-item>
       <el-form-item label="日期">
@@ -46,7 +47,7 @@
       <el-table-column prop="category" label="类别" width="110" show-overflow-tooltip />
       <el-table-column prop="partName" label="配件名称" width="120" show-overflow-tooltip />
       <el-table-column prop="quantity" label="数量" width="60" />
-      <el-table-column label="未过保" width="90">
+      <el-table-column label="返修判定" width="90">
         <template #default="{ row }">
           <el-tag :type="warrantyTagType(row.warrantyStatus)" size="small">{{ row.warrantyStatus || '-' }}</el-tag>
         </template>
@@ -68,6 +69,9 @@
       <el-table-column prop="lastRepairPerson" label="上次维修人" width="100" />
       <el-table-column prop="repairAmount" label="维修金额" width="100" />
       <el-table-column prop="repairMaterialOn" label="上机物料" width="130" show-overflow-tooltip />
+      <el-table-column prop="mountJudgement" label="上机判定" width="90">
+        <template #default="{ row }">{{ row.mountJudgement || '-' }}</template>
+      </el-table-column>
       <el-table-column prop="equipRepairDebugging" label="处理方式" width="140" show-overflow-tooltip />
       <el-table-column prop="createdBy" label="创建人" width="90" />
     </el-table>
@@ -118,10 +122,11 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="未过保">
+            <el-form-item label="返修判定">
               <el-select v-model="form.warrantyStatus" placeholder="请选择" clearable style="width: 100%">
                 <el-option label="未过保" value="未过保" />
                 <el-option label="已过保" value="已过保" />
+                <el-option label="客户物料" value="客户物料" />
               </el-select>
             </el-form-item>
           </el-col>
@@ -292,6 +297,7 @@ const defaultForm = {
   machineNo: '',
   equipRepairDebugging: '',
   repairMaterialOn: '',
+  mountJudgement: '',
   repairPerson: '',
   warrantyStatus: '',
   partName: '',
@@ -435,6 +441,7 @@ async function handleExport() {
 function warrantyTagType(val) {
   if (val === '未过保') return 'success'
   if (val === '已过保') return 'danger'
+  if (val === '客户物料') return 'warning'
   return 'info'
 }
 

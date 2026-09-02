@@ -62,6 +62,13 @@
       <el-table-column prop="machineOnMaterial" label="上机物料号" width="120" show-overflow-tooltip />
       <el-table-column prop="machineOffMaterial" label="下机物料号" width="120" show-overflow-tooltip />
       <el-table-column prop="machineOffCode" label="下机料号" width="115" show-overflow-tooltip />
+      <!-- 客户物料标记 -->
+      <el-table-column prop="machineOnCustomer" label="上机是否客户物料" width="125">
+        <template #default="{ row }">{{ row.machineOnCustomer || '-' }}</template>
+      </el-table-column>
+      <el-table-column prop="machineOffCustomer" label="下机是否客户物料" width="125">
+        <template #default="{ row }">{{ row.machineOffCustomer || '-' }}</template>
+      </el-table-column>
       <!-- 时间 -->
       <el-table-column label="报修时间" width="100">
         <template #default="{ row }">{{ formatTime(row.repairRequestTime) }}</template>
@@ -231,6 +238,24 @@
           </el-col>
         </el-row>
         <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="上机是否客户物料">
+              <el-select v-model="form.machineOnCustomer" placeholder="请选择" clearable style="width:100%">
+                <el-option label="是" value="是" />
+                <el-option label="否" value="否" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="下机是否客户物料">
+              <el-select v-model="form.machineOffCustomer" placeholder="请选择" clearable style="width:100%">
+                <el-option label="是" value="是" />
+                <el-option label="否" value="否" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="16">
           <el-col :span="8">
             <el-form-item label="备注" prop="remark">
               <el-input v-model="form.remark" />
@@ -366,6 +391,7 @@ const defaultForm = {
   diagnostician: '', repairPerson: '', confirmer: '', repairRequestTime: '', startTime: '',
   endTime: '', machineModel: '', faultPhenomenon: '', faultDescription: '',
   materialCode: '', material156Name: '', partName: '', quantity: null, machineOnMaterial: '', machineOffMaterial: '', machineOffCode: '',
+  machineOnCustomer: '', machineOffCustomer: '',
   remark: '', deliveryRecordRef: '', documentNo: '', imageKey: ''
 }
 const form = reactive({ ...defaultForm })
