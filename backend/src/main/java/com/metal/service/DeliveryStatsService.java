@@ -118,13 +118,35 @@ public class DeliveryStatsService {
         List<DeliveryStats> statsList = mapper.search(companyId, keyword, category, months, "id", "desc");
         if (statsList.isEmpty()) return java.util.List.of();
 
-        // 3. 按料号合并：属性取最新月记录（id desc 第一条即最新月）
+        // 3. 按 (公司, 料号) 合并：属性取最新月记录（id desc 第一条即最新月）。
+        //    合并键必须含 companyId：delivery_stats 数据唯一性粒度是 (material_code, year_month, company_id)，
+        //    companyId 为空（查全部公司，search 的 companyId 过滤为 <if test='companyId != null'>）时，
+        //    若只按料号合并，A/B 两公司同料号会被静默并成一行（保留 id 最大者）且数量按基座公司过滤。
         java.util.Map<String, DeliveryStats> merged = new java.util.LinkedHashMap<>();
         for (DeliveryStats s : statsList) {
-            merged.putIfAbsent(s.getMaterialCode(), s);
+            Long cid = s.getCompanyId() != null ? s.getCompanyId() : 1L;
+            // '\u0000' 作分隔符避免料号拼接歧义（如 "1|2A" 与 "12|A"）
+            merged.putIfAbsent(cid + "\u0000" + s.getMaterialCode(), s);
         }
 
-        // 4. 对每个料号按日期区间实时统计
+        // 4. 汇总「机台数」与「约定比例数量」：均取区间覆盖各月记录已存值之和
+        //    （用户口径：机台数 = 两个月的机台数之和、比例内数量 = 两个月的比例数量之和；
+        //    不复用 applyCalculations 的 machineCount × 用量 × 比例 重算，也不查结算机台数表——
+        //    结算机台数表常无对应月份数据导致显示 0，而 delivery_stats 记录的机台数是录入时确认过的值）
+        java.util.Map<String, Integer> machineCountSumByKey = new java.util.HashMap<>();
+        java.util.Map<String, BigDecimal> agreedSumByKey = new java.util.HashMap<>();
+        for (DeliveryStats s : statsList) {
+            Long cid = s.getCompanyId() != null ? s.getCompanyId() : 1L;
+            String key = cid + "\u0000" + s.getMaterialCode();
+            if (s.getMachineCount() != null) {
+                machineCountSumByKey.merge(key, s.getMachineCount(), Integer::sum);
+            }
+            if (s.getAgreedRatioQuantity() != null) {
+                agreedSumByKey.merge(key, s.getAgreedRatioQuantity(), BigDecimal::add);
+            }
+        }
+
+        // 5. 对每个料号按日期区间实时统计
         List<DeliveryStats> result = new ArrayList<>(merged.size());
         for (DeliveryStats base : merged.values()) {
             String code = base.getMaterialCode();
@@ -142,7 +164,8 @@ public class DeliveryStatsService {
             row.setRatio(base.getRatio());
             row.setUnitPriceWithTax(base.getUnitPriceWithTax());
             row.setStatDate(base.getStatDate());
-            row.setYearMonth(String.join(" ~ ", months)); // 合并行年月显示为区间覆盖月份串
+            // 机台数：区间覆盖各月记录存值之和（用户口径：机台数 = 两个月的机台数之和）
+            row.setMachineCount(machineCountSumByKey.getOrDefault(cid + "\u0000" + code, 0));
 
             // 数量字段：按 record_date ∈ [start, end] 实时统计
             row.setDeliveryQuantity(deliveryRecordMapper.countByMaterialCodeAndDateRange(code, startDate, endDate, cid));
@@ -150,18 +173,23 @@ public class DeliveryStatsService {
             row.setMachineOnQuantity(originalRecordMapper.countByMaterialCodeAndDateRange(code, startDate, endDate, cid));
             row.setMonthRepair(unwarrantedMaterialMapper.countRepairByMaterialCodeAndDateRange(code, startDate, endDate, cid));
 
-            // 机台数：区间覆盖各月结算机台数之和
-            int machineCount = 0;
-            for (String m : months) {
-                Integer mc = settlementMachineMapper.sumMachineCountByMaterialCodeAndMonth(code, m, cid);
-                if (mc != null) machineCount += mc;
+            // 派生字段：约定比例数量取各月记录存值之和；超比数量/金额按此重算，
+            // 公式与 applyCalculations 一致（超比 = max(0, 上机 - 返修 - 约定比例)；
+            // 超比含税金额 = 含税单价 × 超比数量 / 1.13），不调用 applyCalculations 以免其
+            // 用「最新月机台数 × 用量 × 比例」覆盖约定比例之和。
+            BigDecimal agreed = agreedSumByKey.getOrDefault(cid + "\u0000" + code, BigDecimal.ZERO)
+                    .setScale(2, RoundingMode.HALF_UP);
+            row.setAgreedRatioQuantity(agreed);
+            int machineOn = row.getMachineOnQuantity() != null ? row.getMachineOnQuantity() : 0;
+            int repair = row.getMonthRepair() != null ? row.getMonthRepair() : 0;
+            BigDecimal excessVal = BigDecimal.valueOf(machineOn - repair).subtract(agreed);
+            row.setExcessQuantity(excessVal.compareTo(BigDecimal.ZERO) > 0 ? excessVal : BigDecimal.ZERO);
+            if (row.getExcessQuantity() != null && row.getUnitPriceWithTax() != null) {
+                row.setExcessAmountWithTax(
+                        row.getUnitPriceWithTax().multiply(row.getExcessQuantity())
+                                .divide(BigDecimal.valueOf(1.13), 2, RoundingMode.HALF_UP));
             }
-            row.setMachineCount(machineCount);
-
-            // 派生字段统一重算（约定比例数量/超比数量/超比含税金额）
-            applyCalculations(row);
-            // applyCalculations 会按 statDate 重写 yearMonth，此处覆盖为区间覆盖月份串
-            row.setYearMonth(String.join(" ~ ", months));
+            row.setYearMonth(String.join(" ~ ", months)); // 合并行年月显示为区间覆盖月份串
 
             // 每日明细：单月区间按日分组填充（同日号不冲突）；跨月区间留空
             if (months.size() == 1) {
