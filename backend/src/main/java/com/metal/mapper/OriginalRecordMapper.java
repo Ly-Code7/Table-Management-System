@@ -99,14 +99,17 @@ public interface OriginalRecordMapper {
                                 @Param("sortOrder") String sortOrder,
                                 @Param("excludeLinked") Boolean excludeLinked);
 
+    /** 上机数量（月度，超比统计用）：排除"上机是否客户物料 = 是"的记录（客户物料不纳入超比统计） */
     @Select("SELECT COALESCE(SUM(quantity), 0) FROM original_record WHERE material_code = #{materialCode} " +
-            "AND DATE_FORMAT(record_date, '%Y-%m') = #{month} AND company_id = #{companyId}")
+            "AND DATE_FORMAT(record_date, '%Y-%m') = #{month} AND company_id = #{companyId} " +
+            "AND (machine_on_customer IS NULL OR machine_on_customer <> '是')")
     int countByMaterialCodeAndMonth(@Param("materialCode") String materialCode, @Param("month") String month,
                                     @Param("companyId") Long companyId);
 
-    /** 区间上机数量：record_date 在 [startDate, endDate] 内（含端点）的上机数量合计（超比统计按日期区间实时统计） */
+    /** 区间上机数量：record_date 在 [startDate, endDate] 内（含端点）的上机数量合计（超比统计按日期区间实时统计），排除"上机是否客户物料 = 是"的记录 */
     @Select("SELECT COALESCE(SUM(quantity), 0) FROM original_record WHERE material_code = #{materialCode} " +
-            "AND record_date >= #{startDate} AND record_date <= #{endDate} AND company_id = #{companyId}")
+            "AND record_date >= #{startDate} AND record_date <= #{endDate} AND company_id = #{companyId} " +
+            "AND (machine_on_customer IS NULL OR machine_on_customer <> '是')")
     int countByMaterialCodeAndDateRange(@Param("materialCode") String materialCode,
                                         @Param("startDate") String startDate,
                                         @Param("endDate") String endDate,

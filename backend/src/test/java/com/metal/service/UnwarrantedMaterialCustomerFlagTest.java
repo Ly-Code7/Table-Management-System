@@ -2,6 +2,7 @@ package com.metal.service;
 
 import com.metal.entity.OriginalRecord;
 import com.metal.entity.UnwarrantedMaterial;
+import com.metal.mapper.OriginalRecordMapper;
 import com.metal.mapper.UnwarrantedMaterialMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,9 @@ class UnwarrantedMaterialCustomerFlagTest {
 
     @Autowired
     private OriginalRecordService originalRecordService;
+
+    @Autowired
+    private OriginalRecordMapper originalRecordMapper;
 
     @Autowired
     private UnwarrantedMaterialMapper unwarrantedMaterialMapper;
@@ -187,5 +191,28 @@ class UnwarrantedMaterialCustomerFlagTest {
         assertEquals(1, hits.size());
         assertEquals("客户物料", hits.get(0).getMountJudgement());
         assertEquals("客户物料", hits.get(0).getWarrantyStatus());
+    }
+
+    @Test
+    void customerOnYes_excludedFromMachineOnQuantityStats() {
+        // 超比统计上机数量（2026-09 口径变更）："上机是否客户物料 = 是" 的记录不纳入统计。
+        // 同料号三条：是(排除) + 否(计入) + 空/未设置(计入) → 月度与区间口径均只计 3+5=8
+        OriginalRecord a = newRecord("TMP配件CUST-MOQ-A-" + System.nanoTime(), LocalDate.of(2026, 7, 1), 2);
+        a.setMachineOnCustomer("是");
+        originalRecordService.create(a);
+
+        OriginalRecord b = newRecord("TMP配件CUST-MOQ-B-" + System.nanoTime(), LocalDate.of(2026, 7, 15), 3);
+        b.setMachineOnCustomer("否");
+        originalRecordService.create(b);
+
+        OriginalRecord c = newRecord("TMP配件CUST-MOQ-C-" + System.nanoTime(), LocalDate.of(2026, 7, 20), 5);
+        // machineOnCustomer 不设置（NULL）——历史数据/Excel 导入缺列场景
+        originalRecordService.create(c);
+
+        String mc = "TMP-CUST-MC";
+        assertEquals(8, originalRecordMapper.countByMaterialCodeAndMonth(mc, "2026-07", 1L),
+                "月度上机数量应排除'上机是否客户物料=是'的记录（2+3+5 → 8）");
+        assertEquals(8, originalRecordMapper.countByMaterialCodeAndDateRange(mc, "2026-07-01", "2026-07-31", 1L),
+                "区间上机数量应排除'上机是否客户物料=是'的记录（2+3+5 → 8）");
     }
 }
