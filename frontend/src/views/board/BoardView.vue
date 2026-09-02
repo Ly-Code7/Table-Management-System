@@ -19,7 +19,7 @@
         />
         <!-- 多条件组合筛选（manual 受控：仅按钮 toggle 与面板外点击关闭，避免输入过程中误关） -->
         <div ref="filterAnchor" class="filter-anchor">
-          <el-popover v-model:visible="filterPanelVisible" :width="640" trigger="manual" placement="bottom-end">
+          <el-popover v-model:visible="filterPanelVisible" :width="640" trigger="manual" placement="bottom-end" popper-class="board-filter-popper">
             <template #reference>
               <el-button :type="activeFilterCount ? 'primary' : 'default'" @click="filterPanelVisible = !filterPanelVisible">
                 <el-icon v-if="activeFilterCount"><Filter /></el-icon>
@@ -29,10 +29,10 @@
           <div class="filter-panel">
             <div v-if="filters.length === 0" class="filter-empty">暂无条件——点击下方"添加条件"开始组合筛选（多条件需同时满足）</div>
             <div v-for="(f, i) in filters" :key="f.id" class="filter-row">
-              <el-select v-model="f.column" placeholder="选择列" style="width: 170px" clearable>
+              <el-select v-model="f.column" placeholder="选择列" style="width: 170px" clearable popper-class="board-filter-select">
                 <el-option v-for="c in columnsForTab" :key="c.value" :label="c.label" :value="c.value" />
               </el-select>
-              <el-select v-model="f.op" placeholder="运算符" style="width: 100px">
+              <el-select v-model="f.op" placeholder="运算符" style="width: 100px" popper-class="board-filter-select">
                 <el-option v-for="op in opsFor(f)" :key="op" :label="op" :value="op" />
               </el-select>
               <el-input
@@ -164,12 +164,13 @@ const searchPlaceholder = computed(() =>
 // ---- 多条件组合筛选（高级筛选面板，2026-09）----
 const filterPanelVisible = ref(false)
 const filterAnchor = ref(null)
-// 面板外点击关闭（manual 模式无自动关闭；popover 内容与 el-select 下拉均 teleport 到 body，点击不视为外部）
+// 面板外点击关闭（manual 模式无自动关闭；面板自身 popper 与面板内 el-select 下拉均 teleport 到 body，
+// 用 popper-class 标记排除——点击它们不视为外部）
 function onDocPointerDown(e) {
   if (!filterPanelVisible.value) return
   const t = e.target
   if (filterAnchor.value && filterAnchor.value.contains(t)) return
-  if (t.closest && (t.closest('.el-popover') || t.closest('.el-select-dropdown'))) return
+  if (t.closest && (t.closest('.board-filter-popper') || t.closest('.board-filter-select') || t.closest('.el-select-dropdown'))) return
   filterPanelVisible.value = false
 }
 onMounted(() => document.addEventListener('pointerdown', onDocPointerDown))
