@@ -17,14 +17,15 @@
           clearable
           style="width: 200px"
         />
-        <!-- 多条件组合筛选 -->
-        <el-popover v-model:visible="filterPanelVisible" :width="640" trigger="click" placement="bottom-end">
-          <template #reference>
-            <el-button :type="activeFilterCount ? 'primary' : 'default'">
-              <el-icon v-if="activeFilterCount"><Filter /></el-icon>
-              筛选<template v-if="activeFilterCount">({{ activeFilterCount }})</template>
-            </el-button>
-          </template>
+        <!-- 多条件组合筛选（manual 受控：仅按钮 toggle 与面板外点击关闭，避免输入过程中误关） -->
+        <div ref="filterAnchor" class="filter-anchor">
+          <el-popover v-model:visible="filterPanelVisible" :width="640" trigger="manual" placement="bottom-end">
+            <template #reference>
+              <el-button :type="activeFilterCount ? 'primary' : 'default'" @click="filterPanelVisible = !filterPanelVisible">
+                <el-icon v-if="activeFilterCount"><Filter /></el-icon>
+                筛选<template v-if="activeFilterCount">({{ activeFilterCount }})</template>
+              </el-button>
+            </template>
           <div class="filter-panel">
             <div v-if="filters.length === 0" class="filter-empty">暂无条件——点击下方"添加条件"开始组合筛选（多条件需同时满足）</div>
             <div v-for="(f, i) in filters" :key="f.id" class="filter-row">
@@ -58,6 +59,7 @@
             </div>
           </div>
         </el-popover>
+        </div>
         <el-select v-model="year" style="width: 110px" @change="fetchAll">
           <el-option v-for="y in yearOptions" :key="y" :label="`${y}年`" :value="y" />
         </el-select>
@@ -125,7 +127,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import * as api from '../../api/board'
 import { useCompanyStore } from '../../stores/company'
@@ -161,6 +163,17 @@ const searchPlaceholder = computed(() =>
 
 // ---- 多条件组合筛选（高级筛选面板，2026-09）----
 const filterPanelVisible = ref(false)
+const filterAnchor = ref(null)
+// 面板外点击关闭（manual 模式无自动关闭；popover 内容与 el-select 下拉均 teleport 到 body，点击不视为外部）
+function onDocPointerDown(e) {
+  if (!filterPanelVisible.value) return
+  const t = e.target
+  if (filterAnchor.value && filterAnchor.value.contains(t)) return
+  if (t.closest && (t.closest('.el-popover') || t.closest('.el-select-dropdown'))) return
+  filterPanelVisible.value = false
+}
+onMounted(() => document.addEventListener('pointerdown', onDocPointerDown))
+onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocPointerDown))
 // 条件行：{ column: 列 value(与行字段/月份键一致), op: 运算符, value: 条件值 }
 const filters = ref([])
 // 按当前看板维度可选的列（机台类：厂房+机台/厂房/12 个月/小计；料号类：料号/156项名称/类别/单价/12 个月/合计/金额(/平均)）
