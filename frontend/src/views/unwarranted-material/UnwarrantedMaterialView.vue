@@ -47,6 +47,11 @@
       <el-table-column prop="category" label="类别" width="110" show-overflow-tooltip />
       <el-table-column prop="partName" label="配件名称" width="120" show-overflow-tooltip />
       <el-table-column prop="quantity" label="数量" width="60" />
+      <el-table-column prop="mountJudgement" label="上机判定" width="90">
+        <template #default="{ row }">
+          <el-tag :type="warrantyTagType(row.mountJudgement)" size="small">{{ row.mountJudgement || '-' }}</el-tag>
+        </template>
+      </el-table-column>
       <el-table-column label="返修判定" width="90">
         <template #default="{ row }">
           <el-tag :type="warrantyTagType(row.warrantyStatus)" size="small">{{ row.warrantyStatus || '-' }}</el-tag>
@@ -69,9 +74,6 @@
       <el-table-column prop="lastRepairPerson" label="上次维修人" width="100" />
       <el-table-column prop="repairAmount" label="维修金额" width="100" />
       <el-table-column prop="repairMaterialOn" label="上机物料" width="130" show-overflow-tooltip />
-      <el-table-column prop="mountJudgement" label="上机判定" width="90">
-        <template #default="{ row }">{{ row.mountJudgement || '-' }}</template>
-      </el-table-column>
       <el-table-column prop="equipRepairDebugging" label="处理方式" width="140" show-overflow-tooltip />
       <el-table-column prop="createdBy" label="创建人" width="90" />
     </el-table>
