@@ -59,7 +59,7 @@
       </el-table-column>
       <el-table-column prop="originalRecordId" label="关联维修记录" width="110">
         <template #default="{ row }">
-          <el-tag v-if="row.originalRecordId" size="small">{{ row.originalRecordId }}</el-tag>
+          <el-link v-if="row.originalRecordId" type="primary" :underline="false" @click="openOriginalDetail(row.originalRecordId)">{{ row.originalRecordId }}</el-link>
           <span v-else>-</span>
         </template>
       </el-table-column>
@@ -252,6 +252,8 @@
 
     <!-- 选择维修记录弹窗 -->
     <OriginalRecordPickerDialog v-model="pickerVisible" :company-id="companyStore.currentCompanyId" @select="handleOriginalPicked" />
+    <!-- 点击"关联维修记录"查看对应维修记录详情（只读弹窗） -->
+    <OriginalRecordDetailDialog v-model="detailVisible" :record-id="detailRecordId" />
   </div>
 </template>
 
@@ -266,6 +268,7 @@ import PageHeader from '../../components/PageHeader.vue'
 import SearchForm from '../../components/SearchForm.vue'
 import ToolBar from '../../components/ToolBar.vue'
 import OriginalRecordPickerDialog from '../../components/OriginalRecordPickerDialog.vue'
+import OriginalRecordDetailDialog from '../../components/OriginalRecordDetailDialog.vue'
 
 const companyStore = useCompanyStore()
 const { list, total, loading, queryParams, fetchData, handlePageChange, handleSizeChange } = usePagination(
@@ -282,6 +285,13 @@ const sortField = ref('id')
 const sortOrder = ref('desc')
 const pickerVisible = ref(false)
 const pickedDesc = ref('')
+// 维修记录详情弹窗（点击"关联维修记录"列）
+const detailVisible = ref(false)
+const detailRecordId = ref(null)
+function openOriginalDetail(recordId) {
+  detailRecordId.value = recordId
+  detailVisible.value = true
+}
 
 function today() {
   const d = new Date()
