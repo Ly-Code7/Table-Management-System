@@ -35,8 +35,20 @@
       </template>
       <!-- 料号看板列 -->
       <template v-else>
-        <el-table-column prop="partName" label="156项名称" width="140" fixed="left" show-overflow-tooltip />
-        <el-table-column prop="key" label="料号" width="130" show-overflow-tooltip />
+        <!-- 156项名称列（冻结首列）：合计行在此显示"合计"，恢复合计字样冻结在左侧的既有视觉 -->
+        <el-table-column label="156项名称" width="140" fixed="left" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-if="row.key === '合计'">合计</span>
+            <span v-else>{{ row.partName }}</span>
+          </template>
+        </el-table-column>
+        <!-- 料号列：合计行置空（"合计"字样已移至首列，避免重复） -->
+        <el-table-column label="料号" width="130" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-if="row.key === '合计'"></span>
+            <span v-else>{{ row.key }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="category" label="类别" width="100" />
         <el-table-column prop="price" label="合约单价" width="100" align="right" />
       </template>
