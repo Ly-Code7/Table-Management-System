@@ -35,9 +35,9 @@
       </template>
       <!-- 料号看板列 -->
       <template v-else>
+        <el-table-column prop="partName" label="156项名称" width="140" fixed="left" show-overflow-tooltip />
+        <el-table-column prop="key" label="料号" width="130" show-overflow-tooltip />
         <el-table-column prop="category" label="类别" width="100" />
-        <el-table-column prop="key" label="料号" width="130" fixed="left" show-overflow-tooltip />
-        <el-table-column prop="partName" label="156项名称" width="140" show-overflow-tooltip />
         <el-table-column prop="price" label="合约单价" width="100" align="right" />
       </template>
       <!-- 12 个月列 -->
