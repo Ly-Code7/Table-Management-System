@@ -23,12 +23,11 @@
       @import="handleImport"
       @export="handleExport"
       @template="handleTemplateDownload"
-    />
-
-    <div style="margin-bottom:12px;display:flex;align-items:center;gap:12px">
-      <el-date-picker v-model="refreshMonth" type="month" placeholder="选择要更新的月份" value-format="YYYY-MM" style="width:180px" />
+    >
+      <!-- 更新当月数据：紧挨模板下载右侧，不独占一行 -->
+      <el-date-picker v-model="refreshMonth" type="month" placeholder="选择要更新的月份" value-format="YYYY-MM" style="width:180px;margin-left:12px" />
       <el-button type="warning" @click="handleBatchRefresh">更新当月数据</el-button>
-    </div>
+    </ToolBar>
 
     <!-- 全表合计 -->
     <div class="summary-row">
