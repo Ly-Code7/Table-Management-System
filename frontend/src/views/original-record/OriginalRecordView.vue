@@ -239,18 +239,16 @@
         </el-row>
         <el-row :gutter="16">
           <el-col :span="12">
-            <el-form-item label="上机是否客户物料">
-              <el-select v-model="form.machineOnCustomer" placeholder="请选择" clearable style="width:100%">
+            <el-form-item label="上机是否客户物料" label-width="130px">
+              <el-select v-model="form.machineOnCustomer" placeholder="请选择" clearable style="width: 130px">
                 <el-option label="是" value="是" />
-                <el-option label="否" value="否" />
               </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="下机是否客户物料">
-              <el-select v-model="form.machineOffCustomer" placeholder="请选择" clearable style="width:100%">
+            <el-form-item label="下机是否客户物料" label-width="130px">
+              <el-select v-model="form.machineOffCustomer" placeholder="请选择" clearable style="width: 130px">
                 <el-option label="是" value="是" />
-                <el-option label="否" value="否" />
               </el-select>
             </el-form-item>
           </el-col>
