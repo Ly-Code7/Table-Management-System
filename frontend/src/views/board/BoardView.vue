@@ -17,6 +17,47 @@
           clearable
           style="width: 200px"
         />
+        <!-- 多条件组合筛选 -->
+        <el-popover v-model:visible="filterPanelVisible" :width="640" trigger="click" placement="bottom-end">
+          <template #reference>
+            <el-button :type="activeFilterCount ? 'primary' : 'default'">
+              <el-icon v-if="activeFilterCount"><Filter /></el-icon>
+              筛选<template v-if="activeFilterCount">({{ activeFilterCount }})</template>
+            </el-button>
+          </template>
+          <div class="filter-panel">
+            <div v-if="filters.length === 0" class="filter-empty">暂无条件——点击下方"添加条件"开始组合筛选（多条件需同时满足）</div>
+            <div v-for="(f, i) in filters" :key="f.id" class="filter-row">
+              <el-select v-model="f.column" placeholder="选择列" style="width: 170px" clearable>
+                <el-option v-for="c in columnsForTab" :key="c.value" :label="c.label" :value="c.value" />
+              </el-select>
+              <el-select v-model="f.op" placeholder="运算符" style="width: 100px">
+                <el-option v-for="op in opsFor(f)" :key="op" :label="op" :value="op" />
+              </el-select>
+              <el-input
+                v-if="typeFor(f) === 'text'"
+                v-model="f.value"
+                placeholder="输入关键字"
+                clearable
+                style="width: 200px"
+              />
+              <el-input-number
+                v-else
+                v-model="f.value"
+                :controls="false"
+                :placeholder="typeFor(f) === 'percent' ? '百分比，如 60' : '输入数值'"
+                style="width: 170px"
+              />
+              <span v-if="typeFor(f) === 'percent'" class="pct-suffix">%</span>
+              <el-button link type="danger" @click="removeFilter(i)">删除</el-button>
+            </div>
+            <div class="filter-actions">
+              <el-button size="small" @click="addFilter">添加条件</el-button>
+              <el-button size="small" plain @click="clearFilters">清空</el-button>
+              <span class="filter-hint">组合条件与关键词搜索叠加生效；合计行始终为全量合计</span>
+            </div>
+          </div>
+        </el-popover>
         <el-select v-model="year" style="width: 110px" @change="fetchAll">
           <el-option v-for="y in yearOptions" :key="y" :label="`${y}年`" :value="y" />
         </el-select>
@@ -90,6 +131,7 @@ import * as api from '../../api/board'
 import { useCompanyStore } from '../../stores/company'
 import { downloadBlob } from '../../utils'
 import PageHeader from '../../components/PageHeader.vue'
+import { buildColumns, filterRowsByConditions, TEXT_OPS, NUM_OPS } from '../../utils/boardFilter.mjs'
 
 const companyStore = useCompanyStore()
 const activeTab = ref('repair-amount')
@@ -117,6 +159,26 @@ const searchPlaceholder = computed(() =>
   isMachineTab.value ? '搜索机台号/厂房' : '搜索料号/156项名称/类别'
 )
 
+// ---- 多条件组合筛选（高级筛选面板，2026-09）----
+const filterPanelVisible = ref(false)
+// 条件行：{ column: 列 value(与行字段/月份键一致), op: 运算符, value: 条件值 }
+const filters = ref([])
+// 按当前看板维度可选的列（机台类：厂房+机台/厂房/12 个月/小计；料号类：料号/156项名称/类别/单价/12 个月/合计/金额(/平均)）
+const columnsForTab = computed(() => buildColumns(activeTab.value, monthKeys.value))
+const columnTypeOf = (column) => (columnsForTab.value.find(c => c.value === column) || {}).type || 'text'
+const opsFor = (f) => columnTypeOf(f.column) === 'text' ? TEXT_OPS : NUM_OPS
+const typeFor = (f) => columnTypeOf(f.column)
+// 有效条件数（列与值均已填）——用于按钮高亮与角标
+const activeFilterCount = computed(() =>
+  filters.value.filter(f => f.column && f.value !== '' && f.value !== null && f.value !== undefined).length
+)
+let filterSeq = 0
+function addFilter() {
+  filters.value.push({ id: ++filterSeq, column: columnsForTab.value[0]?.value ?? '', op: NUM_OPS[0], value: null })
+}
+function removeFilter(i) { filters.value.splice(i, 1) }
+function clearFilters() { filters.value = [] }
+
 const monthKeys = computed(() => {
   const yy = String(year.value % 100).padStart(2, '0')
   return Array.from({ length: 12 }, (_, i) => `FY${yy}${String(i + 1).padStart(2, '0')}`)
@@ -129,18 +191,21 @@ const dataRows = computed(() => rows.value.filter(r => r.key !== '合计'))
 // 按关键词过滤数据行（合计行不受搜索影响，始终为全量合计）
 const filteredRows = computed(() => {
   const kw = keyword.value.trim().toLowerCase()
-  if (!kw) return dataRows.value
-  if (isMachineTab.value) {
-    return dataRows.value.filter(r =>
-      (r.key || '').toLowerCase().includes(kw) ||
-      (r.factory || '').toLowerCase().includes(kw)
-    )
+  let list = dataRows.value
+  if (kw) {
+    list = isMachineTab.value
+      ? list.filter(r =>
+          (r.key || '').toLowerCase().includes(kw) ||
+          (r.factory || '').toLowerCase().includes(kw)
+        )
+      : list.filter(r =>
+          (r.key || '').toLowerCase().includes(kw) ||
+          (r.partName || '').toLowerCase().includes(kw) ||
+          (r.category || '').toLowerCase().includes(kw)
+        )
   }
-  return dataRows.value.filter(r =>
-    (r.key || '').toLowerCase().includes(kw) ||
-    (r.partName || '').toLowerCase().includes(kw) ||
-    (r.category || '').toLowerCase().includes(kw)
-  )
+  // 多条件组合筛选（AND，与关键词叠加；合计行在 dataRows 之外不受影响）
+  return filterRowsByConditions(list, filters.value, activeTab.value, monthKeys.value)
 })
 
 const pagedRows = computed(() => {
@@ -169,6 +234,8 @@ function formatPercent(v) {
 
 async function fetchAll() {
   keyword.value = '' // 切换看板/年份/公司时重置搜索
+  filters.value = [] // 组合筛选同步重置
+  filterPanelVisible.value = false
   const cid = companyStore.currentCompanyId
   const key = `${activeTab.value}|${cid}|${year.value}`
   const hit = cache.get(key)
@@ -213,6 +280,8 @@ async function handleExport() {
 watch(() => companyStore.currentCompanyId, () => fetchAll())
 // 搜索词变化时回到第一页
 watch(keyword, () => { page.value = 1 })
+// 组合筛选条件变化（增删行/改列/改值）时回到第一页
+watch(filters, () => { page.value = 1 }, { deep: true })
 onMounted(fetchAll)
 </script>
 
@@ -223,4 +292,10 @@ onMounted(fetchAll)
 .row-count { color: #909399; font-size: 13px; }
 .board-summary-row { font-weight: 700; }
 .board-summary-row td.el-table__cell { background-color: #f5f7fa; }
+.filter-panel { display: flex; flex-direction: column; gap: 10px; }
+.filter-row { display: flex; align-items: center; gap: 8px; }
+.filter-empty { color: #909399; font-size: 13px; padding: 4px 0; }
+.filter-actions { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.filter-hint { color: #909399; font-size: 12px; margin-left: auto; }
+.pct-suffix { color: #606266; font-size: 13px; }
 </style>
