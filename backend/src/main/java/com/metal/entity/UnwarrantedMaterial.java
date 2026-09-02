@@ -33,9 +33,11 @@ public class UnwarrantedMaterial {
     private String equipRepairDebugging;
     @ExcelProperty(value = "上机物料", index = 4)
     private String repairMaterialOn;
+    @ExcelProperty(value = "上机判定", index = 24)
+    private String mountJudgement;
     @ExcelProperty(value = "维修人", index = 5)
     private String repairPerson;
-    @ExcelProperty(value = "未过保", index = 6)
+    @ExcelProperty(value = "返修判定", index = 6)
     private String warrantyStatus;
     @ExcelProperty(value = "配件名称", index = 7)
     private String partName;

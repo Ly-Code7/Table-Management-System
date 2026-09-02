@@ -54,7 +54,11 @@ class OriginalRecordTemplateStructureTest {
         assertEquals("物料编码", head.get(17));
         assertEquals("156项名称", head.get(18));
         assertEquals("零件名称", head.get(19));
-        assertEquals("单据号", head.get(head.size() - 1));
+        // 尾部列契约（2026-09 起）：单据号(26) → 下机料号(27) → 上机是否客户物料(28) → 下机是否客户物料(29)
+        assertEquals("单据号", head.get(26));
+        assertEquals("下机料号", head.get(27));
+        assertEquals("上机是否客户物料", head.get(28));
+        assertEquals("下机是否客户物料", head.get(29));
     }
 
     @Test

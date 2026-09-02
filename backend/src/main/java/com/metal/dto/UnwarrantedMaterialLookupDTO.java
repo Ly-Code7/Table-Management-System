@@ -14,6 +14,7 @@ public class UnwarrantedMaterialLookupDTO {
     private String machineNo;
     private String equipRepairDebugging;
     private String repairMaterialOn;
+    private String mountJudgement;
     private String repairPerson;
     private String warrantyStatus;
     private String partName;

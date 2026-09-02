@@ -189,6 +189,8 @@ public class UnwarrantedMaterialService {
         dto.setEquipRepairDebugging(o.getFaultDescription());
         dto.setRepairMaterialOn(o.getMachineOnMaterial());
         dto.setRepairPerson(o.getRepairPerson());
+        // 上机判定：维修记录"上机是否客户物料 = 是" → 客户物料（提交时后端按关联记录重算覆盖）
+        dto.setMountJudgement("是".equals(o.getMachineOnCustomer()) ? "客户物料" : null);
         // 未过保列不再回填（独立计算，提交时由 applyCalculations 按唯一标识编号+上次维修日期判定）
         dto.setWarrantyStatus("");
         dto.setPartName(o.getPartName());
@@ -614,15 +616,25 @@ public class UnwarrantedMaterialService {
 
         // 唯一标识编号的配件名称：优先取关联维修记录（original_record）的配件名称（用户口径）；
         // 无关联时（手动新增/导入）用本条记录自身配件名称（料号回填或手工填写）
+        // 客户物料标记：关联维修记录"上机/下机是否客户物料 = 是"时下推"客户物料"——
+        //   上机判定 mountJudgement 与返修判定 warrantyStatus（客户物料跳过按上次上机日期判定过保）
         String uniquePartName = r.getPartName();
+        boolean customerOn = false;
+        boolean customerDown = false;
         if (r.getOriginalRecordId() != null && r.getCompanyId() != null) {
             try {
                 OriginalRecord or = originalRecordMapper.findByIdAndCompany(r.getOriginalRecordId(), r.getCompanyId());
-                if (or != null && notBlank(or.getPartName())) uniquePartName = or.getPartName();
+                if (or != null) {
+                    if (notBlank(or.getPartName())) uniquePartName = or.getPartName();
+                    customerOn = "是".equals(or.getMachineOnCustomer());
+                    customerDown = "是".equals(or.getMachineOffCustomer());
+                }
             } catch (Exception ignored) {
                 // 维修记录查询失败不阻塞
             }
         }
+        // 上机判定：数据源 = 关联维修记录（"是"→客户物料；否则置空，覆盖前端/Excel 传入值）
+        r.setMountJudgement(customerOn ? "客户物料" : null);
         boolean hasKey = notBlank(r.getFactory()) && notBlank(r.getMachineNo()) && notBlank(uniquePartName);
         String uniqueId = null;
         if (hasKey) {
@@ -641,7 +653,7 @@ public class UnwarrantedMaterialService {
             r.setLastDate(null);
             r.setLastDateNo(null);
             r.setCurrentDateNo(null);
-            r.setWarrantyStatus(""); // 无唯一标识编号/日期时无法判断是否未过保，置空
+            r.setWarrantyStatus(customerDown ? "客户物料" : ""); // 无唯一标识编号/日期时无法判断是否未过保；客户物料标记保留
             r.setOverSixMonths(null);
             r.setUsageMonths(null);
             r.setLastRepairPerson(null);
@@ -677,10 +689,13 @@ public class UnwarrantedMaterialService {
             r.setUsageMonths(String.valueOf(wholeMonths(r.getLastDate(), date)));
         }
 
-        // 未过保列独立计算（用户口径，2026-08）：按唯一标识编号查最近一次维修，
-        // 距本次 < 6 个月 → "未过保"；>= 6 个月或首次维修（无上次记录）→ 空。
+        // 返修判定（原"未过保"列，2026-09 更名 + 客户物料扩展）：
+        // 关联维修记录"下机是否客户物料 = 是" → "客户物料"，不按上次上机日期判定过保；
+        // 否则按唯一标识编号查最近一次维修：距本次 < 6 个月 → "未过保"；>= 6 个月或首次维修（无上次记录）→ 空。
         // 覆盖前端传入/回填值，保证一致性；不再依赖维修记录"是否过保"字段。
-        if (r.getLastDate() != null && date != null
+        if (customerDown) {
+            r.setWarrantyStatus("客户物料");
+        } else if (r.getLastDate() != null && date != null
                 && ChronoUnit.MONTHS.between(r.getLastDate(), date) < 6) {
             r.setWarrantyStatus("未过保");
         } else {

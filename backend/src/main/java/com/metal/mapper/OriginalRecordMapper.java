@@ -18,13 +18,13 @@ public interface OriginalRecordMapper {
             "diagnostician, repair_person, repair_request_time, start_time, end_time, repair_hours, downtime_hours, " +
             "machine_model, fault_phenomenon, fault_description, material_code, material_156_name, part_name, quantity, " +
             "machine_on_material, machine_off_material, machine_off_code, remark, confirmer, delivery_record_ref, document_no, " +
-            "image_key, created_by, updated_by) " +
+            "image_key, machine_on_customer, machine_off_customer, created_by, updated_by) " +
             "VALUES (#{companyId}, #{yearMonth}, #{recordDate}, #{shift}, #{factory}, #{serialNumber}, #{machineNo}, #{plantMachine}, " +
             "#{diagnostician}, #{repairPerson}, #{repairRequestTime}, #{startTime}, #{endTime}, " +
             "#{repairHours}, #{downtimeHours}, #{machineModel}, #{faultPhenomenon}, #{faultDescription}, " +
             "#{materialCode}, #{material156Name}, #{partName}, #{quantity}, #{machineOnMaterial}, #{machineOffMaterial}, " +
             "#{machineOffCode}, #{remark}, #{confirmer}, #{deliveryRecordRef}, #{documentNo}, " +
-            "#{imageKey}, #{createdBy}, #{updatedBy})")
+            "#{imageKey}, #{machineOnCustomer}, #{machineOffCustomer}, #{createdBy}, #{updatedBy})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(OriginalRecord record);
 
@@ -36,7 +36,7 @@ public interface OriginalRecordMapper {
             "material_code=#{materialCode}, material_156_name=#{material156Name}, part_name=#{partName}, quantity=#{quantity}, " +
             "machine_on_material=#{machineOnMaterial}, machine_off_material=#{machineOffMaterial}, machine_off_code=#{machineOffCode}, " +
             "remark=#{remark}, confirmer=#{confirmer}, delivery_record_ref=#{deliveryRecordRef}, document_no=#{documentNo}, " +
-            "image_key=#{imageKey}, updated_by=#{updatedBy} " +
+            "image_key=#{imageKey}, machine_on_customer=#{machineOnCustomer}, machine_off_customer=#{machineOffCustomer}, updated_by=#{updatedBy} " +
             "WHERE id=#{id}")
     int update(OriginalRecord record);
 
@@ -52,14 +52,14 @@ public interface OriginalRecordMapper {
             "diagnostician, repair_person, repair_request_time, start_time, end_time, repair_hours, downtime_hours, " +
             "machine_model, fault_phenomenon, fault_description, material_code, material_156_name, part_name, quantity, " +
             "machine_on_material, machine_off_material, machine_off_code, remark, confirmer, delivery_record_ref, document_no, " +
-            "image_key, created_by, updated_by) VALUES " +
+            "image_key, machine_on_customer, machine_off_customer, created_by, updated_by) VALUES " +
             "<foreach collection='list' item='r' separator=','>" +
             "(#{r.companyId}, #{r.yearMonth}, #{r.recordDate}, #{r.shift}, #{r.factory}, #{r.serialNumber}, #{r.machineNo}, #{r.plantMachine}, " +
             "#{r.diagnostician}, #{r.repairPerson}, #{r.repairRequestTime}, #{r.startTime}, #{r.endTime}, " +
             "#{r.repairHours}, #{r.downtimeHours}, #{r.machineModel}, #{r.faultPhenomenon}, #{r.faultDescription}, " +
             "#{r.materialCode}, #{r.material156Name}, #{r.partName}, #{r.quantity}, #{r.machineOnMaterial}, #{r.machineOffMaterial}, " +
             "#{r.machineOffCode}, #{r.remark}, #{r.confirmer}, #{r.deliveryRecordRef}, #{r.documentNo}, " +
-            "#{r.imageKey}, #{r.createdBy}, #{r.updatedBy})" +
+            "#{r.imageKey}, #{r.machineOnCustomer}, #{r.machineOffCustomer}, #{r.createdBy}, #{r.updatedBy})" +
             "</foreach>" +
             "</script>")
     @Options(useGeneratedKeys = true, keyProperty = "id")

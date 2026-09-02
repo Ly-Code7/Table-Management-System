@@ -12,12 +12,12 @@ public interface UnwarrantedMaterialMapper {
     UnwarrantedMaterial findById(Long id);
 
     @Insert("INSERT INTO unwarranted_material (company_id, record_date, factory, machine_no, " +
-            "equip_repair_debugging, repair_material_on, repair_person, warranty_status, part_name, quantity, material_code, " +
+            "equip_repair_debugging, repair_material_on, mount_judgement, repair_person, warranty_status, part_name, quantity, material_code, " +
             "unique_id, last_date_no, current_date_no, plant_machine, `year_month`, repair_amount, " +
             "total_count, occurrence_no, last_date, `current_date`, over_six_months, usage_months, last_repair_person, " +
             "original_record_id, category, created_by, updated_by) VALUES " +
             "(#{companyId}, #{recordDate}, #{factory}, #{machineNo}, " +
-            "#{equipRepairDebugging}, #{repairMaterialOn}, #{repairPerson}, #{warrantyStatus}, #{partName}, #{quantity}, #{materialCode}, " +
+            "#{equipRepairDebugging}, #{repairMaterialOn}, #{mountJudgement}, #{repairPerson}, #{warrantyStatus}, #{partName}, #{quantity}, #{materialCode}, " +
             "#{uniqueId}, #{lastDateNo}, #{currentDateNo}, #{plantMachine}, #{yearMonth}, #{repairAmount}, " +
             "#{totalCount}, #{occurrenceNo}, #{lastDate}, #{currentDate}, #{overSixMonths}, #{usageMonths}, #{lastRepairPerson}, " +
             "#{originalRecordId}, #{category}, #{createdBy}, #{updatedBy})")
@@ -25,7 +25,7 @@ public interface UnwarrantedMaterialMapper {
     int insert(UnwarrantedMaterial record);
 
     @Update("UPDATE unwarranted_material SET record_date=#{recordDate}, factory=#{factory}, machine_no=#{machineNo}, " +
-            "equip_repair_debugging=#{equipRepairDebugging}, repair_material_on=#{repairMaterialOn}, repair_person=#{repairPerson}, " +
+            "equip_repair_debugging=#{equipRepairDebugging}, repair_material_on=#{repairMaterialOn}, mount_judgement=#{mountJudgement}, repair_person=#{repairPerson}, " +
             "warranty_status=#{warrantyStatus}, part_name=#{partName}, quantity=#{quantity}, material_code=#{materialCode}, " +
             "unique_id=#{uniqueId}, last_date_no=#{lastDateNo}, current_date_no=#{currentDateNo}, plant_machine=#{plantMachine}, " +
             "`year_month`=#{yearMonth}, repair_amount=#{repairAmount}, total_count=#{totalCount}, occurrence_no=#{occurrenceNo}, " +
@@ -114,13 +114,13 @@ public interface UnwarrantedMaterialMapper {
     /** 批量插入（每批最多 500 条，提升大数据量导入性能） */
     @Insert("<script>" +
             "INSERT INTO unwarranted_material (company_id, record_date, factory, machine_no, " +
-            "equip_repair_debugging, repair_material_on, repair_person, warranty_status, part_name, quantity, material_code, " +
+            "equip_repair_debugging, repair_material_on, mount_judgement, repair_person, warranty_status, part_name, quantity, material_code, " +
             "unique_id, last_date_no, current_date_no, plant_machine, `year_month`, repair_amount, " +
             "total_count, occurrence_no, last_date, `current_date`, over_six_months, usage_months, last_repair_person, " +
             "original_record_id, category, created_by, updated_by) VALUES " +
             "<foreach collection='list' item='r' separator=','>" +
             "(#{r.companyId}, #{r.recordDate}, #{r.factory}, #{r.machineNo}, " +
-            "#{r.equipRepairDebugging}, #{r.repairMaterialOn}, #{r.repairPerson}, #{r.warrantyStatus}, #{r.partName}, #{r.quantity}, #{r.materialCode}, " +
+            "#{r.equipRepairDebugging}, #{r.repairMaterialOn}, #{r.mountJudgement}, #{r.repairPerson}, #{r.warrantyStatus}, #{r.partName}, #{r.quantity}, #{r.materialCode}, " +
             "#{r.uniqueId}, #{r.lastDateNo}, #{r.currentDateNo}, #{r.plantMachine}, #{r.yearMonth}, #{r.repairAmount}, " +
             "#{r.totalCount}, #{r.occurrenceNo}, #{r.lastDate}, #{r.currentDate}, #{r.overSixMonths}, #{r.usageMonths}, #{r.lastRepairPerson}, " +
             "#{r.originalRecordId}, #{r.category}, #{r.createdBy}, #{r.updatedBy})" +
