@@ -17,48 +17,50 @@
           clearable
           style="width: 200px"
         />
-        <!-- 多条件组合筛选（manual 受控：仅按钮 toggle 与面板外点击关闭，避免输入过程中误关） -->
+        <!-- 多条件组合筛选（自绘浮层，无第三方关闭机制；收起仅由按钮 toggle/面板"收起"/切 tab 触发） -->
         <div ref="filterAnchor" class="filter-anchor">
-          <el-popover v-model:visible="filterPanelVisible" :width="640" trigger="manual" placement="bottom-end" popper-class="board-filter-popper">
-            <template #reference>
-              <el-button :type="activeFilterCount ? 'primary' : 'default'" @click="filterPanelVisible = !filterPanelVisible">
-                <el-icon v-if="activeFilterCount"><Filter /></el-icon>
-                筛选<template v-if="activeFilterCount">({{ activeFilterCount }})</template>
-              </el-button>
-            </template>
-          <div class="filter-panel">
-            <div v-if="filters.length === 0" class="filter-empty">暂无条件——点击下方"添加条件"开始组合筛选（多条件需同时满足）</div>
-            <div v-for="(f, i) in filters" :key="f.id" class="filter-row">
-              <el-select v-model="f.column" placeholder="选择列" style="width: 170px" clearable popper-class="board-filter-select">
-                <el-option v-for="c in columnsForTab" :key="c.value" :label="c.label" :value="c.value" />
-              </el-select>
-              <el-select v-model="f.op" placeholder="运算符" style="width: 100px" popper-class="board-filter-select">
-                <el-option v-for="op in opsFor(f)" :key="op" :label="op" :value="op" />
-              </el-select>
-              <el-input
-                v-if="typeFor(f) === 'text'"
-                v-model="f.value"
-                placeholder="输入关键字"
-                clearable
-                style="width: 200px"
-              />
-              <el-input-number
-                v-else
-                v-model="f.value"
-                :controls="false"
-                :placeholder="typeFor(f) === 'percent' ? '百分比，如 60' : '输入数值'"
-                style="width: 170px"
-              />
-              <span v-if="typeFor(f) === 'percent'" class="pct-suffix">%</span>
-              <el-button link type="danger" @click="removeFilter(i)">删除</el-button>
+          <el-button :type="activeFilterCount ? 'primary' : 'default'" @click="filterPanelVisible = !filterPanelVisible">
+            <el-icon v-if="activeFilterCount"><Filter /></el-icon>
+            筛选<template v-if="activeFilterCount">({{ activeFilterCount }})</template>
+          </el-button>
+          <div v-show="filterPanelVisible" class="filter-panel-pop">
+            <div class="filter-panel-head">
+              <span class="filter-panel-title">多条件筛选</span>
+              <el-button link type="primary" @click="filterPanelVisible = false">收起</el-button>
             </div>
-            <div class="filter-actions">
-              <el-button size="small" @click="addFilter">添加条件</el-button>
-              <el-button size="small" plain @click="clearFilters">清空</el-button>
-              <span class="filter-hint">组合条件与关键词搜索叠加生效；合计行始终为全量合计</span>
+            <div class="filter-panel">
+              <div v-if="filters.length === 0" class="filter-empty">暂无条件——点击下方"添加条件"开始组合筛选（多条件需同时满足）</div>
+              <div v-for="(f, i) in filters" :key="f.id" class="filter-row">
+                <el-select v-model="f.column" placeholder="选择列" style="width: 170px" clearable>
+                  <el-option v-for="c in columnsForTab" :key="c.value" :label="c.label" :value="c.value" />
+                </el-select>
+                <el-select v-model="f.op" placeholder="运算符" style="width: 100px">
+                  <el-option v-for="op in opsFor(f)" :key="op" :label="op" :value="op" />
+                </el-select>
+                <el-input
+                  v-if="typeFor(f) === 'text'"
+                  v-model="f.value"
+                  placeholder="输入关键字"
+                  clearable
+                  style="width: 200px"
+                />
+                <el-input-number
+                  v-else
+                  v-model="f.value"
+                  :controls="false"
+                  :placeholder="typeFor(f) === 'percent' ? '百分比，如 60' : '输入数值'"
+                  style="width: 170px"
+                />
+                <span v-if="typeFor(f) === 'percent'" class="pct-suffix">%</span>
+                <el-button link type="danger" @click="removeFilter(i)">删除</el-button>
+              </div>
+              <div class="filter-actions">
+                <el-button size="small" @click="addFilter">添加条件</el-button>
+                <el-button size="small" plain @click="clearFilters">清空</el-button>
+                <span class="filter-hint">组合条件与关键词搜索叠加生效；合计行始终为全量合计</span>
+              </div>
             </div>
           </div>
-        </el-popover>
         </div>
         <el-select v-model="year" style="width: 110px" @change="fetchAll">
           <el-option v-for="y in yearOptions" :key="y" :label="`${y}年`" :value="y" />
@@ -127,7 +129,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import * as api from '../../api/board'
 import { useCompanyStore } from '../../stores/company'
@@ -164,17 +166,6 @@ const searchPlaceholder = computed(() =>
 // ---- 多条件组合筛选（高级筛选面板，2026-09）----
 const filterPanelVisible = ref(false)
 const filterAnchor = ref(null)
-// 面板外点击关闭（manual 模式无自动关闭；面板自身 popper 与面板内 el-select 下拉均 teleport 到 body，
-// 用 popper-class 标记排除——点击它们不视为外部）
-function onDocPointerDown(e) {
-  if (!filterPanelVisible.value) return
-  const t = e.target
-  if (filterAnchor.value && filterAnchor.value.contains(t)) return
-  if (t.closest && (t.closest('.board-filter-popper') || t.closest('.board-filter-select') || t.closest('.el-select-dropdown'))) return
-  filterPanelVisible.value = false
-}
-onMounted(() => document.addEventListener('pointerdown', onDocPointerDown))
-onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocPointerDown))
 // 条件行：{ column: 列 value(与行字段/月份键一致), op: 运算符, value: 条件值 }
 const filters = ref([])
 // 按当前看板维度可选的列（机台类：厂房+机台/厂房/12 个月/小计；料号类：料号/156项名称/类别/单价/12 个月/合计/金额(/平均)）
@@ -306,6 +297,15 @@ onMounted(fetchAll)
 .row-count { color: #909399; font-size: 13px; }
 .board-summary-row { font-weight: 700; }
 .board-summary-row td.el-table__cell { background-color: #f5f7fa; }
+.filter-anchor { position: relative; display: inline-flex; align-items: center; }
+.filter-panel-pop {
+  position: absolute; top: calc(100% + 8px); right: 0; width: 640px;
+  background: #fff; border: 1px solid #e4e7ed; border-radius: 6px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12); padding: 12px 12px 6px;
+  z-index: 2000; max-height: 70vh; overflow: auto;
+}
+.filter-panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.filter-panel-title { font-weight: 600; font-size: 14px; }
 .filter-panel { display: flex; flex-direction: column; gap: 10px; }
 .filter-row { display: flex; align-items: center; gap: 8px; }
 .filter-empty { color: #909399; font-size: 13px; padding: 4px 0; }
