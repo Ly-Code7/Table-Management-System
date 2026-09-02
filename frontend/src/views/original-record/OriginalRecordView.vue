@@ -63,11 +63,17 @@
       <el-table-column prop="machineOffMaterial" label="下机物料号" width="120" show-overflow-tooltip />
       <el-table-column prop="machineOffCode" label="下机料号" width="115" show-overflow-tooltip />
       <!-- 客户物料标记 -->
-      <el-table-column prop="machineOnCustomer" label="上机是否客户物料" width="125">
-        <template #default="{ row }">{{ row.machineOnCustomer || '-' }}</template>
+      <el-table-column prop="machineOnCustomer" label="上机是否客户物料" width="135">
+        <template #default="{ row }">
+          <span v-if="row.machineOnCustomer === '是'" class="customer-yes">是</span>
+          <span v-else>{{ row.machineOnCustomer || '-' }}</span>
+        </template>
       </el-table-column>
-      <el-table-column prop="machineOffCustomer" label="下机是否客户物料" width="125">
-        <template #default="{ row }">{{ row.machineOffCustomer || '-' }}</template>
+      <el-table-column prop="machineOffCustomer" label="下机是否客户物料" width="135">
+        <template #default="{ row }">
+          <span v-if="row.machineOffCustomer === '是'" class="customer-yes">是</span>
+          <span v-else>{{ row.machineOffCustomer || '-' }}</span>
+        </template>
       </el-table-column>
       <!-- 时间 -->
       <el-table-column label="报修时间" width="100">
@@ -779,4 +785,5 @@ onMounted(() => doFetch())
 
 <style scoped>
 .pagination-wrap { display: flex; justify-content: flex-end; margin-top: 16px; }
+.customer-yes { color: #f56c6c; font-weight: 600; }
 </style>
