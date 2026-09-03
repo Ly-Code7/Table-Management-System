@@ -68,6 +68,7 @@ public interface OriginalRecordMapper {
     @Select("<script>" +
             "SELECT * FROM original_record WHERE 1=1 " +
             "<if test='companyId != null'>AND company_id = #{companyId}</if> " +
+            // 关键词匹配集：上机/下机"是否客户物料"列值仅存 是/否——值 LIKE 覆盖"是/否"，含"客户"字样时命中标记为"是"的行
             "<if test='keyword != null and keyword != \"\"'>" +
             "AND (serial_number LIKE CONCAT('%',#{keyword},'%') OR machine_no LIKE CONCAT('%',#{keyword},'%') " +
             "OR material_code LIKE CONCAT('%',#{keyword},'%') OR machine_model LIKE CONCAT('%',#{keyword},'%') " +
@@ -78,7 +79,11 @@ public interface OriginalRecordMapper {
             "OR plant_machine LIKE CONCAT('%',#{keyword},'%') " +
             "OR document_no LIKE CONCAT('%',#{keyword},'%') " +
             "OR machine_on_material LIKE CONCAT('%',#{keyword},'%') " +
-            "OR machine_off_material LIKE CONCAT('%',#{keyword},'%') OR id LIKE CONCAT('%',#{keyword},'%')) " +
+            "OR machine_off_material LIKE CONCAT('%',#{keyword},'%') " +
+            "OR machine_on_customer LIKE CONCAT('%',#{keyword},'%') " +
+            "OR machine_off_customer LIKE CONCAT('%',#{keyword},'%') " +
+            "OR (machine_on_customer = '是' AND #{keyword} LIKE '%客户%') " +
+            "OR (machine_off_customer = '是' AND #{keyword} LIKE '%客户%') OR id LIKE CONCAT('%',#{keyword},'%')) " +
             "</if>" +
             "<if test='shift != null and shift != \"\"'>AND shift = #{shift}</if> " +
             "<if test='factory != null and factory != \"\"'>AND factory = #{factory}</if> " +
