@@ -34,6 +34,7 @@
       <span class="summary-label">汇总（万元）</span>
       <el-date-picker v-model="summaryMonth" type="months" placeholder="选择月份（可多选）" value-format="YYYY-MM" clearable style="width:200px" @change="fetchTotals" />
       <span class="summary-item">送货金额合计：<b>{{ totals.deliveryAmount.toFixed(2) }}</b></span>
+      <span class="summary-item">送货免费金额合计：<b>{{ totals.freeDeliveryAmount.toFixed(2) }}</b></span>
       <span class="summary-item">上机金额合计：<b>{{ totals.machineOnAmount.toFixed(2) }}</b></span>
       <span class="summary-item">返修金额合计：<b>{{ totals.repairAmount.toFixed(2) }}</b></span>
       <span class="summary-item">比例内金额合计：<b>{{ totals.agreedRatioAmount.toFixed(2) }}</b></span>
@@ -328,6 +329,7 @@ const DIVISOR = 1.13 * 10000
 const summaryMonth = ref([])
 const totals = reactive({
   deliveryAmount: 0,
+  freeDeliveryAmount: 0,
   machineOnAmount: 0,
   repairAmount: 0,
   agreedRatioAmount: 0,
@@ -348,6 +350,8 @@ async function fetchTotals() {
     const all = res.data.list || []
     const calc = (field) => all.reduce((acc, r) => acc + (Number(r.unitPriceWithTax) || 0) * (Number(r[field]) || 0), 0) / DIVISOR
     totals.deliveryAmount = calc('deliveryQuantity')
+    // 送货免费金额合计（口径与导出一致：Σ(含税单价 × 送货免费) ÷ 1.13 ÷ 10000）
+    totals.freeDeliveryAmount = calc('freeDeliveryQuantity')
     totals.machineOnAmount = calc('machineOnQuantity')
     totals.repairAmount = calc('monthRepair')
     totals.agreedRatioAmount = calc('agreedRatioQuantity')
