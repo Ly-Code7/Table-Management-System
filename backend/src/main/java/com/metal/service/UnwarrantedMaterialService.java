@@ -123,6 +123,8 @@ public class UnwarrantedMaterialService {
         record.setUpdatedBy(user);
         mapper.insert(record);
         logService.log("INSERT", "unwarranted_material", record.getId(), record.getCompanyId(), record.toString());
+        // 链纠偏：插入可能落在既有链中间，链上日期晚于本行的既有行需重算派生字段
+        recalcChainAfter(record.getUniqueId(), record.getRecordDate(), record.getId(), record.getCompanyId());
         return record;
     }
 
@@ -131,11 +133,25 @@ public class UnwarrantedMaterialService {
         UnwarrantedMaterial exist = getById(record.getId());
         ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "编辑");
         if (record.getCompanyId() == null) record.setCompanyId(exist.getCompanyId());
+        // 先拷贝旧锚：MyBatis 一级缓存可能使 exist 与 record 为同一对象实例，
+        // 下方 applyCalculations(record) 会覆盖其派生字段（uniqueId 等），旧链纠偏锚点必须在重算前取出
+        String oldUniqueId = exist.getUniqueId();
+        LocalDate oldDate = exist.getRecordDate();
         checkOriginalRecordUniqueness(record);
         applyCalculations(record);
         record.setUpdatedBy(ServiceHelper.getCurrentUserName());
         mapper.update(record);
         logService.log("UPDATE", "unwarranted_material", record.getId(), record.getCompanyId(), record.toString());
+        // 链纠偏：本行变更（编码/日期/维修人等）会改变同链后续行的"前序记录集合"——
+        // 先按变更前旧锚重算旧链，再按变更后新锚重算新链（锚未变时只重算一次）
+        Long cid = record.getCompanyId();
+        Long selfId = record.getId();
+        recalcChainAfter(oldUniqueId, oldDate, selfId, cid);
+        boolean anchorChanged = !java.util.Objects.equals(oldUniqueId, record.getUniqueId())
+                || !java.util.Objects.equals(oldDate, record.getRecordDate());
+        if (anchorChanged) {
+            recalcChainAfter(record.getUniqueId(), record.getRecordDate(), selfId, cid);
+        }
         return record;
     }
 
@@ -153,6 +169,8 @@ public class UnwarrantedMaterialService {
         ServiceHelper.checkOwnershipOrAdmin(exist.getCreatedBy(), "删除");
         mapper.deleteById(id);
         logService.log("DELETE", "unwarranted_material", id, exist.getCompanyId(), null);
+        // 链纠偏：本行脱离后旧链后续行的前序集合变化，需重算
+        recalcChainAfter(exist.getUniqueId(), exist.getRecordDate(), exist.getId(), exist.getCompanyId());
     }
 
     @Transactional
@@ -167,6 +185,49 @@ public class UnwarrantedMaterialService {
         mapper.batchDelete(ids);
         for (UnwarrantedMaterial exist : exists) {
             logService.log("DELETE", "unwarranted_material", exist.getId(), exist.getCompanyId(), null);
+        }
+        // 链纠偏：按 unique_id 合并锚点（同链取最小日期），一次查询覆盖多处删除缺口
+        java.util.Map<String, UnwarrantedMaterial> anchors = new java.util.LinkedHashMap<>();
+        for (UnwarrantedMaterial exist : exists) {
+            if (exist.getUniqueId() == null || exist.getUniqueId().isBlank() || exist.getRecordDate() == null) continue;
+            String key = exist.getCompanyId() + "|" + exist.getUniqueId();
+            UnwarrantedMaterial cur = anchors.get(key);
+            if (cur == null || exist.getRecordDate().isBefore(cur.getRecordDate())) {
+                anchors.put(key, exist);
+            }
+        }
+        for (UnwarrantedMaterial anchor : anchors.values()) {
+            recalcChainAfter(anchor.getUniqueId(), anchor.getRecordDate(), anchor.getId(), anchor.getCompanyId());
+        }
+    }
+
+    /**
+     * 链纠偏：unique_id 链上位于 date 之后（含同日且 id 更大者，排除自身）的行逐行重算派生字段并落库。
+     * 触发：本行增/删/改导致同链后续行的"前序记录集合"变化（编码迁移/日期调整/维修人变更/删除/插入链中），
+     * 消除"按旧前序落库的派生快照不再刷新"的失真（如旧前序脱离后返修判定仍显示'未过保'）。
+     * 每行重算 = applyCalculations（实时查库自洽统计），与用户手动重新保存该行等价，幂等；
+     * 自动纠偏不写 OperationLog（与 syncFromOriginalRecord 先例一致），updatedBy 置当前操作人。
+     *
+     * @param uniqueId  链键（null/空表示无链，直接返回）
+     * @param date      变更行日期锚点（date 为 null 时无日期秩序可纠偏，直接返回）
+     * @param selfId    变更行 id（自身被排除；批量导入等 id 未回填场景传 -1，使同日行全部纳入）
+     * @param companyId 公司 id（null 时按 1L 处理）
+     */
+    private void recalcChainAfter(String uniqueId, LocalDate date, Long selfId, Long companyId) {
+        if (uniqueId == null || uniqueId.isBlank() || date == null) return;
+        Long cid = companyId != null ? companyId : 1L;
+        List<UnwarrantedMaterial> chain = mapper.findChainAfter(uniqueId, cid, date, selfId != null ? selfId : -1L);
+        recalcChainRows(chain);
+    }
+
+    /** 逐行重算派生字段并落库（链纠偏内部循环） */
+    private void recalcChainRows(List<UnwarrantedMaterial> rows) {
+        if (rows == null || rows.isEmpty()) return;
+        String user = ServiceHelper.getCurrentUserName();
+        for (UnwarrantedMaterial row : rows) {
+            applyCalculations(row);
+            row.setUpdatedBy(user);
+            mapper.update(row);
         }
     }
 

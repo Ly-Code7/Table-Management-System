@@ -34,6 +34,14 @@ public interface UnwarrantedMaterialMapper {
             "updated_by=#{updatedBy} WHERE id=#{id}")
     int update(UnwarrantedMaterial record);
 
+    /** 链纠偏：查询同一唯一标识编号链上位于 date 之后的行（含同日且 id 更大者，排除自身）——编辑/删除/新增后需重算派生字段的受影响行 */
+    @Select("<script>SELECT * FROM unwarranted_material " +
+            "WHERE unique_id = #{uniqueId} AND company_id = #{companyId} AND id != #{selfId} " +
+            "AND (record_date &gt; #{date} OR (record_date = #{date} AND id &gt; #{selfId})) " +
+            "ORDER BY record_date, id</script>")
+    List<UnwarrantedMaterial> findChainAfter(@Param("uniqueId") String uniqueId, @Param("companyId") Long companyId,
+                                             @Param("date") LocalDate date, @Param("selfId") Long selfId);
+
     @Delete("DELETE FROM unwarranted_material WHERE id = #{id}")
     int deleteById(Long id);
 
