@@ -3,8 +3,9 @@ package com.metal.service;
 import com.alibaba.excel.EasyExcel;
 import com.alibaba.excel.context.AnalysisContext;
 import com.alibaba.excel.event.AnalysisEventListener;
-import com.alibaba.excel.write.handler.CellWriteHandler;
-import com.alibaba.excel.write.handler.context.CellWriteHandlerContext;
+import com.alibaba.excel.write.handler.RowWriteHandler;
+import com.alibaba.excel.write.metadata.holder.WriteSheetHolder;
+import com.alibaba.excel.write.metadata.holder.WriteTableHolder;
 import com.alibaba.excel.write.style.column.LongestMatchColumnWidthStyleStrategy;
 import org.apache.poi.ss.usermodel.*;
 import com.github.pagehelper.PageHelper;
@@ -464,6 +465,7 @@ public class DeliveryStatsService {
             // 计算汇总金额（与前端逻辑一致：Σ(含税单价 × 数量) ÷ 1.13 ÷ 10000，单位为万元）
             final BigDecimal DIVISOR = new BigDecimal("11300"); // 1.13 * 10000
             BigDecimal deliveryAmount = BigDecimal.ZERO;
+            BigDecimal freeDeliveryAmount = BigDecimal.ZERO;
             BigDecimal machineOnAmount = BigDecimal.ZERO;
             BigDecimal repairAmount = BigDecimal.ZERO;
             BigDecimal agreedRatioAmount = BigDecimal.ZERO;
@@ -473,6 +475,8 @@ public class DeliveryStatsService {
                 BigDecimal unitPrice = s.getUnitPriceWithTax() != null ? s.getUnitPriceWithTax() : BigDecimal.ZERO;
                 deliveryAmount = deliveryAmount.add(unitPrice.multiply(
                         BigDecimal.valueOf(s.getDeliveryQuantity() != null ? s.getDeliveryQuantity() : 0)));
+                freeDeliveryAmount = freeDeliveryAmount.add(unitPrice.multiply(
+                        BigDecimal.valueOf(s.getFreeDeliveryQuantity() != null ? s.getFreeDeliveryQuantity() : 0)));
                 machineOnAmount = machineOnAmount.add(unitPrice.multiply(
                         BigDecimal.valueOf(s.getMachineOnQuantity() != null ? s.getMachineOnQuantity() : 0)));
                 repairAmount = repairAmount.add(unitPrice.multiply(
@@ -486,14 +490,16 @@ public class DeliveryStatsService {
             }
             final BigDecimal[] totals = {
                     deliveryAmount.divide(DIVISOR, 2, RoundingMode.HALF_UP),
+                    freeDeliveryAmount.divide(DIVISOR, 2, RoundingMode.HALF_UP),
                     machineOnAmount.divide(DIVISOR, 2, RoundingMode.HALF_UP),
                     repairAmount.divide(DIVISOR, 2, RoundingMode.HALF_UP),
                     agreedRatioAmount.divide(DIVISOR, 2, RoundingMode.HALF_UP),
                     excessAmount.divide(DIVISOR, 2, RoundingMode.HALF_UP),
                     excessTaxAmount.divide(new BigDecimal("10000"), 2, RoundingMode.HALF_UP)
             };
-            final String[] labels = {"送货金额合计", "上机金额合计", "返修金额合计", "比例内金额合计", "超比金额合计", "超比含税总额"};
-            final int[] valueCols = {8, 9, 10, 11, 12, 13};
+            // 合计标签/数值所在列与数量列一一对应（0 基）：送货数量8 送货免费9 上机数量10 当月返修11 约定比例数量12 超比数量13 超比含税金额14
+            final String[] labels = {"送货金额合计", "送货免费金额合计", "上机金额合计", "返修金额合计", "比例内金额合计", "超比金额合计", "超比含税总额"};
+            final int[] valueCols = {8, 9, 10, 11, 12, 13, 14};
             final int dataRowCount = list.size();
 
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -504,12 +510,15 @@ public class DeliveryStatsService {
             OutputStream os = response.getOutputStream();
             EasyExcel.write(os, DeliveryStats.class)
                     .registerWriteHandler(new LongestMatchColumnWidthStyleStrategy())
-                    .registerWriteHandler(new CellWriteHandler() {
+                    .registerWriteHandler(new RowWriteHandler() {
                         @Override
-                        public void afterCellDispose(CellWriteHandlerContext context) {
-                            // 数据行从 row 1 开始（row 0 是表头），在最后一条数据的最后一个单元格写完后追加汇总行
-                            if (dataRowCount > 0 && context.getRowIndex() == dataRowCount && context.getColumnIndex() == 46) {
-                                Sheet sheet = context.getWriteSheetHolder().getSheet();
+                        public void afterRowDispose(WriteSheetHolder writeSheetHolder, WriteTableHolder writeTableHolder,
+                                                    Row row, Integer relativeRowIndex, Boolean isHead) {
+                            // 表头 row 0、数据行从 row 1 开始；最后一条数据行写完后追加汇总行。
+                            // 按行号而非列号触发：原按最后一列 ==46 判断在末行 31 号明细有值（到 47 列）或
+                            // 小月（不足 30 号）时不生效，合计行静默缺失。
+                            if (dataRowCount > 0 && row.getRowNum() == dataRowCount) {
+                                Sheet sheet = row.getSheet();
                                 // 空两行
                                 sheet.createRow(dataRowCount + 1);
                                 sheet.createRow(dataRowCount + 2);
