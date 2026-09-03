@@ -42,6 +42,22 @@ public interface UnwarrantedMaterialMapper {
     List<UnwarrantedMaterial> findChainAfter(@Param("uniqueId") String uniqueId, @Param("companyId") Long companyId,
                                              @Param("date") LocalDate date, @Param("selfId") Long selfId);
 
+    /** 当前最大 id（Excel 导入链纠偏用：区分本次导入行与既有行——导入行 id 更大） */
+    @Select("SELECT COALESCE(MAX(id), 0) FROM unwarranted_material")
+    Long maxId();
+
+    /**
+     * 链纠偏（Excel 导入场景）：链上日期 >= fromDate 且 id &lt;= maxIdBefore 的既有行。
+     * 导入行插入后，既有链上日期晚于导入行的行需重算；maxIdBefore 排除本次导入行
+     * （batchInsert 不回填 id，且重算导入行自身会破坏组内按 Excel 行序计算的语义）。
+     */
+    @Select("<script>SELECT * FROM unwarranted_material " +
+            "WHERE unique_id = #{uniqueId} AND company_id = #{companyId} " +
+            "AND record_date &gt;= #{fromDate} AND id &lt;= #{maxIdBefore} " +
+            "ORDER BY record_date, id</script>")
+    List<UnwarrantedMaterial> findExistingChainFrom(@Param("uniqueId") String uniqueId, @Param("companyId") Long companyId,
+                                                    @Param("fromDate") LocalDate fromDate, @Param("maxIdBefore") Long maxIdBefore);
+
     @Delete("DELETE FROM unwarranted_material WHERE id = #{id}")
     int deleteById(Long id);
 

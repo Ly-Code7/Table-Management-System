@@ -227,4 +227,33 @@ class UnwarrantedMaterialChainRecalcTest {
         UnwarrantedMaterial after = findByDate(part, LocalDate.of(2026, 6, 10));
         assertEquals("new-tester", after.getLastRepairPerson(), "前序行维修人变更后，后续行'上次维修人'应同步");
     }
+
+    @Test
+    void editOriginalRecord_machineNoChange_chainFollowersRecalc() {
+        // 场景：编辑维修记录改机台号 → 其下推的未过保物料行基础字段随 fillFromOriginal 重写（编码变），
+        // 旧链上日期在它之后的兄弟行应随之纠偏（pushFromOriginalRecord 链路）
+        String part = "TMPCHAIN-ORUPD-" + System.nanoTime();
+        OriginalRecord r1 = newRecord(part, LocalDate.of(2026, 1, 10));
+        OriginalRecord saved1 = originalRecordService.create(r1);
+        pushRecord(part, LocalDate.of(2026, 6, 10));
+        UnwarrantedMaterial uwJun = findByDate(part, LocalDate.of(2026, 6, 10));
+        assertEquals("未过保", uwJun.getWarrantyStatus());
+
+        // 编辑维修记录：机台号改走 → 关联的 1 月行编码跟随变化
+        saved1.setMachineNo(MACHINE_OTHER);
+        originalRecordService.update(saved1);
+
+        UnwarrantedMaterial after = findByDate(part, LocalDate.of(2026, 6, 10));
+        assertEquals("", after.getWarrantyStatus(), "维修记录机台号变更导致前序行编码脱离后，后续行返修判定应清空");
+        assertEquals(1, after.getOccurrenceNo());
+        assertNull(after.getLastDate());
+
+        // 反向：机台号改回 → 后续行恢复
+        saved1.setMachineNo(MACHINE);
+        originalRecordService.update(saved1);
+        UnwarrantedMaterial recovered = findByDate(part, LocalDate.of(2026, 6, 10));
+        assertEquals("未过保", recovered.getWarrantyStatus());
+        assertEquals(2, recovered.getOccurrenceNo());
+        assertEquals(LocalDate.of(2026, 1, 10), recovered.getLastDate());
+    }
 }

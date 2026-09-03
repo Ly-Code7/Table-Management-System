@@ -324,6 +324,8 @@ public class UnwarrantedMaterialService {
         uw.setCreatedBy(user);
         uw.setUpdatedBy(user);
         mapper.insert(uw);
+        // 链纠偏：下推新增可能落在既有链中间，链上日期晚于本行的既有行需重算
+        recalcChainAfter(uw.getUniqueId(), uw.getRecordDate(), uw.getId(), uw.getCompanyId());
         return uw;
     }
 
@@ -338,10 +340,19 @@ public class UnwarrantedMaterialService {
         List<UnwarrantedMaterial> linked = mapper.findByOriginalRecordId(o.getId(), cid);
         String user = ServiceHelper.getCurrentUserName();
         for (UnwarrantedMaterial uw : linked) {
+            // 旧锚须在 fillFromOriginal（变异对象）前取出：基础字段被维修记录重写后编码/日期可能变化
+            String oldUid = uw.getUniqueId();
+            LocalDate oldDate = uw.getRecordDate();
             fillFromOriginal(uw, o);
             applyCalculations(uw);
             uw.setUpdatedBy(user);
             mapper.update(uw);
+            // 链纠偏：先重算旧链（本行脱离后的前序缺口），再重算新链（本行迁入后的前序增量）
+            recalcChainAfter(oldUid, oldDate, uw.getId(), cid);
+            if (!java.util.Objects.equals(oldUid, uw.getUniqueId())
+                    || !java.util.Objects.equals(oldDate, uw.getRecordDate())) {
+                recalcChainAfter(uw.getUniqueId(), uw.getRecordDate(), uw.getId(), cid);
+            }
         }
     }
 
@@ -355,31 +366,45 @@ public class UnwarrantedMaterialService {
         Long cid = o.getCompanyId() != null ? o.getCompanyId() : 1L;
         List<UnwarrantedMaterial> linked = mapper.findByOriginalRecordId(o.getId(), cid);
         if (o.getQuantity() == null || o.getQuantity() < 1) {
-            // 数量不满足下推条件：删除已关联的记录
+            // 数量不满足下推条件：删除已关联的记录（linked 快照在删除前已取出，用于旧链纠偏）
             if (!linked.isEmpty()) {
                 mapper.deleteByOriginalRecordId(o.getId(), cid);
+                for (UnwarrantedMaterial uw : linked) {
+                    recalcChainAfter(uw.getUniqueId(), uw.getRecordDate(), uw.getId(), cid);
+                }
             }
             return;
         }
         if (!linked.isEmpty()) {
             String user = ServiceHelper.getCurrentUserName();
             for (UnwarrantedMaterial uw : linked) {
+                String oldUid = uw.getUniqueId();
+                LocalDate oldDate = uw.getRecordDate();
                 fillFromOriginal(uw, o);
                 applyCalculations(uw);
                 uw.setUpdatedBy(user);
                 mapper.update(uw);
+                recalcChainAfter(oldUid, oldDate, uw.getId(), cid);
+                if (!java.util.Objects.equals(oldUid, uw.getUniqueId())
+                        || !java.util.Objects.equals(oldDate, uw.getRecordDate())) {
+                    recalcChainAfter(uw.getUniqueId(), uw.getRecordDate(), uw.getId(), cid);
+                }
             }
         } else {
-            createFromOriginalRecord(o);
+            createFromOriginalRecord(o); // 内部含链纠偏
         }
     }
 
-    /** 删除维修记录时级联删除其关联的未过保物料（同事务） */
+    /** 删除维修记录时级联删除其关联的未过保物料（同事务）——先取快照用于旧链纠偏 */
     @Transactional
     public void deleteByOriginalRecordId(Long originalRecordId, Long companyId) {
         if (originalRecordId == null) return;
         Long cid = companyId != null ? companyId : 1L;
+        List<UnwarrantedMaterial> linked = mapper.findByOriginalRecordId(originalRecordId, cid);
         mapper.deleteByOriginalRecordId(originalRecordId, cid);
+        for (UnwarrantedMaterial uw : linked) {
+            recalcChainAfter(uw.getUniqueId(), uw.getRecordDate(), uw.getId(), cid);
+        }
     }
 
     /** 某维修记录在当前公司内已关联的未过保物料条数（前端删除提示用） */
@@ -435,6 +460,8 @@ public class UnwarrantedMaterialService {
         List<ImportResultDTO.FailDetail> failDetails = new ArrayList<>();
         List<UnwarrantedMaterial> all = new ArrayList<>();
         int[] counts = {0, 0, 0}; // total, success, fail
+        // 导入前最大 id：链纠偏用它排除本次导入行（batchInsert 不回填 id，且重算导入行自身会破坏组内按 Excel 行序的语义）
+        Long maxIdBefore = mapper.maxId();
 
         // 阶段一：读取全部行（行序 = Excel 行序）
         try (InputStream is = file.getInputStream()) {
@@ -496,6 +523,26 @@ public class UnwarrantedMaterialService {
         }
         if (!batch.isEmpty()) {
             flushBatch(batch, counts);
+        }
+
+        // 阶段四：链纠偏——导入行可能插入既有链中间（日期早于既有行），
+        // 既有链上日期 >= 各链导入行最小日期的行需重算（只重算 id <= maxIdBefore 的既有行，
+        // 不动本次导入行：其派生值已按组内 Excel 行序上下文算好，重算会破坏乱序语义）
+        if (maxIdBefore != null && maxIdBefore > 0 && !all.isEmpty()) {
+            java.util.Map<String, UnwarrantedMaterial> anchors = new java.util.LinkedHashMap<>();
+            for (UnwarrantedMaterial r : all) {
+                if (r.getUniqueId() == null || r.getUniqueId().isBlank() || r.getRecordDate() == null) continue;
+                Long rcid = r.getCompanyId() != null ? r.getCompanyId() : 1L;
+                String key = rcid + "|" + r.getUniqueId();
+                UnwarrantedMaterial cur = anchors.get(key);
+                if (cur == null || r.getRecordDate().isBefore(cur.getRecordDate())) {
+                    anchors.put(key, r);
+                }
+            }
+            for (UnwarrantedMaterial a : anchors.values()) {
+                Long rcid = a.getCompanyId() != null ? a.getCompanyId() : 1L;
+                recalcChainRows(mapper.findExistingChainFrom(a.getUniqueId(), rcid, a.getRecordDate(), maxIdBefore));
+            }
         }
 
         ImportResultDTO result = new ImportResultDTO();
