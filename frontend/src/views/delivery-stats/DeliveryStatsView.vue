@@ -354,7 +354,10 @@ async function fetchTotals() {
     totals.freeDeliveryAmount = calc('freeDeliveryQuantity')
     totals.machineOnAmount = calc('machineOnQuantity')
     totals.repairAmount = calc('monthRepair')
-    totals.agreedRatioAmount = calc('agreedRatioQuantity')
+    // 约定比例金额合计：跳过上机数量为 0 的行（该行未上机，不计约定比例金额）——口径与后端导出一致
+    totals.agreedRatioAmount = all
+      .filter(r => (Number(r.machineOnQuantity) || 0) > 0)
+      .reduce((acc, r) => acc + (Number(r.unitPriceWithTax) || 0) * (Number(r.agreedRatioQuantity) || 0), 0) / DIVISOR
     // 超比金额合计 = Σ(含税单价 × 超比数量) ÷ 1.13 ÷ 10000
     totals.excessAmount = calc('excessQuantity')
     // 超比含税总额 = Σ(超比含税金额) ÷ 10000

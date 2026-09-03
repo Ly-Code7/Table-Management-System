@@ -99,7 +99,10 @@ class DeliveryStatsExportTotalsTest {
             sums[1] = sums[1].add(price.multiply(BigDecimal.valueOf(s.getFreeDeliveryQuantity() != null ? s.getFreeDeliveryQuantity() : 0)));
             sums[2] = sums[2].add(price.multiply(BigDecimal.valueOf(s.getMachineOnQuantity() != null ? s.getMachineOnQuantity() : 0)));
             sums[3] = sums[3].add(price.multiply(BigDecimal.valueOf(s.getMonthRepair() != null ? s.getMonthRepair() : 0)));
-            sums[4] = sums[4].add(price.multiply(s.getAgreedRatioQuantity() != null ? s.getAgreedRatioQuantity() : BigDecimal.ZERO));
+            // 约定比例金额合计：跳过上机数量为 0 的行（该行未上机，不计约定比例金额）——规则与导出实现一致
+            if ((s.getMachineOnQuantity() != null ? s.getMachineOnQuantity() : 0) > 0) {
+                sums[4] = sums[4].add(price.multiply(s.getAgreedRatioQuantity() != null ? s.getAgreedRatioQuantity() : BigDecimal.ZERO));
+            }
             sums[5] = sums[5].add(price.multiply(s.getExcessQuantity() != null ? s.getExcessQuantity() : BigDecimal.ZERO));
             sums[6] = sums[6].add(s.getExcessAmountWithTax() != null ? s.getExcessAmountWithTax() : BigDecimal.ZERO);
         }

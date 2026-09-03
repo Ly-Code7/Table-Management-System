@@ -481,8 +481,11 @@ public class DeliveryStatsService {
                         BigDecimal.valueOf(s.getMachineOnQuantity() != null ? s.getMachineOnQuantity() : 0)));
                 repairAmount = repairAmount.add(unitPrice.multiply(
                         BigDecimal.valueOf(s.getMonthRepair() != null ? s.getMonthRepair() : 0)));
-                agreedRatioAmount = agreedRatioAmount.add(unitPrice.multiply(
-                        s.getAgreedRatioQuantity() != null ? s.getAgreedRatioQuantity() : BigDecimal.ZERO));
+                // 约定比例金额合计：跳过上机数量为 0 的行（该行未上机，不计约定比例金额）
+                if ((s.getMachineOnQuantity() != null ? s.getMachineOnQuantity() : 0) > 0) {
+                    agreedRatioAmount = agreedRatioAmount.add(unitPrice.multiply(
+                            s.getAgreedRatioQuantity() != null ? s.getAgreedRatioQuantity() : BigDecimal.ZERO));
+                }
                 excessAmount = excessAmount.add(unitPrice.multiply(
                         s.getExcessQuantity() != null ? s.getExcessQuantity() : BigDecimal.ZERO));
                 excessTaxAmount = excessTaxAmount.add(
