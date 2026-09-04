@@ -73,7 +73,9 @@
       <el-table-column prop="freeDeliveryQuantity" label="送货免费" width="90" />
       <el-table-column prop="machineOnQuantity" label="上机数量" width="90" />
       <el-table-column prop="monthRepair" label="当月返修" width="90" />
-      <el-table-column prop="agreedRatioQuantity" label="约定比例数量" width="120" />
+      <el-table-column prop="agreedRatioQuantity" label="约定比例数量" width="120">
+        <template #default="{ row }">{{ effAgreed(row) }}</template>
+      </el-table-column>
       <el-table-column prop="excessQuantity" label="超比数量" width="90" />
       <el-table-column prop="excessAmountWithTax" label="超比含税金额" width="120">
         <template #default="{ row }">{{ row.excessAmountWithTax != null ? Number(row.excessAmountWithTax).toFixed(2) : '' }}</template>
@@ -326,6 +328,13 @@ const rules = {
 // 汇总金额 = Σ(含税单价 × 数量) ÷ 1.13 ÷ 10000，单位为万元
 const DIVISOR = 1.13 * 10000
 
+// 约定比例数量口径裁剪：min(额度, max(上机−返修, 0))——欠比例行按实际净用量计，
+// 使「上机金额 = 返修金额 + 比例内金额 + 超比金额」恒等。与后端 DeliveryStatsService.effectiveAgreed 公式一致，两处修改须同步。
+const effAgreed = (row) => {
+  const net = (Number(row.machineOnQuantity) || 0) - (Number(row.monthRepair) || 0)
+  return Math.min(Number(row.agreedRatioQuantity) || 0, Math.max(net, 0))
+}
+
 const summaryMonth = ref([])
 const totals = reactive({
   deliveryAmount: 0,
@@ -354,10 +363,11 @@ async function fetchTotals() {
     totals.freeDeliveryAmount = calc('freeDeliveryQuantity')
     totals.machineOnAmount = calc('machineOnQuantity')
     totals.repairAmount = calc('monthRepair')
-    // 约定比例金额合计：跳过上机数量为 0 的行（该行未上机，不计约定比例金额）——口径与后端导出一致
-    totals.agreedRatioAmount = all
-      .filter(r => (Number(r.machineOnQuantity) || 0) > 0)
-      .reduce((acc, r) => acc + (Number(r.unitPriceWithTax) || 0) * (Number(r.agreedRatioQuantity) || 0), 0) / DIVISOR
+    // 约定比例金额合计 = Σ(含税单价 × effAgreed) ÷ 1.13 ÷ 10000
+    // （effAgreed = min(额度, max(上机−返修, 0))，口径与后端 DeliveryStatsService.effectiveAgreed 一致；
+    //  上机=0 行 effAgreed=0 自然不计，无需再 filter）
+    totals.agreedRatioAmount = all.reduce(
+      (acc, r) => acc + (Number(r.unitPriceWithTax) || 0) * effAgreed(r), 0) / DIVISOR
     // 超比金额合计 = Σ(含税单价 × 超比数量) ÷ 1.13 ÷ 10000
     totals.excessAmount = calc('excessQuantity')
     // 超比含税总额 = Σ(超比含税金额) ÷ 10000

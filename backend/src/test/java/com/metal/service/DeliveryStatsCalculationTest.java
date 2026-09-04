@@ -434,4 +434,50 @@ class DeliveryStatsCalculationTest {
         r.setUpdatedBy("tester");
         deliveryRecordMapper.insert(r);
     }
+
+    @Test
+    void effectiveAgreed_clipsQuotaToActualNetQuantity() {
+        // 欠比例：额度 10，上机 8、返修 2 → 净 6 < 10 → 约定比例按实际净用量 6
+        assertEquals(0, new BigDecimal("6").compareTo(
+                DeliveryStatsService.effectiveAgreed(new BigDecimal("10"), 8, 2)));
+        // 超比例：上机 20、返修 0 → 净 20 ≥ 额度 10 → 保持额度
+        assertEquals(0, new BigDecimal("10").compareTo(
+                DeliveryStatsService.effectiveAgreed(new BigDecimal("10"), 20, 0)));
+        // 上机=0：净 0 → 约定比例 0（不依赖额度）
+        assertEquals(0, BigDecimal.ZERO.compareTo(
+                DeliveryStatsService.effectiveAgreed(new BigDecimal("10"), 0, 0)));
+        // 上机 < 返修：净为负 → 取下界 0（不产生负约定比例）
+        assertEquals(0, BigDecimal.ZERO.compareTo(
+                DeliveryStatsService.effectiveAgreed(new BigDecimal("10"), 2, 5)));
+        // 额度为空 → 按 0 计（与页面/导出原口径一致：null 额度行比例内金额按 0，净量全部由超比承担，恒等式仍成立）
+        assertEquals(0, BigDecimal.ZERO.compareTo(
+                DeliveryStatsService.effectiveAgreed(null, 8, 2)));
+    }
+
+    @Test
+    void batchRefresh_keepsStoredAgreedAsQuota_unclipped() {
+        String mc = "TMP-EFF-" + System.nanoTime();
+        // 额度 10（机台 10 × 用量 2 × 比例 0.5）；刷新后上机 8、返修 2 → 欠比例（净 6 < 10）
+        deliveryStatsMapper.insert(newStats(mc));
+        addRepair(mc, 8);             // 上机数量数据源（original_record）
+        addUnwarrantedMaterial(mc, 2); // 当月返修数据源（未过保物料）
+
+        int count = service.batchRefreshByMonth(month, month, 1L);
+        assertEquals(1, count);
+
+        List<DeliveryStats> hits = deliveryStatsMapper.findByYearMonth(month, 1L);
+        DeliveryStats s = hits.stream().filter(x -> mc.equals(x.getMaterialCode())).findFirst().orElse(null);
+        assertNotNull(s, "刷新后应能查到记录");
+        assertEquals(8, s.getMachineOnQuantity());
+        assertEquals(2, s.getMonthRepair());
+        // 存储约定比例数量仍为合同额度 10：口径裁剪只发生在展示/合计层，不落库
+        assertEquals(0, new BigDecimal("10.00").compareTo(s.getAgreedRatioQuantity()),
+                "存储约定比例数量应保持额度，裁剪不得落库");
+        // 超比 = max(0, 8-2-10) = 0（欠比例不产生超比）
+        assertEquals(0, BigDecimal.ZERO.compareTo(s.getExcessQuantity()));
+        // 口径层裁剪：effAgreed = min(10, max(8-2, 0)) = 6 → 恒等式 上机8 = 返修2 + 约定比例6 + 超比0
+        assertEquals(0, new BigDecimal("6").compareTo(
+                DeliveryStatsService.effectiveAgreed(s.getAgreedRatioQuantity(), s.getMachineOnQuantity(), s.getMonthRepair())),
+                "裁剪后的约定比例应等于实际净用量（上机−返修）");
+    }
 }

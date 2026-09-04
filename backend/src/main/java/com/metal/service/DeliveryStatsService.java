@@ -180,10 +180,14 @@ public class DeliveryStatsService {
             // 用「最新月机台数 × 用量 × 比例」覆盖约定比例之和。
             BigDecimal agreed = agreedSumByKey.getOrDefault(cid + "\u0000" + code, BigDecimal.ZERO)
                     .setScale(2, RoundingMode.HALF_UP);
-            row.setAgreedRatioQuantity(agreed);
             int machineOn = row.getMachineOnQuantity() != null ? row.getMachineOnQuantity() : 0;
             int repair = row.getMonthRepair() != null ? row.getMonthRepair() : 0;
-            BigDecimal excessVal = BigDecimal.valueOf(machineOn - repair).subtract(agreed);
+            // 约定比例数量口径裁剪（与页面/导出一致）：min(额度, max(实时上机−实时返修, 0))
+            BigDecimal effAgreed = effectiveAgreed(agreed, machineOn, repair);
+            row.setAgreedRatioQuantity(effAgreed);
+            // 超比 = max(0, 上机 − 返修 − 约定比例)；用裁剪后的约定比例计算，公式自明
+            //（结果与用额度相同：欠比例行两者均为 0，超比例行 effAgreed=额度）
+            BigDecimal excessVal = BigDecimal.valueOf(machineOn - repair).subtract(effAgreed);
             row.setExcessQuantity(excessVal.compareTo(BigDecimal.ZERO) > 0 ? excessVal : BigDecimal.ZERO);
             if (row.getExcessQuantity() != null && row.getUnitPriceWithTax() != null) {
                 row.setExcessAmountWithTax(
@@ -481,11 +485,12 @@ public class DeliveryStatsService {
                         BigDecimal.valueOf(s.getMachineOnQuantity() != null ? s.getMachineOnQuantity() : 0)));
                 repairAmount = repairAmount.add(unitPrice.multiply(
                         BigDecimal.valueOf(s.getMonthRepair() != null ? s.getMonthRepair() : 0)));
-                // 约定比例金额合计：跳过上机数量为 0 的行（该行未上机，不计约定比例金额）
-                if ((s.getMachineOnQuantity() != null ? s.getMachineOnQuantity() : 0) > 0) {
-                    agreedRatioAmount = agreedRatioAmount.add(unitPrice.multiply(
-                            s.getAgreedRatioQuantity() != null ? s.getAgreedRatioQuantity() : BigDecimal.ZERO));
-                }
+                // 约定比例金额合计 = Σ(含税单价 × effectiveAgreed)（口径裁剪 min(额度, max(上机−返修, 0))，
+                // 与前端 fetchTotals 一致；上机=0 行 effAgreed=0 自然不计，不再单独 filter）
+                agreedRatioAmount = agreedRatioAmount.add(unitPrice.multiply(effectiveAgreed(
+                        s.getAgreedRatioQuantity() != null ? s.getAgreedRatioQuantity() : BigDecimal.ZERO,
+                        s.getMachineOnQuantity() != null ? s.getMachineOnQuantity() : 0,
+                        s.getMonthRepair() != null ? s.getMonthRepair() : 0)));
                 excessAmount = excessAmount.add(unitPrice.multiply(
                         s.getExcessQuantity() != null ? s.getExcessQuantity() : BigDecimal.ZERO));
                 excessTaxAmount = excessTaxAmount.add(
@@ -500,6 +505,13 @@ public class DeliveryStatsService {
                     excessAmount.divide(DIVISOR, 2, RoundingMode.HALF_UP),
                     excessTaxAmount.divide(new BigDecimal("10000"), 2, RoundingMode.HALF_UP)
             };
+            // 导出行「约定比例数量」列与合计口径一致：按 effectiveAgreed 裁剪（内存副本行，不落库）
+            for (DeliveryStats s : list) {
+                s.setAgreedRatioQuantity(effectiveAgreed(
+                        s.getAgreedRatioQuantity() != null ? s.getAgreedRatioQuantity() : BigDecimal.ZERO,
+                        s.getMachineOnQuantity() != null ? s.getMachineOnQuantity() : 0,
+                        s.getMonthRepair() != null ? s.getMonthRepair() : 0));
+            }
             // 合计标签/数值所在列与数量列一一对应（0 基）：送货数量8 送货免费9 上机数量10 当月返修11 约定比例数量12 超比数量13 超比含税金额14
             final String[] labels = {"送货金额合计", "送货免费金额合计", "上机金额合计", "返修金额合计", "比例内金额合计", "超比金额合计", "超比含税总额"};
             final int[] valueCols = {8, 9, 10, 11, 12, 13, 14};
@@ -631,6 +643,17 @@ public class DeliveryStatsService {
         } catch (IOException e) {
             throw new BizException("模板下载失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 约定比例数量口径裁剪：min(额度, max(上机−返修, 0))。
+     * 欠比例行（上机−返修 < 合同额度）按实际净用量计，使行级恒等式「上机 = 返修 + 约定比例 + 超比」成立；
+     * 上机=0 行取 0（与页面合计跳过 0 上机行口径同构）。存储列仍存额度，本方法仅口径层（导出/区间视图/前端合计）使用。
+     * 与前端 DeliveryStatsView.effAgreed 公式一致，两处修改须同步。
+     */
+    public static BigDecimal effectiveAgreed(BigDecimal agreed, int machineOn, int repair) {
+        BigDecimal net = BigDecimal.valueOf(machineOn - repair);
+        return (agreed != null ? agreed : BigDecimal.ZERO).min(net.max(BigDecimal.ZERO));
     }
 
     /**
