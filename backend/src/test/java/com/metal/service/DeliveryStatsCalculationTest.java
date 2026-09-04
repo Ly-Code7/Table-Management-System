@@ -480,4 +480,38 @@ class DeliveryStatsCalculationTest {
                 DeliveryStatsService.effectiveAgreed(s.getAgreedRatioQuantity(), s.getMachineOnQuantity(), s.getMonthRepair())),
                 "裁剪后的约定比例应等于实际净用量（上机−返修）");
     }
+
+    @Test
+    void exportExcel_exportsClippedAgreedRatioColumn() throws Exception {
+        String mc = "TMP-EXP-" + System.nanoTime();
+        // 额度 10（机台 10 × 用量 2 × 比例 0.5）；上机 2、返修 0 → 欠比例（净 2 < 10）
+        deliveryStatsMapper.insert(newStats(mc));
+        addRepair(mc, 2);
+        int count = service.batchRefreshByMonth(month, month, 1L);
+        assertEquals(1, count);
+
+        // 调用导出（keyword 限定该料号；日期区间覆盖当月）
+        java.time.YearMonth ym = java.time.YearMonth.parse(month);
+        org.springframework.mock.web.MockHttpServletResponse resp =
+                new org.springframework.mock.web.MockHttpServletResponse();
+        service.exportExcel(resp, 1L, mc, null, null,
+                ym.atDay(1).toString(), ym.atEndOfMonth().toString());
+
+        byte[] bytes = resp.getContentAsByteArray();
+        assertTrue(bytes.length > 0, "导出应有内容");
+        // 无模型读回（Map<列号,值>）：导出尾部有 RowWriteHandler 追加的空行+合计行（标签文本列），
+        // 有模型读会把合计行当数据行触发类型转换错误；无模型读无此问题
+        java.util.List<java.util.Map<Integer, Object>> rows = com.alibaba.excel.EasyExcel.read(
+                        new java.io.ByteArrayInputStream(bytes))
+                .sheet().headRowNumber(1).doReadSync();
+        java.util.Map<Integer, Object> hit = rows.stream()
+                .filter(m -> m.values().stream().anyMatch(v -> v != null && mc.equals(String.valueOf(v))))
+                .findFirst().orElse(null);
+        assertNotNull(hit, "导出应包含该料号行");
+        // 列 12 = 约定比例数量（与导出合计列 valueCols 对齐：约定比例数量12）：应 = effectiveAgreed(10, 2, 0) = 2
+        Object agreed = hit.get(12);
+        assertNotNull(agreed, "约定比例数量列不应为空");
+        assertEquals(0, new BigDecimal(String.valueOf(agreed)).compareTo(new BigDecimal("2")),
+                "导出行约定比例数量应按 effectiveAgreed 裁剪（页面行显示 2，导出行也应 2），实际=" + agreed);
+    }
 }
